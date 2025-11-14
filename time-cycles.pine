@@ -44,9 +44,6 @@ show_930 = input.bool(false, "9:30 Opening", group="Opening Lines")
 color_930 = input.color(color.black, "Color", group="Opening Lines", inline="930_style")
 style_930 = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Opening Lines", inline="930_style")
 
-// 9:30 Opening Range Gap
-show_930_org = input.bool(false, "9:30 ORG", group="9:30 Opening Range Gap")
-org_box_color = input.color(color.rgb(255, 192, 203), "Box Color", group="9:30 Opening Range Gap")
 
 // Asia session line settings
 show_asia_labels = input.bool(true, "Labels", group="Asia Session")
@@ -73,7 +70,10 @@ box_transp = input.int(93, "Box Transparency", minval=0, maxval=100, group="Disp
 
 // Helper function to convert time string to timestamp in NY timezone
 time_to_timestamp(h, m) =>
-    timestamp("America/New_York", year, month, dayofmonth, h, m, 0)
+    ny_year = year(time, "America/New_York")
+    ny_month = month(time, "America/New_York") 
+    ny_day = dayofmonth(time, "America/New_York")
+    timestamp("America/New_York", ny_year, ny_month, ny_day, h, m, 0)
 
 // === 90MIN PIVOT LINES TRACKING ===
 // Arrays to store active pivot lines for 90min cycles
@@ -458,96 +458,6 @@ create_90min_cycle_box_with_pivots(start_h, start_m, end_h, end_m, box_color, cy
 
 // SMT data processing section removed
 
-// Function to create 9:30 Opening Range Gap box
-create_930_gap() =>
-    if not show_930_org
-        na
-    else
-        // Get current NY time
-        ny_hour = hour(time, "America/New_York")
-        ny_minute = minute(time, "America/New_York")
-        current_ny_year = year(time, "America/New_York")
-        current_ny_month = month(time, "America/New_York")
-        current_ny_day = dayofmonth(time, "America/New_York")
-        
-        // Check if we're at 9:30 NY time (start of gap box)
-        is_930_start = ny_hour == 9 and ny_minute == 30
-        
-        // Check if we're in the 9:30-10:00 window
-        is_in_org_window = (ny_hour == 9 and ny_minute >= 30) or (ny_hour == 10 and ny_minute == 0)
-        
-        // Store box and previous close price
-        var box org_box = na
-        var float prev_1615_close = na
-        var float gap_930_open = na
-        var int org_start_bar = na
-        
-        // Get yesterday's 16:15 close price (handle weekends - Friday to Monday)
-        if is_930_start
-            // Look back for previous trading day's 16:15 close
-            var float found_close = na
-            var bool found = false
-            
-            for i = 1 to 10  // Look back up to 10 bars
-                past_time = time[i]
-                if not na(past_time)
-                    past_ny_hour = hour(past_time, "America/New_York")
-                    past_ny_minute = minute(past_time, "America/New_York")
-                    past_ny_year = year(past_time, "America/New_York")
-                    past_ny_month = month(past_time, "America/New_York") 
-                    past_ny_day = dayofmonth(past_time, "America/New_York")
-                    
-                    // Check if this is 16:15 from previous trading day
-                    is_different_day = past_ny_year != current_ny_year or past_ny_month != current_ny_month or past_ny_day != current_ny_day
-                    is_1615 = past_ny_hour == 16 and past_ny_minute == 15
-                    
-                    if is_different_day and is_1615 and not found
-                        found_close := close[i]
-                        found := true
-                        break
-            
-            if found
-                prev_1615_close := found_close
-                gap_930_open := open  // Current 9:30 open
-                org_start_bar := bar_index
-                
-                // Calculate gradient transparency (30% at 9:30, 90% at 16:15)
-                // For now, use 30% transparency for the box
-                box_transparency = 70  // 30% visible = 70% transparent
-                
-                // Determine box top and bottom
-                box_top = math.max(prev_1615_close, gap_930_open)
-                box_bottom = math.min(prev_1615_close, gap_930_open)
-                
-                // Create new box (fixed 30-minute window)
-                if not na(org_box)
-                    box.delete(org_box)
-                
-                org_box := box.new(
-                    left=bar_index, 
-                    top=box_top, 
-                    right=bar_index, 
-                    bottom=box_bottom,
-                    bgcolor=color.new(org_box_color, box_transparency),
-                    border_color=color.new(org_box_color, 50),
-                    border_width=1,
-                    extend=extend.none
-                )
-        
-        // Update box right edge in real-time during 9:30-10:00 window
-        if not na(org_box) and is_in_org_window and not na(org_start_bar)
-            // Only extend within the 30-minute window (9:30-10:00)
-            box.set_right(org_box, bar_index)
-        
-        // Delete box after 10:00
-        if not na(org_box) and ny_hour == 10 and ny_minute > 0
-            box.delete(org_box)
-            org_box := na
-            prev_1615_close := na
-            gap_930_open := na
-            org_start_bar := na
-        
-        true
 
 // Clean up previous day's pivot lines and update current ones
 if is_valid_tf and show_90min_pivots
@@ -597,9 +507,6 @@ if is_valid_tf and show_90min_pivots
     // Update existing pivot lines
     update_pivot_lines()
 
-// Create 9:30 opening range gap
-if is_valid_tf
-    create_930_gap()
 
 // Only execute if timeframe is valid
 if is_valid_tf
