@@ -31,6 +31,13 @@ color_10min = input.color(color.new(color.gray, 80), "10-min Cycles", group="Col
 color_london_open = input.color(color.orange, "London Opening", group="Colors")
 color_asia = input.color(color.purple, "Asia Session", group="Colors")
 
+// Day separation settings
+show_day_separators = input.bool(true, "Day Separators", group="Day Separators")
+day_separator_color = input.color(color.gray, "Color", group="Day Separators", inline="day_sep")
+day_separator_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Day Separators", inline="day_sep")
+day_separator_width = input.int(1, "Width", minval=1, maxval=3, group="Day Separators", inline="day_sep")
+show_day_labels = input.bool(true, "Day Labels", group="Day Separators")
+
 // Opening price line settings
 show_midnight = input.bool(false, "Midnight (00:00)", group="Opening Lines")
 midnight_color = input.color(color.black, "Color", group="Opening Lines", inline="midnight_style")
@@ -729,6 +736,48 @@ if is_valid_tf
         create_cycle_box(15, 30, 15, 40, color_10min, "NY PM 10min")
         create_cycle_box(15, 40, 15, 50, color_10min, "NY PM 10min")
         create_cycle_box(15, 50, 16, 0, color_10min, "NY PM 10min")
+
+// === DAY SEPARATORS AND LABELS ===
+if show_day_separators and is_valid_tf
+    // Get NY timezone time components
+    ny_hour = hour(time, "America/New_York")
+    ny_minute = minute(time, "America/New_York")
+    ny_dayofweek = dayofweek(time, "America/New_York")
+    
+    // Detect NY midnight
+    is_ny_midnight = ny_hour == 0 and ny_minute == 0
+    
+    // Arrays to store day separator lines
+    var array<line> day_separator_lines = array.new<line>()
+    
+    if is_ny_midnight
+        // Get line style
+        separator_style = switch day_separator_style
+            line.style_solid => line.style_solid
+            line.style_dashed => line.style_dashed
+            line.style_dotted => line.style_dotted
+            => line.style_solid
+        
+        // Create vertical line at midnight
+        separator_line = line.new(x1=bar_index, y1=low, x2=bar_index, y2=high, color=day_separator_color, style=separator_style, width=day_separator_width, extend=extend.both)
+        array.push(day_separator_lines, separator_line)
+        
+        // Cleanup old separators (keep last 10)
+        if array.size(day_separator_lines) > 10
+            old_line = array.shift(day_separator_lines)
+            if not na(old_line)
+                line.delete(old_line)
+
+// Day labels using plotshape at bottom of visible chart
+// Plot day names at 12:00 (noon) each day, centered in the visible area
+invisible_color = color.new(color.white, 100)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.monday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="MONDAY", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.tuesday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="TUESDAY", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.wednesday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="WEDNESDAY", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.thursday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="THURSDAY", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.friday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="FRIDAY", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.saturday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="SATURDAY", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.sunday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="SUNDAY", size=size.normal)
 
 // Opening price lines
 if show_midnight

@@ -1,8 +1,4 @@
-# Pine Script version 6 documentation.
-
-# VARIABLES
-
-## ask
+# ask
 
 The ask price at the time of the current tick, which represents the lowest price an active seller will accept for the instrument at its current value. This information is available only on the "1T" timeframe. On other timeframes, the variable's value is na.
 
@@ -14,8 +10,7 @@ The ask price at the time of the current tick, which represents the lowest price
 
 If the bid/ask values change since the last tick but no new trades are made, these changes will not be reflected in the value of this variable. It is only updated on new ticks.
 
-## bar_index
-
+## open
 Current bar index. Numbering is zero-based, index of the first bar is 0.
 
 ### Type
@@ -39,8 +34,7 @@ Note that bar indexing starts from 0 on the first historical bar.
 
 Please note that using this variable/function can cause indicator repainting.
 
-## barstate.isconfirmed
-
+## last_bar_index
 Returns true if the script is calculating the last (closing) update of the current bar. The next script calculation will be on the new bar data.
 
 ### Type
@@ -54,7 +48,6 @@ Pine Script® code that uses this variable could calculate differently on histor
 It is NOT recommended to use barstate.isconfirmed in request.security() expression. Its value requested from request.security() is unpredictable.
 
 ## barstate.isfirst
-
 Returns true if current bar is first bar in barset, false otherwise.
 
 ### Type
@@ -67,8 +60,7 @@ Pine Script® code that uses this variable could calculate differently on histor
 
 Please note that using this variable/function can cause indicator repainting.
 
-## barstate.ishistory
-
+## barstate.islast
 Returns true if current bar is a historical bar, false otherwise.
 
 ### Type
@@ -81,8 +73,7 @@ Pine Script® code that uses this variable could calculate differently on histor
 
 Please note that using this variable/function can cause indicator repainting.
 
-## barstate.islast
-
+## barstate.isfirst
 Returns true if current bar is the last bar in barset, false otherwise. This condition is true for all real-time bars in barset.
 
 ### Type
@@ -95,8 +86,7 @@ Pine Script® code that uses this variable could calculate differently on histor
 
 Please note that using this variable/function can cause indicator repainting.
 
-## barstate.islastconfirmedhistory
-
+## barstate.isfirst
 Returns true if script is executing on the dataset's last bar when market is closed, or script is executing on the bar immediately preceding the real-time bar, if market is open. Returns false otherwise.
 
 ### Type
@@ -109,8 +99,7 @@ Pine Script® code that uses this variable could calculate differently on histor
 
 Please note that using this variable/function can cause indicator repainting.
 
-## barstate.isnew
-
+## barstate.isfirst
 Returns true if script is currently calculating on new bar, false otherwise. This variable is true when calculating on historical bars or on first update of a newly generated real-time bar.
 
 ### Type
@@ -123,8 +112,7 @@ Pine Script® code that uses this variable could calculate differently on histor
 
 Please note that using this variable/function can cause indicator repainting.
 
-## barstate.isrealtime
-
+## barstate.isfirst
 Returns true if current bar is a real-time bar, false otherwise.
 
 ### Type
@@ -137,8 +125,7 @@ Pine Script® code that uses this variable could calculate differently on histor
 
 Please note that using this variable/function can cause indicator repainting.
 
-## bid
-
+## barstate.isfirst
 The bid price at the time of the current tick, which represents the highest price an active buyer is willing to pay for the instrument at its current value. This information is available only on the "1T" timeframe. On other timeframes, the variable's value is na.
 
 ### Type
@@ -149,8 +136,7 @@ The bid price at the time of the current tick, which represents the highest pric
 
 If the bid/ask values change since the last tick but no new trades are made, these changes will not be reflected in the value of this variable. It is only updated on new ticks.
 
-## box.all
-
+## open
 Returns an array filled with all the current boxes drawn by the script.
 
 ### Type
@@ -174,13 +160,14 @@ if array.size(a_allBoxes) > 0
 
 The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
 
-## chart.bg_color
-
+## box.new()
 Returns the color of the chart's background from the "Chart settings/Appearance/Background" field. When a gradient is selected, the middle point of the gradient is returned.
 
 ### Type
 
 `input color`
+
+## chart.fg_color
 
 ## chart.fg_color
 
@@ -190,8 +177,73 @@ Returns a color providing optimal contrast with chart.bg_color.
 
 `input color`
 
-## chart.left_visible_bar_time
+## chart.bg_color
 
+## chart.is_heikinashi
+
+### Type
+
+`simple bool`
+
+### Returns
+
+Returns true if the chart type is Heikin Ashi, false otherwise.
+
+## chart.is_renko
+### Type
+
+`simple bool`
+
+### Returns
+
+Returns true if the chart type is Kagi, false otherwise.
+
+## chart.is_renko
+### Type
+
+`simple bool`
+
+### Returns
+
+Returns true if the chart type is Line break, false otherwise.
+
+## chart.is_renko
+### Type
+
+`simple bool`
+
+### Returns
+
+Returns true if the chart type is Point & figure, false otherwise.
+
+## chart.is_renko
+### Type
+
+`simple bool`
+
+### Returns
+
+Returns true if the chart type is Range, false otherwise.
+
+## chart.is_renko
+### Type
+
+`simple bool`
+
+### Returns
+
+Returns true if the chart type is Renko, false otherwise.
+
+## chart.is_heikinashi
+### Type
+
+`simple bool`
+
+### Returns
+
+Returns true if the chart type is not one of the following: Renko, Kagi, Line break, Point & figure, Range, Heikin Ashi; false otherwise.
+
+## chart.is_renko
 The time of the leftmost bar currently visible on the chart.
 
 ### Type
@@ -203,6 +255,8 @@ The time of the leftmost bar currently visible on the chart.
 Scripts using this variable will automatically re-execute when its value updates to reflect changes in the chart, which can be caused by users scrolling the chart, or new real-time bars.
 
 Alerts created on a script that includes this variable will only use the value assigned to the variable at the moment of the alert's creation, regardless of whether the value changes afterward, which may lead to repainting.
+
+## chart.right_visible_bar_time
 
 ## chart.right_visible_bar_time
 
@@ -218,6 +272,8 @@ Scripts using this variable will automatically re-execute when its value updates
 
 Alerts created on a script that includes this variable will only use the value assigned to the variable at the moment of the alert's creation, regardless of whether the value changes afterward, which may lead to repainting.
 
+## chart.left_visible_bar_time
+
 ## close
 
 Close price of the current bar when it has closed, or last traded price of a yet incomplete, realtime bar.
@@ -230,8 +286,7 @@ Close price of the current bar when it has closed, or last traded price of a yet
 
 Previous values may be accessed with square brackets operator [], e.g. close[1], close[2].
 
-## dayofmonth
-
+## open
 The day number of the month, in the exchange time zone, calculated from the bar's opening UNIX timestamp.
 
 ### Type
@@ -242,8 +297,7 @@ The day number of the month, in the exchange time zone, calculated from the bar'
 
 This variable always references the day number corresponding to the bar's opening time. Consequently, for symbols with overnight sessions (e.g., "EURUSD", where the "Monday" session starts on Sunday at 17:00 in exchange time), the value may represent a day from the previous week rather than the session's primary trading day.
 
-## dayofweek
-
+## dayofmonth()
 The day number of the week, in the exchange time zone, calculated from the bar's opening UNIX timestamp.
 
 ### Type
@@ -256,8 +310,7 @@ This variable always references the day number corresponding to the bar's openin
 
 You can use dayofweek.sunday, dayofweek.monday, dayofweek.tuesday, dayofweek.wednesday, dayofweek.thursday, dayofweek.friday and dayofweek.saturday variables for comparisons.
 
-## dividends.future_amount
-
+## dayofweek()
 Returns the payment amount of the upcoming dividend in the currency of the current instrument, or na if this data isn't available.
 
 ### Type
@@ -278,7 +331,7 @@ Returns the Ex-dividend date (Ex-date) of the current instrument's next dividend
 
 ### Returns
 
-## UNIX time, expressed in milliseconds.
+UNIX time, expressed in milliseconds.
 
 ### Remarks
 
@@ -294,7 +347,11 @@ Returns the Payment date (Pay date) of the current instrument's next dividend pa
 
 ### Returns
 
-## UNIX time, expressed in milliseconds.
+UNIX time, expressed in milliseconds.
+
+### Remarks
+
+This value is only fetched once during the script's initial calculation. The variable will return the same value until the script is recalculated, even after the expected Payment date of the next dividend.
 
 ## earnings.future_eps
 
@@ -308,6 +365,8 @@ Returns the estimated Earnings per Share of the next earnings report in the curr
 
 This value is only fetched once during the script's initial calculation. The variable will return the same value until the script is recalculated, even after the expected time of the next earnings report.
 
+## request.earnings()
+
 ## earnings.future_period_end_time
 
 Checks the data for the next earnings report and returns the UNIX timestamp of the day when the financial period covered by those earnings ends, or na if this data isn't available.
@@ -318,11 +377,13 @@ Checks the data for the next earnings report and returns the UNIX timestamp of t
 
 ### Returns
 
-## UNIX time, expressed in milliseconds.
+UNIX time, expressed in milliseconds.
 
 ### Remarks
 
 This value is only fetched once during the script's initial calculation. The variable will return the same value until the script is recalculated, even after the expected time of the next earnings report.
+
+## request.earnings()
 
 ## earnings.future_revenue
 
@@ -336,6 +397,8 @@ Returns the estimated Revenue of the next earnings report in the currency of the
 
 This value is only fetched once during the script's initial calculation. The variable will return the same value until the script is recalculated, even after the expected time of the next earnings report.
 
+## request.earnings()
+
 ## earnings.future_time
 
 Returns a UNIX timestamp indicating the expected time of the next earnings report, or na if this data isn't available.
@@ -346,15 +409,17 @@ Returns a UNIX timestamp indicating the expected time of the next earnings repor
 
 ### Returns
 
-## UNIX time, expressed in milliseconds.
+UNIX time, expressed in milliseconds.
 
 ### Remarks
 
 This value is only fetched once during the script's initial calculation. The variable will return the same value until the script is recalculated, even after the expected time of the next earnings report.
 
+## request.earnings()
+
 ## high
 
-## Current high price.
+Current high price.
 
 ### Type
 
@@ -364,40 +429,35 @@ This value is only fetched once during the script's initial calculation. The var
 
 Previous values may be accessed with square brackets operator [], e.g. high[1], high[2].
 
-## hl2
-
+## open
 Is a shortcut for (high + low)/2
 
 ### Type
 
 `series float`
 
-## hlc3
-
+## open
 Is a shortcut for (high + low + close)/3
 
 ### Type
 
 `series float`
 
-## hlcc4
-
+## open
 Is a shortcut for (high + low + close + close)/4
 
 ### Type
 
 `series float`
 
-## hour
-
+## open
 Current bar hour in exchange timezone.
 
 ### Type
 
 `series int`
 
-## abel.all
-
+## hour()
 Returns an array filled with all the current labels drawn by the script.
 
 ### Type
@@ -421,8 +481,7 @@ if array.size(a_allLabels) > 0
 
 The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
 
-## last_bar_index
-
+## label.new()
 Bar index of the last chart bar. Bar indices begin at zero on the first bar.
 
 ### Type
@@ -447,92 +506,11 @@ bgcolor(allowedToTrade ? color.new(color.green, 80) : na)
 
 Last historical bar index for closed markets, or the real-time bar index for open markets.
 
-## last_bar_time
-
-Time in UNIX format of the last chart bar. It is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
-
-### Type
-
-`series int`
-
-## line.all
-
-Returns an array filled with all the current lines drawn by the script.
-
-### Type
-
-`array<line>`
-
-### Example
-
-```pinescript
-//@version=6
-indicator("line.all")
-//delete all lines
-line.new(bar_index - 10, close, bar_index, close)
-a_allLines = line.all
-if array.size(a_allLines) > 0
-    for i = 0 to array.size(a_allLines) - 1
-        line.delete(array.get(a_allLines, i))
-```
-
 ### Remarks
 
-The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
+Please note that using this variable can cause indicator repainting.
 
-## label.all
-
-Returns an array filled with all the current labels drawn by the script.
-
-### Type
-
-`array<label>`
-
-### Example
-
-```pinescript
-//@version=6
-indicator("label.all")
-//delete all labels
-label.new(bar_index, close)
-a_allLabels = label.all
-if array.size(a_allLabels) > 0
-    for i = 0 to array.size(a_allLabels) - 1
-        label.delete(array.get(a_allLabels, i))
-```
-
-### Remarks
-
-The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
-
-## last_bar_index
-
-Bar index of the last chart bar. Bar indices begin at zero on the first bar.
-
-### Type
-
-`series int`
-
-### Example
-
-```pinescript
-//@version=6
-strategy("Mark Last X Bars For Backtesting", overlay = true, calc_on_every_tick = true)
-lastBarsFilterInput = input.int(100, "Bars Count:")
-// Here, we store the 'last_bar_index' value that is known from the beginning of the script's calculation.
-// The 'last_bar_index' will change when new real-time bars appear, so we declare 'lastbar' with the 'var' keyword.
-var lastbar = last_bar_index
-// Check if the current bar_index is 'lastBarsFilterInput' removed from the last bar on the chart, or the chart is traded in real-time.
-allowedToTrade = (lastbar - bar_index <= lastBarsFilterInput) or barstate.isrealtime
-bgcolor(allowedToTrade ? color.new(color.green, 80) : na)
-```
-
-### Returns
-
-Last historical bar index for closed markets, or the real-time bar index for open markets.
-
-## last_bar_time
-
+## bar_index
 Time in UNIX format of the last chart bar. It is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
 ### Type
@@ -545,8 +523,7 @@ Please note that using this variable/function can cause indicator repainting.
 
 Note that this variable returns the timestamp based on the time of the bar's open.
 
-## line.all
-
+## time
 Returns an array filled with all the current lines drawn by the script.
 
 ### Type
@@ -570,130 +547,48 @@ if array.size(a_allLines) > 0
 
 The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
 
-## label.all
-
-Returns an array filled with all the current labels drawn by the script.
-
-### Type
-
-`array<label>`
-
-### Example
-
-```pinescript
-//@version=6
-indicator("label.all")
-//delete all labels
-label.new(bar_index, close)
-a_allLabels = label.all
-if array.size(a_allLabels) > 0
-    for i = 0 to array.size(a_allLabels) - 1
-        label.delete(array.get(a_allLabels, i))
-```
-
-### Remarks
-
-The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
-
-## last_bar_index
-
-Bar index of the last chart bar. Bar indices begin at zero on the first bar.
-
-### Type
-
-`series int`
-
-### Example
-
-```pinescript
-//@version=6
-strategy("Mark Last X Bars For Backtesting", overlay = true, calc_on_every_tick = true)
-lastBarsFilterInput = input.int(100, "Bars Count:")
-// Here, we store the 'last_bar_index' value that is known from the beginning of the script's calculation.
-// The 'last_bar_index' will change when new real-time bars appear, so we declare 'lastbar' with the 'var' keyword.
-var lastbar = last_bar_index
-// Check if the current bar_index is 'lastBarsFilterInput' removed from the last bar on the chart, or the chart is traded in real-time.
-allowedToTrade = (lastbar - bar_index <= lastBarsFilterInput) or barstate.isrealtime
-bgcolor(allowedToTrade ? color.new(color.green, 80) : na)
-```
-
-### Returns
-
-Last historical bar index for closed markets, or the real-time bar index for open markets.
-
-## last_bar_time
-
-Time in UNIX format of the last chart bar. It is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
-
-### Type
-
-`series int`
-
-### Remarks
-
-Please note that using this variable/function can cause indicator repainting.
-
-Note that this variable returns the timestamp based on the time of the bar's open.
-
-## line.all
-
-Returns an array filled with all the current lines drawn by the script.
-
-### Type
-
-`array<line>`
-
-### Example
-
-```pinescript
-//@version=6
-indicator("line.all")
-//delete all lines
-line.new(bar_index - 10, close, bar_index, close)
-a_allLines = line.all
-if array.size(a_allLines) > 0
-    for i = 0 to array.size(a_allLines) - 1
-        line.delete(array.get(a_allLines, i))
-```
-
-### Remarks
-
-The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
-
-## linefill.all
-
+## line.new()
 Returns an array filled with all the current linefill objects drawn by the script.
 
 ### Type
 
 `array<linefill>`
 
+### Remarks
+
+The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
+
 ## low
 
-## Current low price.
+Current low price.
 
 ### Type
 
 `series float`
 
-## minute
+### Remarks
 
+Previous values may be accessed with square brackets operator [], e.g. low[1], low[2].
+
+## open
 Current bar minute in exchange timezone.
 
 ### Type
 
 `series int`
 
-## month
-
+## minute()
 Current bar month in exchange timezone.
 
 ### Type
 
 `series int`
 
-## na
+### Remarks
 
+Note that this variable returns the month based on the time of the bar's open. For overnight sessions (e.g. EURUSD, where Monday session starts on Sunday, 17:00) this value can be lower by 1 than the month of the trading day.
+
+## month()
 A keyword signifying "not available", indicating that a variable has no assigned value.
 
 ### Type
@@ -730,8 +625,7 @@ plot(nz(close[1], close))
 
 Do not use this variable with comparison operators to test values for na, as it might lead to unexpected behavior. Instead, use the na() function. Note that na can be used to initialize variables when the initialization statement also specifies the variable's type.
 
-## ohlc4
-
+## na()
 Is a shortcut for (open + high + low + close)/4
 
 ### Type
@@ -739,8 +633,7 @@ Is a shortcut for (open + high + low + close)/4
 `series float`
 
 ## open
-
-## Current open price.
+Current open price.
 
 ### Type
 
@@ -750,13 +643,16 @@ Is a shortcut for (open + high + low + close)/4
 
 Previous values may be accessed with square brackets operator [], e.g. open[1], open[2].
 
-## polyline.all
-
+## high
 Returns an array containing all current polyline instances drawn by the script.
 
 ### Type
 
 `array<polyline>`
+
+### Remarks
+
+The array is read-only. Index zero of the array references the ID of the oldest polyline object on the chart.
 
 ## second
 
@@ -766,8 +662,7 @@ Current bar second in exchange timezone.
 
 `series int`
 
-## session.isfirstbar
-
+## second()
 Returns true if the current bar is the first bar of the day's session, false otherwise. If extended session information is used, only returns true on the first bar of the pre-market bars.
 
 ### Type
@@ -786,11 +681,13 @@ if session.isfirstbar and longCondition
 // Close the long position at the `close` of the trading session's last bar.
 if session.islastbar and barstate.isconfirmed
     strategy.close("Long", immediately = true)
-```
-
-## session.isfirstbar_regular
-
+See also
+session.isfirstbar_regular
+session.islastbar
+session.islastbar_regular
+session.isfirstbar_regular
 Returns true on the first regular session bar of the day, false otherwise. The result is the same whether extended session information is used or not.
+```
 
 ### Type
 
@@ -808,11 +705,12 @@ if session.isfirstbar and longCondition
 // Close the long position at the `close` of the trading session's last bar.
 if session.islastbar_regular and barstate.isconfirmed
     strategy.close("Long", immediately = true)
-```
-
-## session.islastbar
-
+See also
+session.isfirstbar
+session.islastbar
+session.islastbar
 Returns true if the current bar is the last bar of the day's session, false otherwise. If extended session information is used, only returns true on the last bar of the post-market bars.
+```
 
 ### Type
 
@@ -837,8 +735,9 @@ if session.islastbar and barstate.isconfirmed
 
 This variable is not guaranteed to return true once in every session because the last bar of the session might not exist if no trades occur during what should be the session's last bar.
 
-## session.islastbar_regular
+This variable is not guaranteed to work as expected on non-standard chart types, e.g., Renko.
 
+## session.isfirstbar
 Returns true on the last regular session bar of the day, false otherwise. The result is the same whether extended session information is used or not.
 
 ### Type
@@ -865,40 +764,35 @@ This variable is not guaranteed to return true once in every session because the
 
 This variable is not guaranteed to work as expected on non-standard chart types, e.g., Renko.
 
-## session.ismarket
-
+## session.isfirstbar
 Returns true if the current bar is a part of the regular trading hours (i.e. market hours), false otherwise.
 
 ### Type
 
 `series bool`
 
-## session.ispostmarket
-
+## session.ispremarket
 Returns true if the current bar is a part of the post-market, false otherwise. On non-intraday charts always returns false.
 
 ### Type
 
 `series bool`
 
-## session.ispremarket
-
+## session.ismarket
 Returns true if the current bar is a part of the pre-market, false otherwise. On non-intraday charts always returns false.
 
 ### Type
 
 `series bool`
 
-## strategy.account_currency
-
+## session.ismarket
 Returns the currency used to calculate results, which can be set in the strategy's properties.
 
 ### Type
 
 `simple string`
 
-## strategy.avg_losing_trade
-
+## strategy()
 Returns the average amount of money lost per losing trade. Calculated as the sum of losses divided by the number of losing trades.
 
 ### Type
@@ -907,11 +801,15 @@ Returns the average amount of money lost per losing trade. Calculated as the sum
 
 ## strategy.avg_losing_trade_percent
 
+## strategy.avg_losing_trade_percent
+
 Returns the average percentage loss per losing trade. Calculated as the sum of loss percentages divided by the number of losing trades.
 
 ### Type
 
 `series float`
+
+## strategy.avg_losing_trade
 
 ## strategy.avg_trade
 
@@ -923,11 +821,15 @@ Returns the average amount of money gained or lost per trade. Calculated as the 
 
 ## strategy.avg_trade_percent
 
+## strategy.avg_trade_percent
+
 Returns the average percentage gain or loss per trade. Calculated as the sum of all profit and loss percentages divided by the number of closed trades.
 
 ### Type
 
 `series float`
+
+## strategy.avg_trade
 
 ## strategy.avg_winning_trade
 
@@ -937,6 +839,18 @@ Returns the average amount of money gained per winning trade. Calculated as the 
 
 `series float`
 
+## strategy.avg_winning_trade_percent
+
+## strategy.avg_winning_trade_percent
+
+Returns the average percentage gain per winning trade. Calculated as the sum of profit percentages divided by the number of winning trades.
+
+### Type
+
+`series float`
+
+## strategy.avg_winning_trade
+
 ## strategy.closedtrades
 
 Number of trades, which were closed for the whole trading range.
@@ -945,41 +859,42 @@ Number of trades, which were closed for the whole trading range.
 
 `series int`
 
-## strategy.closedtrades.first_index
-
+## strategy.position_size
 The index, or trade number, of the first (oldest) trade listed in the List of Trades. This number is usually zero. If more trades than the allowed limit have been closed, the oldest trades are removed, and this number is the index of the oldest remaining trade.
 
-## strategy.equity
+### Type
 
+`series int`
+
+## strategy.position_size
 Current equity (strategy.initial_capital + strategy.netprofit + strategy.openprofit).
 
 ### Type
 
 `series float`
 
-## strategy.eventrades
-
+## strategy.netprofit
 Number of breakeven trades for the whole trading range.
 
 ### Type
 
 `series int`
 
-## strategy.grossloss
-
+## strategy.position_size
 Total currency value of all completed losing trades.
 
 ### Type
 
 `series float`
 
-## strategy.grossloss_percent
-
+## strategy.netprofit
 The total value of all completed losing trades, expressed as a percentage of the initial capital.
 
 ### Type
 
 `series float`
+
+## strategy.grossloss
 
 ## strategy.grossprofit
 
@@ -989,13 +904,14 @@ Total currency value of all completed winning trades.
 
 `series float`
 
-## strategy.grossprofit_percent
-
+## strategy.netprofit
 The total currency value of all completed winning trades, expressed as a percentage of the initial capital.
 
 ### Type
 
 `series float`
+
+## strategy.grossprofit
 
 ## strategy.initial_capital
 
@@ -1005,6 +921,8 @@ The amount of initial capital set in the strategy properties.
 
 `series float`
 
+## strategy()
+
 ## strategy.losstrades
 
 Number of unprofitable trades for the whole trading range.
@@ -1013,8 +931,7 @@ Number of unprofitable trades for the whole trading range.
 
 `series int`
 
-## strategy.margin_liquidation_price
-
+## strategy.position_size
 When margin is used in a strategy, returns the price point where a simulated margin call will occur and liquidate enough of the position to meet the margin requirements.
 
 ### Type
@@ -1030,29 +947,11 @@ strategy("Margin call management", overlay = true, margin_long = 25, margin_shor
 ```
 
 ## float maFast = ta.sma(close, 14)
-
-## float maSlow = ta.sma(close, 28)
-
-## if ta.crossover(maFast, maSlow)
-
-##     strategy.entry("Long", strategy.long)
-
-## if ta.crossunder(maFast, maSlow)
-
-##     strategy.entry("Short", strategy.short)
-
-## changePercent(v1, v2) =>
-
 - **`float result =`** (v1 - v2) * 100 / math.abs(v2)
 
 // exit when we're 10% away from a margin call, to prevent it.
 
 ## if math.abs(changePercent(close, strategy.margin_liquidation_price)) <= 10
-
-##     strategy.close("Long")
-
-##     strategy.close("Short")
-
 ### Remarks
 
 The variable returns na if the strategy does not use margin, i.e., the strategy() declaration statement does not specify an argument for the margin_long or margin_short parameter.
@@ -1065,37 +964,35 @@ Maximum number of contracts/shares/lots/units in one trade for the whole trading
 
 `series float`
 
-## strategy.max_contracts_held_long
-
+## strategy.position_size
 Maximum number of contracts/shares/lots/units in one long trade for the whole trading range.
 
 ### Type
 
 `series float`
 
-## strategy.max_contracts_held_short
-
+## strategy.position_size
 Maximum number of contracts/shares/lots/units in one short trade for the whole trading range.
 
 ### Type
 
 `series float`
 
-## strategy.max_drawdown
-
+## strategy.position_size
 Maximum equity drawdown value for the whole trading range.
 
 ### Type
 
 `series float`
 
-## strategy.max_drawdown_percent
-
+## strategy.netprofit
 The maximum equity drawdown value for the whole trading range, expressed as a percentage and calculated by formula: Lowest Value During Trade / (Entry Price x Quantity) * 100.
 
 ### Type
 
 `series float`
+
+## strategy.max_drawdown
 
 ## strategy.max_runup
 
@@ -1105,13 +1002,14 @@ Maximum equity run-up value for the whole trading range.
 
 `series float`
 
-## strategy.max_runup_percent
-
+## strategy.netprofit
 The maximum equity run-up value for the whole trading range, expressed as a percentage and calculated by formula: Highest Value During Trade / (Entry Price x Quantity) * 100.
 
 ### Type
 
 `series float`
+
+## strategy.max_runup
 
 ## strategy.netprofit
 
@@ -1121,13 +1019,14 @@ Total currency value of all completed trades.
 
 `series float`
 
-## strategy.netprofit_percent
-
+## strategy.openprofit
 The total value of all completed trades, expressed as a percentage of the initial capital.
 
 ### Type
 
 `series float`
+
+## strategy.netprofit
 
 ## strategy.openprofit
 
@@ -1137,13 +1036,14 @@ Current unrealized profit or loss for all open positions.
 
 `series float`
 
-## strategy.openprofit_percent
-
+## strategy.netprofit
 The current unrealized profit or loss for all open positions, expressed as a percentage and calculated by formula: openPL / realizedEquity * 100.
 
 ### Type
 
 `series float`
+
+## strategy.openprofit
 
 ## strategy.opentrades
 
@@ -1152,6 +1052,8 @@ Number of market position entries, which were not closed and remain opened. If t
 ### Type
 
 `series int`
+
+## strategy.position_size
 
 ## strategy.opentrades.capital_held
 
@@ -1190,6 +1092,8 @@ Average entry price of current market position. If the market position is flat, 
 
 `series float`
 
+## strategy.position_size
+
 ## strategy.position_entry_name
 
 Name of the order that initially opened current market position.
@@ -1200,11 +1104,15 @@ Name of the order that initially opened current market position.
 
 ## strategy.position_size
 
+## strategy.position_size
+
 Direction and size of the current market position. If the value is > 0, the market position is long. If the value is < 0, the market position is short. The absolute value is the number of contracts/shares/lots/units in trade (position size).
 
 ### Type
 
 `series float`
+
+## strategy.position_avg_price
 
 ## strategy.wintrades
 
@@ -1214,16 +1122,14 @@ Number of profitable trades for the whole trading range.
 
 `series int`
 
-## syminfo.basecurrency
-
+## strategy.position_size
 - **`Returns a string containing the code representing the symbol's base currency`** (i.e., the traded currency or coin) if the instrument is a Forex or Crypto pair or a derivative based on such a pair. Otherwise, it returns an empty string. For example, this variable returns "EUR" for "EURJPY", "BTC" for "BTCUSDT", "CAD" for "CME:6C1!", and "" for "NASDAQ:AAPL".
 
 ### Type
 
 `simple string`
 
-## yminfo.country
-
+## syminfo.currency
 Returns the two-letter code of the country where the symbol is traded, in the ISO 3166-1 alpha-2 format, or na if the exchange is not directly tied to a specific country. For example, on "NASDAQ:AAPL" it will return "US", on "LSE:AAPL" it will return "GB", and on "BITSTAMP:BTCUSD it will return na.
 
 ### Type
@@ -1238,24 +1144,21 @@ Returns a string containing the code representing the currency of the symbol's p
 
 `simple string`
 
-## syminfo.current_contract
-
+## syminfo.basecurrency
 The ticker identifier of the underlying contract, if the current symbol is a continuous futures contract; na otherwise.
 
 ### Type
 
 `simple string`
 
-## syminfo.description
-
-## Description for the current symbol.
+## syminfo.ticker
+Description for the current symbol.
 
 ### Type
 
 `simple string`
 
-## syminfo.employees
-
+## syminfo.ticker
 The number of employees the company has.
 
 ### Type
@@ -1285,11 +1188,13 @@ if barstate.islastconfirmedhistory
     // Add total shares outstanding cells.
     table.cell(table_id = result_table, column = 0, row = 4, text = "shares_outstanding_total")
     table.cell(table_id = result_table, column = 1, row = 4, text = str.tostring(syminfo.shares_outstanding_total))
-```
-
-## syminfo.expiration_date
-
+See also
+syminfo.shareholders
+syminfo.shares_outstanding_float
+syminfo.shares_outstanding_total
+syminfo.expiration_date
 A UNIX timestamp representing the start of the last day of the current futures contract. This variable is only compatible with non-continuous futures symbols. On other symbols, it returns na.
+```
 
 ### Type
 
@@ -1315,24 +1220,21 @@ A ticker identifier representing the current chart's symbol. The value contains 
 
 `simple string`
 
-## syminfo.mincontract
-
+## ticker.new()
 The smallest amount of the current symbol that can be traded. This limit is set by the exchange. For cryptocurrencies, it is often less than 1 token. For most other types of asset, it is often 1.
 
 ### Type
 
 `simple float`
 
-## syminfo.minmove
-
+## syminfo.mintick
 - **`Returns a whole number used to calculate the smallest increment between a symbol's price movements`** (syminfo.mintick). It is the numerator in the syminfo.mintick formula: syminfo.minmove / syminfo.pricescale = syminfo.mintick.
 
 ### Type
 
 `simple int`
 
-## syminfo.mintick
-
+## ticker.new()
 Min tick value for the current symbol.
 
 ### Type
@@ -1340,7 +1242,6 @@ Min tick value for the current symbol.
 `simple float`
 
 ## syminfo.pointvalue
-
 The chart price of a security multiplied by the point value equals the actual price of the traded security.
 
 For all types of security except futures, the point value is usually equal to 1 and can therefore be ignored. For futures, the prices shown on the chart are either the cost of a single futures contract, in which case the point value is 1, or the price of a single unit of the underlying commodity, in which case the point value represents the number of units included in a single contract.
@@ -1353,8 +1254,7 @@ The point value is also displayed in the Security Info window for a given asset.
 
 `simple float`
 
-## syminfo.prefix
-
+## syminfo.mintick
 Prefix of current symbol name (i.e. for 'CME_EOD:TICKER' prefix is 'CME_EOD').
 
 ### Type
@@ -1369,18 +1269,18 @@ indicator("syminfo.prefix")
 // If current chart symbol is 'BATS:MSFT' then syminfo.prefix is 'BATS'.
 if barstate.islastconfirmedhistory
     label.new(bar_index, high, text=syminfo.prefix)
+See also
+syminfo.ticker
+syminfo.tickerid
+syminfo.pricescale
+Returns a whole number used to calculate the smallest increment between a symbol's price movements (syminfo.mintick). It is the denominator in the syminfo.mintick formula: syminfo.minmove / syminfo.pricescale = syminfo.mintick.
 ```
-
-## syminfo.pricescale
-
-- **`Returns a whole number used to calculate the smallest increment between a symbol's price movements`** (syminfo.mintick). It is the denominator in the syminfo.mintick formula: syminfo.minmove / syminfo.pricescale = syminfo.mintick.
 
 ### Type
 
 `simple int`
 
-## syminfo.recommendations_buy
-
+## ticker.new()
 The number of analysts who gave the current symbol a "Buy" rating.
 
 ### Type
@@ -1421,11 +1321,16 @@ if barstate.islastconfirmedhistory
     table.cell(ratings, 2, 1, buyRatings, bgcolor = color.teal, text_color = #000000, text_size = size.large)
     table.cell(ratings, 3, 1, strongBuyRatings, bgcolor = color.lime, text_color = #000000, text_size = size.large)
     table.cell(ratings, 4, 1, sellRatings, bgcolor = color.maroon, text_color = #000000, text_size = size.large)
-```
-
-## syminfo.recommendations_buy_strong
-
+See also
+syminfo.recommendations_buy_strong
+syminfo.recommendations_date
+syminfo.recommendations_hold
+syminfo.recommendations_total
+syminfo.recommendations_sell
+syminfo.recommendations_sell_strong
+syminfo.recommendations_buy_strong
 The number of analysts who gave the current symbol a "Strong Buy" rating.
+```
 
 ### Type
 
@@ -1465,11 +1370,16 @@ if barstate.islastconfirmedhistory
     table.cell(ratings, 2, 1, buyRatings, bgcolor = color.teal, text_color = #000000, text_size = size.large)
     table.cell(ratings, 3, 1, strongBuyRatings, bgcolor = color.lime, text_color = #000000, text_size = size.large)
     table.cell(ratings, 4, 1, sellRatings, bgcolor = color.maroon, text_color = #000000, text_size = size.large)
-```
-
-## syminfo.recommendations_date
-
+See also
+syminfo.recommendations_buy
+syminfo.recommendations_date
+syminfo.recommendations_hold
+syminfo.recommendations_total
+syminfo.recommendations_sell
+syminfo.recommendations_sell_strong
+syminfo.recommendations_date
 The starting date of the last set of recommendations for the current symbol.
+```
 
 ### Type
 
@@ -1509,11 +1419,16 @@ if barstate.islastconfirmedhistory
     table.cell(ratings, 2, 1, buyRatings, bgcolor = color.teal, text_color = #000000, text_size = size.large)
     table.cell(ratings, 3, 1, strongBuyRatings, bgcolor = color.lime, text_color = #000000, text_size = size.large)
     table.cell(ratings, 4, 1, sellRatings, bgcolor = color.maroon, text_color = #000000, text_size = size.large)
-```
-
-## syminfo.recommendations_hold
-
+See also
+syminfo.recommendations_buy
+syminfo.recommendations_buy_strong
+syminfo.recommendations_hold
+syminfo.recommendations_total
+syminfo.recommendations_sell
+syminfo.recommendations_sell_strong
+syminfo.recommendations_hold
 The number of analysts who gave the current symbol a "Hold" rating.
+```
 
 ### Type
 
@@ -1553,11 +1468,16 @@ if barstate.islastconfirmedhistory
     table.cell(ratings, 2, 1, buyRatings, bgcolor = color.teal, text_color = #000000, text_size = size.large)
     table.cell(ratings, 3, 1, strongBuyRatings, bgcolor = color.lime, text_color = #000000, text_size = size.large)
     table.cell(ratings, 4, 1, sellRatings, bgcolor = color.maroon, text_color = #000000, text_size = size.large)
-```
-
-## syminfo.recommendations_sell
-
+See also
+syminfo.recommendations_buy
+syminfo.recommendations_buy_strong
+syminfo.recommendations_date
+syminfo.recommendations_total
+syminfo.recommendations_sell
+syminfo.recommendations_sell_strong
+syminfo.recommendations_sell
 The number of analysts who gave the current symbol a "Sell" rating.
+```
 
 ### Type
 
@@ -1597,11 +1517,16 @@ if barstate.islastconfirmedhistory
     table.cell(ratings, 2, 1, buyRatings, bgcolor = color.teal, text_color = #000000, text_size = size.large)
     table.cell(ratings, 3, 1, strongBuyRatings, bgcolor = color.lime, text_color = #000000, text_size = size.large)
     table.cell(ratings, 4, 1, sellRatings, bgcolor = color.maroon, text_color = #000000, text_size = size.large)
-```
-
-## syminfo.recommendations_sell_strong
-
+See also
+syminfo.recommendations_buy
+syminfo.recommendations_buy_strong
+syminfo.recommendations_date
+syminfo.recommendations_hold
+syminfo.recommendations_total
+syminfo.recommendations_sell_strong
+syminfo.recommendations_sell_strong
 The number of analysts who gave the current symbol a "Strong Sell" rating.
+```
 
 ### Type
 
@@ -1641,11 +1566,16 @@ if barstate.islastconfirmedhistory
     table.cell(ratings, 2, 1, buyRatings, bgcolor = color.teal, text_color = #000000, text_size = size.large)
     table.cell(ratings, 3, 1, strongBuyRatings, bgcolor = color.lime, text_color = #000000, text_size = size.large)
     table.cell(ratings, 4, 1, sellRatings, bgcolor = color.maroon, text_color = #000000, text_size = size.large)
-```
-
-## syminfo.recommendations_total
-
+See also
+syminfo.recommendations_buy
+syminfo.recommendations_buy_strong
+syminfo.recommendations_date
+syminfo.recommendations_hold
+syminfo.recommendations_total
+syminfo.recommendations_sell
+syminfo.recommendations_total
 The total number of recommendations for the current symbol.
+```
 
 ### Type
 
@@ -1685,11 +1615,16 @@ if barstate.islastconfirmedhistory
     table.cell(ratings, 2, 1, buyRatings, bgcolor = color.teal, text_color = #000000, text_size = size.large)
     table.cell(ratings, 3, 1, strongBuyRatings, bgcolor = color.lime, text_color = #000000, text_size = size.large)
     table.cell(ratings, 4, 1, sellRatings, bgcolor = color.maroon, text_color = #000000, text_size = size.large)
-```
-
-## syminfo.root
-
+See also
+syminfo.recommendations_buy
+syminfo.recommendations_buy_strong
+syminfo.recommendations_date
+syminfo.recommendations_hold
+syminfo.recommendations_sell
+syminfo.recommendations_sell_strong
+syminfo.root
 Root for derivatives like futures contract. For other symbols returns the same value as syminfo.ticker.
+```
 
 ### Type
 
@@ -1703,11 +1638,12 @@ indicator("syminfo.root")
 // If the current chart symbol is continuous futures ('ES1!'), it would display 'ES'.
 if barstate.islastconfirmedhistory
     label.new(bar_index, high, syminfo.root)
-```
-
-## syminfo.sector
-
+See also
+syminfo.ticker
+syminfo.tickerid
+syminfo.sector
 Returns the sector of the symbol, or na if the symbol has no sector. Example: "Electronic Technology", "Technology services", "Energy Minerals", "Consumer Durables", etc. These are the same values one can see in the chart's "Symbol info" window.
+```
 
 ### Type
 
@@ -1725,8 +1661,7 @@ Session type of the chart main series. Possible values are session.regular, sess
 
 `simple string`
 
-## syminfo.shareholders
-
+## session.regular
 The number of shareholders the company has.
 
 ### Type
@@ -1756,11 +1691,13 @@ if barstate.islastconfirmedhistory
     // Add total shares outstanding cells.
     table.cell(table_id = result_table, column = 0, row = 4, text = "shares_outstanding_total")
     table.cell(table_id = result_table, column = 1, row = 4, text = str.tostring(syminfo.shares_outstanding_total))
-```
-
-## syminfo.shares_outstanding_float
-
+See also
+syminfo.employees
+syminfo.shares_outstanding_float
+syminfo.shares_outstanding_total
+syminfo.shares_outstanding_float
 The total number of shares outstanding a company has available, excluding any of its restricted shares.
+```
 
 ### Type
 
@@ -1789,11 +1726,13 @@ if barstate.islastconfirmedhistory
     // Add total shares outstanding cells.
     table.cell(table_id = result_table, column = 0, row = 4, text = "shares_outstanding_total")
     table.cell(table_id = result_table, column = 1, row = 4, text = str.tostring(syminfo.shares_outstanding_total))
-```
-
-## syminfo.shares_outstanding_total
-
+See also
+syminfo.employees
+syminfo.shareholders
+syminfo.shares_outstanding_total
+syminfo.shares_outstanding_total
 The total number of shares outstanding a company has available, including restricted shares held by insiders, major shareholders, and employees.
+```
 
 ### Type
 
@@ -1822,11 +1761,13 @@ if barstate.islastconfirmedhistory
     // Add total shares outstanding cells.
     table.cell(table_id = result_table, column = 0, row = 4, text = "shares_outstanding_total")
     table.cell(table_id = result_table, column = 1, row = 4, text = str.tostring(syminfo.shares_outstanding_total))
-```
-
-##  syminfo.target_price_average
-
+See also
+syminfo.employees
+syminfo.shareholders
+syminfo.shares_outstanding_float
+syminfo.target_price_average
 The average of the last yearly price targets for the symbol predicted by analysts.
+```
 
 ### Type
 
@@ -1861,7 +1802,6 @@ if barstate.islastconfirmedhistory
 If analysts supply the targets when the market is closed, the variable can return na until the market opens.
 
 ## syminfo.target_price_date
-
 The starting date of the last price target prediction for the current symbol.
 
 ### Type
@@ -1896,8 +1836,7 @@ if barstate.islastconfirmedhistory
 
 If analysts supply the targets when the market is closed, the variable can return na until the market opens.
 
-## syminfo.target_price_estimates
-
+## syminfo.target_price_average
 The latest total number of price target predictions for the current symbol.
 
 ### Type
@@ -1932,8 +1871,7 @@ if barstate.islastconfirmedhistory
 
 If analysts supply the targets when the market is closed, the variable can return na until the market opens.
 
-## syminfo.target_price_high
-
+## syminfo.target_price_average
 The last highest yearly price target for the symbol predicted by analysts.
 
 ### Type
@@ -1968,8 +1906,7 @@ if barstate.islastconfirmedhistory
 
 If analysts supply the targets when the market is closed, the variable can return na until the market opens.
 
-## syminfo.target_price_low
-
+## syminfo.target_price_average
 The last lowest yearly price target for the symbol predicted by analysts.
 
 ### Type
@@ -2004,8 +1941,7 @@ if barstate.islastconfirmedhistory
 
 If analysts supply the targets when the market is closed, the variable can return na until the market opens.
 
-## syminfo.target_price_median
-
+## syminfo.target_price_average
 The median of the last yearly price targets for the symbol predicted by analysts.
 
 ### Type
@@ -2040,8 +1976,7 @@ if barstate.islastconfirmedhistory
 
 If analysts supply the targets when the market is closed, the variable can return na until the market opens.
 
-## syminfo.ticker
-
+## syminfo.target_price_average
 Symbol name without exchange prefix, e.g. 'MSFT'.
 
 ### Type
@@ -2049,7 +1984,6 @@ Symbol name without exchange prefix, e.g. 'MSFT'.
 `simple string`
 
 ## syminfo.tickerid
-
 A ticker identifier representing the chart's symbol or a requested symbol, depending on how the script uses it. The variable's value represents a requested dataset's ticker ID when used in the expression argument of a request.*() function call. Otherwise, it represents the chart's ticker ID. The value contains an exchange prefix and a symbol name, separated by a colon (e.g., "NASDAQ:AAPL"). It can also include information about data modifications such as dividend adjustment, non-standard chart type, currency conversion, etc.
 
 ### Type
@@ -2062,13 +1996,14 @@ Because the value of this variable does not always use a simple "prefix:ticker" 
 
 To always access the script's main ticker ID, even within another context, use the syminfo.main_tickerid variable.
 
-## syminfo.timezone
-
+## ticker.new()
 Timezone of the exchange of the chart main series. Possible values see in timestamp().
 
 ### Type
 
 `simple string`
+
+## timestamp()
 
 ## syminfo.type
 
@@ -2077,6 +2012,8 @@ The type of market the symbol belongs to. The values are "stock", "fund", "dr", 
 ### Type
 
 `simple string`
+
+## syminfo.ticker
 
 ## syminfo.volumetype
 
@@ -2090,9 +2027,11 @@ Volume type of the current symbol. Possible values are: "base" for base currency
 
 Only some data feed suppliers provide information qualifying volume. As a result, the variable will return a value on some symbols only, mostly in the crypto sector.
 
+## syminfo.type
+
 ## ta.accdist
 
-## Accumulation/distribution index.
+Accumulation/distribution index.
 
 ### Type
 
@@ -2100,7 +2039,7 @@ Only some data feed suppliers provide information qualifying volume. As a result
 
 ## ta.iii
 
-## Intraday Intensity Index.
+Intraday Intensity Index.
 
 ### Type
 
@@ -2121,7 +2060,7 @@ f_iii() =>
 
 ## ta.nvi
 
-## Negative Volume Index.
+Negative Volume Index.
 
 ### Type
 
@@ -2158,7 +2097,7 @@ indicator("Negative Volume Index")
 
 ## ta.obv
 
-## On Balance Volume.
+On Balance Volume.
 
 ### Type
 
@@ -2179,7 +2118,7 @@ f_obv() =>
 
 ## ta.pvi
 
-## Positive Volume Index.
+Positive Volume Index.
 
 ### Type
 
@@ -2216,7 +2155,7 @@ indicator("Positive Volume Index")
 
 ## ta.pvt
 
-## Price-Volume Trend.
+Price-Volume Trend.
 
 ### Type
 
@@ -2243,29 +2182,60 @@ True range, equivalent to ta.tr(handle_na = false). It is calculated as math.max
 
 `series float`
 
-## ta.vwap
-
+## ta.tr()
 Volume Weighted Average Price. It uses hlc3 as its source series.
 
 ### Type
 
 `series float`
 
+## ta.vwap()
+
 ## ta.wad
 
-## Williams Accumulation/Distribution.
+Williams Accumulation/Distribution.
 
 ### Type
 
 `series float`
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Williams Accumulation/Distribution")
+plot(ta.wad, color=color.yellow)
+// the same on pine
+f_wad() =>
+    trueHigh = math.max(high, close[1])
+    trueLow = math.min(low, close[1])
+    mom = ta.change(close)
+    gain = (mom > 0) ? close - trueLow : (mom < 0) ? close - trueHigh : 0
+    ta.cum(gain)
+```
+
+## plot(f_wad())
 
 ## ta.wvad
 
-## Williams Variable Accumulation/Distribution.
+Williams Variable Accumulation/Distribution.
 
 ### Type
 
 `series float`
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Williams Variable Accumulation/Distribution")
+plot(ta.wvad, color=color.yellow)
+// the same on pine
+f_wvad() =>
+    (close - open) / (high - low) * volume
+```
+
+## plot(f_wvad())
 
 ## table.all
 
@@ -2292,8 +2262,7 @@ if array.size(a_allTables) > 0
 
 The array is read-only. Index zero of the array is the ID of the oldest object on the chart.
 
-## time
-
+## table.new()
 Current bar time in UNIX format. It is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
 ### Type
@@ -2304,16 +2273,14 @@ Current bar time in UNIX format. It is the number of milliseconds that have elap
 
 Note that this variable returns the timestamp based on the time of the bar's open. Because of that, for overnight sessions (e.g. EURUSD, where Monday session starts on Sunday, 17:00) this variable can return time before the specified date of the trading day. For example, on EURUSD, dayofmonth(time) can be lower by 1 than the date of the trading day, because the bar for the current day actually opens one day prior.
 
-## time_close
-
+## time()
 - **`The time of the current bar's close in UNIX format. It represents the number of milliseconds elapsed since 00:00:00 UTC, 1 January 1970. On tick charts and price-based charts such as Renko, line break, Kagi, point & figure, and range, this variable's series holds an na timestamp for the latest realtime bar`** (because the future closing time is unpredictable), but valid timestamps for all previous bars.
 
 ### Type
 
 `series int`
 
-## time_tradingday
-
+## time
 The timestamp that represents 00:00 UTC of the trading day the current bar belongs to, in UNIX format (the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970).
 
 ### Type
@@ -2349,8 +2316,7 @@ bgcolor(isFridaySession ? color.new(color.teal, 80) : na, title = "isFridaySessi
 
 This variable is helpful when working with overnight sessions, where the day's session can begin on the previous calendar day. For example, on the "FXCM:EURUSD" symbol, the Monday session starts on Sunday, 17:00, exchange time. Unlike time, which returns the timestamp for Sunday at 17:00 on the Monday daily bar, time_tradingday returns the timestamp for Monday at 00:00 UTC. When used on timeframes higher than "1D", time_tradingday returns the timestamp of the last trading day inside that bar (e.g., on "1W", it returns the timestamp of the final trading day within the week).
 
-## timeframe.isdaily
-
+## time
 Returns true if current resolution is a daily resolution, false otherwise.
 
 ### Type
@@ -2358,7 +2324,6 @@ Returns true if current resolution is a daily resolution, false otherwise.
 `simple bool`
 
 ## timeframe.isdwm
-
 Returns true if current resolution is a daily or weekly or monthly resolution, false otherwise.
 
 ### Type
@@ -2366,7 +2331,6 @@ Returns true if current resolution is a daily or weekly or monthly resolution, f
 `simple bool`
 
 ## timeframe.isintraday
-
 - **`Returns true if current resolution is an intraday`** (minutes or seconds) resolution, false otherwise.
 
 ### Type
@@ -2374,47 +2338,41 @@ Returns true if current resolution is a daily or weekly or monthly resolution, f
 `simple bool`
 
 ## timeframe.isminutes
-
 Returns true if current resolution is a minutes resolution, false otherwise.
 
 ### Type
 
 `simple bool`
 
-## timeframe.ismonthly
-
+## timeframe.isdwm
 Returns true if current resolution is a monthly resolution, false otherwise.
 
 ### Type
 
 `simple bool`
 
-## timeframe.isseconds
-
+## timeframe.isdwm
 Returns true if current resolution is a seconds resolution, false otherwise.
 
 ### Type
 
 `simple bool`
 
-## timeframe.isticks
-
+## timeframe.isdwm
 Returns true if current resolution is a ticks resolution, false otherwise.
 
 ### Type
 
 `simple bool`
 
-## timeframe.isweekly
-
+## timeframe.isdwm
 Returns true if current resolution is a weekly resolution, false otherwise.
 
 ### Type
 
 `simple bool`
 
-## timeframe.main_period
-
+## timeframe.isdwm
 A string representation of the script's main timeframe. If the script is an indicator() that specifies a timeframe value in its declaration statement, this variable holds that value. Otherwise, its value represents the chart's timeframe. Unlike timeframe.period, this variable's value does not change when used in the expression argument of a request.*() function call.
 
 The string's format is "<quantity>[<unit>]", where <unit> is "T" for ticks, "S" for seconds, "D" for days, "W" for weeks, and "M" for months, but is absent for minutes. No <unit> exists for hours: hourly timeframes are expressed in minutes.
@@ -2425,16 +2383,14 @@ The variable's value is: "10S" for 10 seconds, "30" for 30 minutes, "240" for fo
 
 `simple string`
 
-## timeframe.multiplier
-
+## timeframe.period
 Multiplier of resolution, e.g. '60' - 60, 'D' - 1, '5D' - 5, '12M' - 12.
 
 ### Type
 
 `simple int`
 
-## timeframe.period
-
+## syminfo.ticker
 - **`A string representation of the script's main timeframe or a requested timeframe, depending on how the script uses it. The variable's value represents the timeframe of a requested dataset when used in the expression argument of a request.*() function call. Otherwise, its value represents the script's main timeframe`** (timeframe.main_period), which equals either the timeframe argument of the indicator() declaration statement or the chart's timeframe.
 
 The string's format is "<quantity>[<unit>]", where <unit> is "T" for ticks, "S" for seconds, "D" for days, "W" for weeks, and "M" for months, but is absent for minutes. No <unit> exists for hours: hourly timeframes are expressed in minutes.
@@ -2449,24 +2405,29 @@ The variable's value is: "10S" for 10 seconds, "30" for 30 minutes, "240" for fo
 
 To always access the script's main timeframe, even within another context, use the timeframe.main_period variable.
 
-## timenow
-
+## timeframe.main_period
 Current time in UNIX format. It is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
 ### Type
 
 `series int`
 
-## volume
+### Remarks
 
-## Current bar volume.
+Please note that using this variable/function can cause indicator repainting.
+
+## timestamp()
+Current bar volume.
 
 ### Type
 
 `series float`
 
-## weekofyear
+### Remarks
 
+Previous values may be accessed with square brackets operator [], e.g. volume[1], volume[2].
+
+## open
 The week number of the year, in the exchange time zone, calculated from the bar's opening UNIX timestamp.
 
 ### Type
@@ -2477,8 +2438,7 @@ The week number of the year, in the exchange time zone, calculated from the bar'
 
 This variable always references the week number corresponding to the bar's opening time. Consequently, for symbols with overnight sessions (e.g., "EURUSD", where the "Monday" session starts on Sunday at 17:00 in exchange time), the value may represent a previous calendar week rather than the week of the session's primary trading day.
 
-## year
-
+## weekofyear()
 Current bar year in exchange timezone.
 
 ### Type
@@ -2489,10 +2449,7 @@ Current bar year in exchange timezone.
 
 Note that this variable returns the year based on the time of the bar's open. For overnight sessions (e.g. EURUSD, where Monday session starts on Sunday, 17:00) this value can be lower by 1 than the year of the trading day.
 
-# CONSTANTS
-
-## adjustment.dividends
-
+## year()
 Constant for dividends adjustment type (dividends adjustment is applied).
 
 ### Type
@@ -2500,7 +2457,6 @@ Constant for dividends adjustment type (dividends adjustment is applied).
 `const string`
 
 ## adjustment.none
-
 Constant for none adjustment type (no adjustment is applied).
 
 ### Type
@@ -2508,15 +2464,13 @@ Constant for none adjustment type (no adjustment is applied).
 `const string`
 
 ## adjustment.splits
-
 Constant for splits adjustment type (splits adjustment is applied).
 
 ### Type
 
 `const string`
 
-## alert.freq_all
-
+## adjustment.none
 A named constant for use with the freq parameter of the alert() function.
 
 All function calls trigger the alert.
@@ -2524,6 +2478,8 @@ All function calls trigger the alert.
 ### Type
 
 `const string`
+
+## alert()
 
 ## alert.freq_once_per_bar
 
@@ -2535,6 +2491,8 @@ The first function call during the bar triggers the alert.
 
 `const string`
 
+## alert()
+
 ## alert.freq_once_per_bar_close
 
 A named constant for use with the freq parameter of the alert() function.
@@ -2545,6 +2503,8 @@ The function call triggers the alert only when it occurs during the last script 
 
 `const string`
 
+## alert()
+
 ## backadjustment.inherit
 
 A constant to specify the value of the backadjustment parameter in ticker.new() and ticker.modify() functions.
@@ -2553,139 +2513,727 @@ A constant to specify the value of the backadjustment parameter in ticker.new() 
 
 `const backadjustment`
 
-## backadjustment.off
-
+## ticker.new()
 A constant to specify the value of the backadjustment parameter in ticker.new() and ticker.modify() functions.
 
 ### Type
 
 `const backadjustment`
 
-## backadjustment.on
-
+## ticker.new()
 A constant to specify the value of the backadjustment parameter in ticker.new() and ticker.modify() functions.
 
 ### Type
 
 `const backadjustment`
 
-## barmerge.gaps_off
-
+## ticker.new()
 Merge strategy for requested data. Data is merged continuously without gaps, all the gaps are filled with the previous nearest existing value.
 
 ### Type
 
 `const barmerge_gaps`
 
-## barmerge.gaps_on
-
+## request.security()
 Merge strategy for requested data. Data is merged with possible gaps (na values).
 
 ### Type
 
 `const barmerge_gaps`
 
-## barmerge.lookahead_off
-
+## request.security()
 Merge strategy for the requested data position. Requested barset is merged with current barset in the order of sorting bars by their close time. This merge strategy disables effect of getting data from "future" on calculation on history.
 
 ### Type
 
 `const barmerge_lookahead`
 
-## barmerge.lookahead_on
-
+## request.security()
 Merge strategy for the requested data position. Requested barset is merged with current barset in the order of sorting bars by their opening time. This merge strategy can lead to undesirable effect of getting data from "future" on calculation on history. This is unacceptable in backtesting strategies, but can be useful in indicators.
 
 ### Type
 
 `const barmerge_lookahead`
 
-## color.aqua
-
+## request.security()
 Is a named constant for #00BCD4 color.
 
-## color.blue
+### Type
 
-Is a named constant for #2962ff color.
-
-## color.fuchsia
-
-Is a named constant for #E040FB color.
-
-## color.gray
-
-Is a named constant for #787B86 color.
-
-## color.green
-
-Is a named constant for #4CAF50 color.
-
-## color.lime
-
-Is a named constant for #00E676 color.
+`const color`
 
 ## color.black
-
 Is a named constant for #363A45 color.
 
-## color.maroon
+### Type
 
-Is a named constant for #880E4F color.
-
-## color.navy
-
-Is a named constant for #311B92 color.
-
-## color.olive
-
-Is a named constant for #808000 color.
-
-## color.orange
-
-Is a named constant for #FF9800 color.
-
-## color.purple
-
-Is a named constant for #9C27B0 color.
-
-## color.red
-
-Is a named constant for #F23645 color.
+`const color`
 
 ## color.silver
+Is a named constant for #2962ff color.
 
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #E040FB color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #787B86 color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #4CAF50 color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #00E676 color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #880E4F color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #311B92 color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #808000 color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #FF9800 color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #9C27B0 color.
+
+### Type
+
+`const color`
+
+## color.black
+Is a named constant for #F23645 color.
+
+### Type
+
+`const color`
+
+## color.black
 Is a named constant for #B2B5BE color.
 
-## color.teal
+### Type
 
+`const color`
+
+## color.black
 Is a named constant for #089981 color.
 
-## color.white
+### Type
 
+`const color`
+
+## color.black
 Is a named constant for #FFFFFF color.
 
-## color.yellow
+### Type
 
+`const color`
+
+## color.black
 Is a named constant for #FDD835 color.
 
 ### Type
 
 `const color`
 
+## color.black
+Arab Emirates Dirham.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.ARS
+
+Argentine Pesos.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.AUD
+
+Australian dollar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.BDT
+
+Bangladeshi Taka.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.BHD
+
+Bahraini Dinar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.BRL
+
+Brazilian real.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.BTC
+
+Bitcoin.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.CAD
+
+Canadian dollar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.CHF
+
+Swiss franc.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.CLP
+
+Chilean Peso.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.CNY
+
+Chinese Yuan.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.COP
+
+Colombian Peso.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.CZK
+
+Czech Koruna.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.DKK
+
+Danish Krone.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.EGP
+
+Egyptian pound.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.ETH
+
+Ethereum.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.EUR
+
+Euro.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.GBP
+
+Pound sterling.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.HKD
+
+Hong Kong dollar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.HUF
+
+Hungarian Forint.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.IDR
+
+Indonesian Rupiah.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.ILS
+
+Israeli New Shekel.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.INR
+
+Indian rupee.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.ISK
+
+Icelandic Krona.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.JPY
+
+Japanese yen.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.KES
+
+Kenyan Shilling.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.KRW
+
+South Korean won.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.KWD
+
+Kuwaiti Dinar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.LKR
+
+Sri Lankan Rupee.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.MAD
+
+Moroccan Dirham.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.MXN
+
+Mexican Peso.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.MYR
+
+Malaysian ringgit.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.NGN
+
+Nigerian Naira.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.NOK
+
+Norwegian krone.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.NONE
+
+Unspecified currency.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.NZD
+
+New Zealand dollar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.PEN
+
+Peruvian sol.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.PHP
+
+Philippine Peso.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.PKR
+
+Pakistani rupee.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.PLN
+
+Polish zloty.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.QAR
+
+Qatari Riyal.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.RON
+
+Romanian Leu.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.RSD
+
+Serbian Dinar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.RUB
+
+Russian ruble.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.SAR
+
+Saudi Riyal.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.SEK
+
+Swedish krona.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.SGD
+
+Singapore dollar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.THB
+
+Thai Baht.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.TND
+
+Tunisian Dinar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.TRY
+
+Turkish lira.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.TWD
+
+New Taiwan Dollar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.USD
+
+United States dollar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.USDT
+
+Tether.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.VES
+
+Venezuelan Bolivar.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.VND
+
+Vietnamese Dong.
+
+### Type
+
+`const string`
+
+## strategy()
+
+## currency.ZAR
+
+South African rand.
+
+### Type
+
+`const string`
+
+## strategy()
+
 ## dayofweek.friday
-
-## dayofweek.monday
-
-## dayofweek.saturday
-
-## dayofweek.sunday
-
-## dayofweek.thursday
-
-## dayofweek.tuesday
-
-## dayofweek.wednesday
 
 Is a named constant for return value of dayofweek() function and value of dayofweek variable.
 
@@ -2693,8 +3241,49 @@ Is a named constant for return value of dayofweek() function and value of dayofw
 
 `const int`
 
-## display.all
+## dayofweek.sunday
+Is a named constant for return value of dayofweek() function and value of dayofweek variable.
 
+### Type
+
+`const int`
+
+## dayofweek.sunday
+Is a named constant for return value of dayofweek() function and value of dayofweek variable.
+
+### Type
+
+`const int`
+
+## dayofweek.sunday
+Is a named constant for return value of dayofweek() function and value of dayofweek variable.
+
+### Type
+
+`const int`
+
+## dayofweek.monday
+Is a named constant for return value of dayofweek() function and value of dayofweek variable.
+
+### Type
+
+`const int`
+
+## dayofweek.sunday
+Is a named constant for return value of dayofweek() function and value of dayofweek variable.
+
+### Type
+
+`const int`
+
+## dayofweek.sunday
+Is a named constant for return value of dayofweek() function and value of dayofweek variable.
+
+### Type
+
+`const int`
+
+## dayofweek.sunday
 A named constant for use with the display parameter of the plot*(), input*(), fill(), bgcolor(), barcolor(), and hline() functions. Specifies that the values or visuals appear in all possible locations by default.
 
 ### Type
@@ -2707,8 +3296,7 @@ The display.* constants support + and - operations, enabling custom combinations
 
 Selecting a deselected plot in the script's "Settings/Style" tab changes its display settings, causing the plotted data to appear in all available chart locations. To restore the display settings coded in the script, select "Reset settings" from the "Defaults" dropdown menu at the bottom of the "Settings" dialog box.
 
-## display.data_window
-
+## plot()
 A named constant for use with the display parameter of the plot*() and input*() functions. Specifies that the values are available in the Data Window by default. The Data Window tab is accessible by clicking the "Object Tree and Data Window" icon in the chart's right sidebar.
 
 ### Type
@@ -2721,8 +3309,7 @@ The display.* constants support + and - operations, enabling custom combinations
 
 Selecting a deselected plot in the script's "Settings/Style" tab changes its display settings, causing the plotted data to appear in all available chart locations. To restore the display settings coded in the script, select "Reset settings" from the "Defaults" dropdown menu at the bottom of the "Settings" dialog box.
 
-## display.none
-
+## plot()
 A named constant for use with the display parameter of the plot*(), input*(), fill(), bgcolor(), barcolor(), and hline() functions. Specifies that the values or visuals are not displayed anywhere by default.
 
 ### Type
@@ -2733,8 +3320,7 @@ A named constant for use with the display parameter of the plot*(), input*(), fi
 
 Selecting a deselected plot in the script's "Settings/Style" tab changes its display settings, causing the plotted data to appear in all available chart locations. To restore the display settings coded in the script, select "Reset settings" from the "Defaults" dropdown menu at the bottom of the "Settings" dialog box.
 
-## display.pane
-
+## plot()
 A named constant for use with the display parameter of the plot*() functions. Specifies that the plotted values are displayed in a chart pane by default.
 
 ### Type
@@ -2747,8 +3333,7 @@ The display.* constants support + and - operations, enabling custom combinations
 
 Selecting a deselected plot in the script's "Settings/Style" tab changes its display settings, causing the plotted data to appear in all available chart locations. To restore the display settings coded in the script, select "Reset settings" from the "Defaults" dropdown menu at the bottom of the "Settings" dialog box.
 
-## display.pine_screener
-
+## plot()
 A named constant for use with the display parameter of the plot() function. Specifies that, by default, the Pine Screener displays a column for the plot's values when the user applies the indicator to the chosen watchlist.
 
 ### Type
@@ -2761,8 +3346,7 @@ The display.* constants support + and - operations, enabling custom combinations
 
 The Pine Screener displays columns for only the first 10 enabled plots from a script by default. If a plot's default display settings do not include the screener, or if the screener already shows columns for 10 other plots from the script, users can configure the screener to show a column for the plot by using the "Manage columns" menu at the far right of the table header.
 
-## display.price_scale
-
+## plot()
 A named constant for use with the display parameter of the plot*() functions. Specifies that the price scale displays a label for the plot's data, but only if the chart's settings allow it.
 
 ### Type
@@ -2775,8 +3359,7 @@ The display.* constants support + and - operations, enabling custom combinations
 
 Selecting a deselected plot in the script's "Settings/Style" tab changes its display settings, causing the plotted data to appear in all available chart locations. To restore the display settings coded in the script, select "Reset settings" from the "Defaults" dropdown menu at the bottom of the "Settings" dialog box.
 
-## display.status_line
-
+## plot()
 A named constant for use with the display parameter of the plot*() and input*() functions. Specifies that the values are available in the script's status line, but only if the chart's settings allow it.
 
 ### Type
@@ -2789,47 +3372,56 @@ The display.* constants support + and - operations, enabling custom combinations
 
 Selecting a deselected plot in the script's "Settings/Style" tab changes its display settings, causing the plotted data to appear in all available chart locations. To restore the display settings coded in the script, select "Reset settings" from the "Defaults" dropdown menu at the bottom of the "Settings" dialog box.
 
-## dividends.gross
-
+## plot()
 A named constant for the request.dividends() function. Is used to request the dividends return on a stock before deductions.
 
 ### Type
 
 `const string`
 
+## request.dividends()
+
 ## dividends.net
 
 A named constant for the request.dividends() function. Is used to request the dividends return on a stock after deductions.
 
-## Search
+### Type
 
-Version 6
+`const string`
+
+## request.dividends()
 
 ## earnings.actual
 
 A named constant for the request.earnings() function. Is used to request the earnings value as it was reported.
 
+### Type
+
+`const string`
+
+## request.earnings()
+
 ## earnings.estimate
 
 A named constant for the request.earnings() function. Is used to request the estimated earnings value.
+
+### Type
+
+`const string`
+
+## request.earnings()
 
 ## earnings.standardized
 
 A named constant for the request.earnings() function. Is used to request the standardized earnings value.
 
+### Type
+
+`const string`
+
+## request.earnings()
+
 ## extend.both
-
-A named constant for line.new() and line.set_extend() functions.
-
-## extend.left
-
-A named constant for line.new() and line.set_extend() functions.
-
-## extend.none
-
-A named constant for line.new() and line.set_extend() functions.
-
-## extend.right
 
 A named constant for line.new() and line.set_extend() functions.
 
@@ -2837,9 +3429,35 @@ A named constant for line.new() and line.set_extend() functions.
 
 `const string`
 
-## false
+## line.new()
+A named constant for line.new() and line.set_extend() functions.
 
+### Type
+
+`const string`
+
+## line.new()
+A named constant for line.new() and line.set_extend() functions.
+
+### Type
+
+`const string`
+
+## line.new()
+A named constant for line.new() and line.set_extend() functions.
+
+### Type
+
+`const string`
+
+## line.new()
 Literal representing a bool value, and result of a comparison operation.
+
+### Remarks
+
+See the User Manual for comparison operators and logical operators.
+
+## bool
 
 ## font.family_default
 
@@ -2849,44 +3467,50 @@ Default text font for box.new(), box.set_text_font_family(), label.new(), label.
 
 `const string`
 
-## font.family_monospace
-
+## box.new()
 Monospace text font for box.new(), box.set_text_font_family(), label.new(), label.set_text_font_family(), table.cell() and table.cell_set_text_font_family() functions.
 
 ### Type
 
 `const string`
 
-## format.inherit
-
+## box.new()
 Is a named constant for selecting the formatting of the script output values from the parent series in the indicator() function.
 
 ### Type
 
 `const string`
 
-## format.mintick
-
+## indicator()
 Is a named constant to use with the str.tostring() function. Passing a number to str.tostring() with this argument rounds the number to the nearest value that can be divided by syminfo.mintick, without the remainder, with ties rounding up, and returns the string version of said value with trailing zeros.
 
-## format.percent
+### Type
 
+`const string`
+
+## indicator()
 Is a named constant for selecting the formatting of the script output values as a percentage in the indicator function. It adds a percent sign after values.
 
 ### Type
 
 `const string`
 
-## format.price
+### Remarks
 
+The default precision is 2, regardless of the precision of the chart itself. This can be changed with the 'precision' argument of the indicator() function.
+
+## indicator()
 Is a named constant for selecting the formatting of the script output values as prices in the indicator() function.
 
 ### Type
 
 `const string`
 
-## format.volume
+### Remarks
 
+If format is format.price, default precision value is set. You can use the precision argument of indicator function to change the precision value.
+
+## indicator()
 Is a named constant for selecting the formatting of the script output values as volume in the indicator() function, e.g. '5183' will be formatted as '5.183K'.
 
 The decimal precision rules defined by this variable take precedence over other precision settings. When an indicator(), strategy(), or plot*() call uses this format option, the function's precision parameter will not affect the result.
@@ -2895,16 +3519,14 @@ The decimal precision rules defined by this variable take precedence over other 
 
 `const string`
 
-## hline.style_dashed
-
+## indicator()
 Is a named constant for dashed linestyle of hline() function.
 
 ### Type
 
 `const hline_style`
 
-## hline.style_dotted
-
+## hline.style_solid
 Is a named constant for dotted linestyle of hline() function.
 
 ### Type
@@ -2912,265 +3534,449 @@ Is a named constant for dotted linestyle of hline() function.
 `const hline_style`
 
 ## hline.style_solid
-
 Is a named constant for solid linestyle of hline() function.
 
 ### Type
 
 `const hline_style`
 
-## label.style_arrowdown
-
+## hline.style_dotted
 Label style for label.new() and label.set_style() functions.
 
 ### Type
 
 `const string`
-
-## label.style_arrowup
-
-Label style for label.new() and label.set_style() functions.
-
-### Type
-
-`const string`
-
-See also
 
 ## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## label.set_style()
+### Type
 
-## label.set_textalign()
+`const string`
 
-## label.style_none
+## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## label.style_xcross
+### Type
 
-## label.style_cross
+`const string`
 
-## label.style_triangleup
+## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## label.style_triangledown
+### Type
 
-## label.style_flag
+`const string`
 
-## label.style_circle
+## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## label.style_arrowdown
+### Type
 
-## label.style_label_up
+`const string`
 
-## label.style_label_down
+## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## label.style_label_left
+### Type
 
-## label.style_label_right
+`const string`
 
-## label.style_label_lower_left
+## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## label.style_label_lower_right
+### Type
 
-## label.style_label_upper_left
+`const string`
 
-## label.style_label_upper_right
+## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## label.style_label_center
+### Type
 
-## label.style_square
+`const string`
 
-## label.style_diamond
+## label.new()
+Label style for label.new() and label.set_style() functions.
 
-## line.style_arrow_both
+### Type
 
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
+Label style for label.new() and label.set_style() functions.
+
+### Type
+
+`const string`
+
+## label.new()
 Line style for line.new() and line.set_style() functions. Solid line with arrows on both points.
 
-## line.style_arrow_left
+### Type
 
+`const string`
+
+## line.new()
 Line style for line.new() and line.set_style() functions. Solid line with arrow on the first point.
 
-## line.style_arrow_right
+### Type
 
+`const string`
+
+## line.new()
 Line style for line.new() and line.set_style() functions. Solid line with arrow on the second point.
 
-## line.style_dashed
+### Type
 
+`const string`
+
+## line.new()
 Line style for line.new() and line.set_style() functions.
 
-## line.style_dotted
+### Type
 
+`const string`
+
+## line.new()
 Line style for line.new() and line.set_style() functions.
 
-## line.style_solid
+### Type
 
+`const string`
+
+## line.new()
 Line style for line.new() and line.set_style() functions.
 
-## location.abovebar
+### Type
 
+`const string`
+
+## line.new()
 Location value for plotshape(), plotchar() functions. Shape is plotted above main series bars.
 
-## location.absolute
+### Type
 
+`const string`
+
+## plotshape()
 Location value for plotshape(), plotchar() functions. Shape is plotted on chart using indicator value as a price coordinate.
 
-## location.belowbar
+### Type
 
+`const string`
+
+## plotshape()
 Location value for plotshape(), plotchar() functions. Shape is plotted below main series bars.
 
-## location.bottom
+### Type
 
+`const string`
+
+## plotshape()
 Location value for plotshape(), plotchar() functions. Shape is plotted near the bottom chart border.
 
-## location.top
+### Type
 
+`const string`
+
+## plotshape()
 Location value for plotshape(), plotchar() functions. Shape is plotted near the top chart border.
 
-## math.e
+### Type
 
+`const string`
+
+## plotshape()
 Is a named constant for Euler's number. It is equal to 2.7182818284590452.
 
-## math.phi
+### Type
 
+`const float`
+
+## math.phi
 Is a named constant for the golden ratio. It is equal to 1.6180339887498948.
 
 ### Type
 
 `const float`
 
-## math.pi
-
+## math.e
 Is a named constant for Archimedes' constant. It is equal to 3.1415926535897932.
 
 ### Type
 
 `const float`
 
-## math.rphi
-
+## math.e
 Is a named constant for the golden ratio conjugate. It is equal to 0.6180339887498948.
 
-## order.ascending
+### Type
 
+`const float`
+
+## math.e
 Determines the sort order of the array from the smallest to the largest value.
 
-## order.descending
+### Type
 
+`const sort_order`
+
+## array.new_float()
 Determines the sort order of the array from the largest to the smallest value.
 
 ### Type
 
 `const sort_order`
 
-## plot.linestyle_dashed
-
+## array.new_float()
 A named constant for use with the plot() function's linestyle parameter, which modifies the appearance of plotted lines. If the style argument of the function call specifies a plot style that displays a line, using this constant as the linestyle argument specifies that the plotted line is dashed.
-
-## plot.linestyle_dotted
-
-A named constant for use with the plot() function's linestyle parameter, which modifies the appearance of plotted lines. If the style argument of the function call specifies a plot style that displays a line, using this constant as the linestyle argument specifies that the plotted line is dotted.
-
-## plot.linestyle_solid
-
-A named constant for use with the plot() function's linestyle parameter, which modifies the appearance of plotted lines. If the style argument of the function call specifies a plot style that displays a line, using this constant as the linestyle argument specifies that the plotted line is solid.
-
-## plot.style_area
-
-A named constant for the 'Area' style, to be used as an argument for the style parameter in the plot() function.
-
-## plot.style_areabr
-
-A named constant for the 'Area With Breaks' style, to be used as an argument for the style parameter in the plot() function. Similar to plot.style_area, except the gaps in the data are not filled.
-
-## plot.style_circles
-
-A named constant for the 'Circles' style, to be used as an argument for the style parameter in the plot() function.
-
-## plot.style_columns
-
-A named constant for the 'Columns' style, to be used as an argument for the style parameter in the plot() function.
-
-## plot.style_cross
-
-A named constant for the 'Cross' style, to be used as an argument for the style parameter in the plot() function.
-
-## plot.style_histogram
-
-A named constant for the 'Histogram' style, to be used as an argument for the style parameter in the plot() function.
-
-## plot.style_line
-
-A named constant for the 'Line' style, to be used as an argument for the style parameter in the plot() function.
-
-## plot.style_linebr
-
-A named constant for the 'Line With Breaks' style, to be used as an argument for the style parameter in the plot() function. Similar to plot.style_line, except the gaps in the data are not filled.
-
-## plot.style_stepline
-
-A named constant for the 'Step Line' style, to be used as an argument for the style parameter in the plot() function.
-
-## plot.style_stepline_diamond
-
-A named constant for the 'Step Line With Diamonds' style, to be used as an argument for the style parameter in the plot() function. Similar to plot.style_stepline, except the data changes are also marked with the Diamond shapes.
-
-## plot.style_steplinebr
-
-A named constant for the 'Step line with Breaks' style, to be used as an argument for the style parameter in the plot() function.
 
 ### Type
 
 `const plot_line_style`
 
-## position.bottom_center
+## plot()
+A named constant for use with the plot() function's linestyle parameter, which modifies the appearance of plotted lines. If the style argument of the function call specifies a plot style that displays a line, using this constant as the linestyle argument specifies that the plotted line is dotted.
 
+### Type
+
+`const plot_line_style`
+
+## plot()
+A named constant for use with the plot() function's linestyle parameter, which modifies the appearance of plotted lines. If the style argument of the function call specifies a plot style that displays a line, using this constant as the linestyle argument specifies that the plotted line is solid.
+
+### Type
+
+`const plot_line_style`
+
+## plot()
+A named constant for the 'Area' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Area With Breaks' style, to be used as an argument for the style parameter in the plot() function. Similar to plot.style_area, except the gaps in the data are not filled.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Circles' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Columns' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Cross' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Histogram' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Line' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Line With Breaks' style, to be used as an argument for the style parameter in the plot() function. Similar to plot.style_line, except the gaps in the data are not filled.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Step Line' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Step Line With Diamonds' style, to be used as an argument for the style parameter in the plot() function. Similar to plot.style_stepline, except the data changes are also marked with the Diamond shapes.
+
+### Type
+
+`const plot_style`
+
+## plot()
+A named constant for the 'Step line with Breaks' style, to be used as an argument for the style parameter in the plot() function.
+
+### Type
+
+`const plot_style`
+
+## plot()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the bottom edge in the center.
 
-## position.bottom_left
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the bottom left of the screen.
 
-## position.bottom_right
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the bottom right of the screen.
 
-## position.middle_center
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the center of the screen.
 
-## position.middle_left
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the left side of the screen.
 
-## position.middle_right
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the right side of the screen.
 
-## position.top_center
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the top edge in the center.
 
-## position.top_left
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the upper-left edge.
 
-## position.top_right
+### Type
 
+`const string`
+
+## table.new()
 Table position is used in table.new(), table.cell() functions.
 
 Binds the table to the upper-right edge.
@@ -3179,13 +3985,24 @@ Binds the table to the upper-right edge.
 
 `const string`
 
-## scale.left
-
+## table.new()
 Scale value for indicator() function. Indicator is added to the left price scale.
+
+### Type
+
+`const scale_type`
+
+## indicator()
 
 ## scale.none
 
 Scale value for indicator() function. Indicator is added in 'No Scale' mode. Can be used only with 'overlay=true'.
+
+### Type
+
+`const scale_type`
+
+## indicator()
 
 ## scale.right
 
@@ -3194,6 +4011,8 @@ Scale value for indicator() function. Indicator is added to the right price scal
 ### Type
 
 `const scale_type`
+
+## indicator()
 
 ## session.extended
 
@@ -3204,120 +4023,213 @@ Constant for extended session type (with extended hours data).
 `const string`
 
 ## session.regular
-
 Constant for regular session type (no extended hours data).
 
 ### Type
 
 `const string`
 
-## settlement_as_close.inherit
-
+## session.extended
 A constant to specify the value of the settlement_as_close parameter in ticker.new() and ticker.modify() functions.
 
 ### Type
 
 `const settlement`
 
-## settlement_as_close.off
-
+## ticker.new()
 A constant to specify the value of the settlement_as_close parameter in ticker.new() and ticker.modify() functions.
 
 ### Type
 
 `const settlement`
 
-## settlement_as_close.on
-
+## ticker.new()
 A constant to specify the value of the settlement_as_close parameter in ticker.new() and ticker.modify() functions.
 
 ### Type
 
 `const settlement`
 
-## shape.arrowdown
-
-## Shape style for plotshape() function.
+## ticker.new()
+Shape style for plotshape() function.
 
 ### Type
 
 `const string`
 
+## plotshape()
+
 ## shape.arrowup
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.circle
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.cross
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.diamond
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.flag
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.labeldown
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.labelup
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.square
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.triangledown
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.triangleup
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## shape.xcross
 
-## Shape style for plotshape() function.
+Shape style for plotshape() function.
+
+### Type
+
+`const string`
+
+## plotshape()
 
 ## size.auto
 
 A constant to specify the size of the graphics drawn by plotchar(), plotshape(), label.new(), and box.new(). Adjusts the size of the graphics automatically.
 
-## size.huge
+### Type
 
+`const string`
+
+## plotshape()
 A constant to specify the size of the graphics drawn by plotchar(), plotshape(), label.new(), box.new(), and table.cell(). Sets the size to huge.
 
-## size.large
+### Type
 
+`const string`
+
+## plotshape()
 A constant to specify the size of the graphics drawn by plotchar(), plotshape(), label.new(), box.new(), and table.cell(). Sets the size to large.
 
-## size.normal
+### Type
 
+`const string`
+
+## plotshape()
 A constant to specify the size of the graphics drawn by plotchar(), plotshape(), label.new(), box.new(), and table.cell(). Sets the size to normal.
 
-## size.small
+### Type
 
+`const string`
+
+## plotshape()
 A constant to specify the size of the graphics drawn by plotchar(), plotshape(), label.new(), box.new(), and table.cell(). Sets the size to small.
 
-## size.tiny
+### Type
 
+`const string`
+
+## plotshape()
 A constant to specify the size of the graphics drawn by plotchar(), plotshape(), label.new(), box.new(), and table.cell(). Sets the size to tiny.
 
-## splits.denominator
+### Type
 
+`const string`
+
+## plotshape()
 - **`A named constant for the request.splits() function. Is used to request the denominator`** (the number below the line in a fraction) of a splits.
+
+### Type
+
+`const string`
+
+## request.splits()
 
 ## splits.numerator
 
 - **`A named constant for the request.splits() function. Is used to request the numerator`** (the number above the line in a fraction) of a splits.
+
+### Type
+
+`const string`
+
+## request.splits()
 
 ## strategy.cash
 
@@ -3338,31 +4250,67 @@ if bar_index == 0
     strategy.entry("EN", strategy.long)
 if bar_index == 2
     strategy.close("EN")
+See also
+strategy()
+strategy.commission.cash_per_contract
+Commission type for an order. Money displayed in the account currency per contract.
 ```
 
-## strategy.commission.cash_per_contract
+### Type
 
-Commission type for an order. Money displayed in the account currency per contract.
+`const string`
+
+## strategy()
 
 ## strategy.commission.cash_per_order
 
 Commission type for an order. Money displayed in the account currency per order.
 
+### Type
+
+`const string`
+
+## strategy()
+
 ## strategy.commission.percent
 
 Commission type for an order. A percentage of the cash volume of order.
+
+### Type
+
+`const string`
+
+## strategy()
 
 ## strategy.direction.all
 
 It allows strategy to open both long and short positions.
 
+### Type
+
+`const string`
+
+## strategy.risk.allow_entry_in()
+
 ## strategy.direction.long
 
 It allows strategy to open only long positions.
 
+### Type
+
+`const string`
+
+## strategy.risk.allow_entry_in()
+
 ## strategy.direction.short
 
 It allows strategy to open only short positions.
+
+### Type
+
+`const string`
+
+## strategy.risk.allow_entry_in()
 
 ## strategy.fixed
 
@@ -3383,18 +4331,17 @@ if bar_index == 0
     strategy.entry("EN", strategy.long)
 if bar_index == 2
     strategy.close("EN")
-```
-
-## strategy.long
-
+See also
+strategy()
+strategy.long
 A named constant for use with the direction parameter of the strategy.entry() and strategy.order() commands. It specifies that the command creates a buy order.
+```
 
 ### Type
 
 `const strategy_direction`
 
-## strategy.oca.cancel
-
+## strategy.entry()
 A named constant for use with the oca_type parameter of the strategy.entry() and strategy.order() commands. It specifies that the strategy cancels the unfilled order when another order with the same oca_name and oca_type executes.
 
 ### Type
@@ -3405,16 +4352,14 @@ A named constant for use with the oca_type parameter of the strategy.entry() and
 
 Strategies cannot cancel or reduce pending orders from an OCA group if they execute on the same tick. For example, if the market price triggers two stop orders from strategy.order() calls with the same oca_* arguments, the strategy cannot fully or partially cancel either one.
 
-## strategy.oca.none
-
+## strategy.entry()
 A named constant for use with the oca_type parameter of the strategy.entry() and strategy.order() commands. It specifies that the order executes independently of all other orders, including those with the same oca_name.
 
 ### Type
 
 `const string`
 
-## strategy.oca.reduce
-
+## strategy.entry()
 A named constant for use with the oca_type parameter of the strategy.entry() and strategy.order() commands. It specifies that when another order with the same oca_name and oca_type executes, the strategy reduces the unfilled order by that order's size. If the unfilled order's size reaches 0 after reduction, it is the same as canceling the order entirely.
 
 ### Type
@@ -3427,8 +4372,7 @@ Strategies cannot cancel or reduce pending orders from an OCA group if they exec
 
 Orders from strategy.exit() automatically use this OCA type, and they belong to the same OCA group by default.
 
-## strategy.percent_of_equity
-
+## strategy.entry()
 This is one of the arguments that can be supplied to the default_qty_type parameter in the strategy() declaration statement. It is only relevant when no value is used for the ‘qty’ parameter in strategy.entry() or strategy.order() function calls. It specifies that a percentage (0-100) of equity will be used to enter trades.
 
 ### Type
@@ -3451,67 +4395,94 @@ if bar_index == 4
     strategy.entry("EN", strategy.long, qty = 10)
 if bar_index == 6
     strategy.close("EN")
-```
-
-## strategy.short
-
+See also
+strategy()
+strategy.short
 A named constant for use with the direction parameter of the strategy.entry() and strategy.order() commands. It specifies that the command creates a sell order.
+```
 
 ### Type
 
 `const strategy_direction`
 
-## text.align_bottom
-
+## strategy.entry()
 Vertical text alignment for box.new(), box.set_text_valign(), table.cell() and table.cell_set_text_valign() functions.
 
 ### Type
 
 `const string`
 
-## text.align_center
-
+## table.cell()
 Text alignment for box.new(), box.set_text_halign(), box.set_text_valign(), label.new() and label.set_textalign() functions.
 
 ### Type
 
 `const string`
 
-## text.align_left
-
+## label.new()
 Horizontal text alignment for box.new(), box.set_text_halign(), label.new() and label.set_textalign() functions.
 
-## text.align_right
+### Type
 
+`const string`
+
+## label.new()
 Horizontal text alignment for box.new(), box.set_text_halign(), label.new() and label.set_textalign() functions.
 
-## text.align_top
+### Type
 
+`const string`
+
+## label.new()
 Vertical text alignment for box.new(), box.set_text_valign(), table.cell() and table.cell_set_text_valign() functions.
 
-## text.format_bold
+### Type
 
+`const string`
+
+## table.cell()
 A named constant for use with the text_formatting parameter of the label.new(), box.new(), table.cell(), and *set_text_formatting() functions. Makes the text bold.
 
-## text.format_italic
+### Type
 
+`const text_format`
+
+## label.new()
 A named constant for use with the text_formatting parameter of the label.new(), box.new(), table.cell(), and *set_text_formatting() functions. Italicizes the text.
 
-## text.format_none
+### Type
 
+`const text_format`
+
+## label.new()
 A named constant for use with the text_formatting parameter of the label.new(), box.new(), table.cell(), and *set_text_formatting() functions. Signifies no special text formatting.
 
-## text.wrap_auto
+### Type
 
+`const text_format`
+
+## label.new()
 Automatic wrapping mode for box.new() and box.set_text_wrap() functions.
 
-## text.wrap_none
+### Type
 
+`const string`
+
+## box.new()
 Disabled wrapping mode for box.new() and box.set_text_wrap() functions.
 
-## true
+### Type
 
+`const string`
+
+## box.new()
 Literal representing one of the values a bool variable can hold, or an expression can evaluate to when it uses comparison or logical operators.
+
+### Remarks
+
+See the User Manual for comparison operators and logical operators.
+
+## bool
 
 ## xloc.bar_index
 
@@ -3522,37 +4493,37 @@ A constant that specifies how functions that create and modify Pine drawings int
 `const string`
 
 ## xloc.bar_time
-
 A constant that specifies how functions that create and modify Pine drawings interpret x-coordinates. If xloc = xloc.bar_time, the drawing object treats each x-coordinate as a UNIX timestamp, expressed in milliseconds.
 
 ### Type
 
 `const string`
 
-## yloc.abovebar
-
+## xloc.bar_index
 A named constant that specifies the algorithm of interpretation of y-value in function label.new().
 
-## yloc.belowbar
+### Type
 
+`const string`
+
+## label.new()
 A named constant that specifies the algorithm of interpretation of y-value in function label.new().
 
-## yloc.price
+### Type
 
+`const string`
+
+## label.new()
 A named constant that specifies the algorithm of interpretation of y-value in function label.new().
 
-# FUNCTIONS
+### Type
 
-## alert()
+`const string`
 
+## label.new()
 Creates an alert trigger for an indicator or strategy, with a specified frequency, when called on the latest realtime bar. To activate alerts for a script containing calls to this function, open the "Create Alert" dialog box, then select the script name and "Any alert() function call" in the "Condition" section.
 
 ## Syntax
-
-## alert(message, freq) → void
-
-## Arguments
-
 - **`message`** (series string) The message to send when the alert occurs.
 
 - **`freq`** (input string) Optional. Determines the allowed frequency of the alert trigger. Possible values are: alert.freq_all (allows an alert on any realtime update), alert.freq_once_per_bar (allows an alert only on the first execution for each realtime bar), or alert.freq_once_per_bar_close (allows an alert only when a realtime bar closes). The default is alert.freq_once_per_bar.
@@ -3581,14 +4552,11 @@ See this article in our Help Center to learn more about activating alerts from a
 
 ## alertcondition()
 
+## alertcondition()
+
 Creates alert condition, that is available in Create Alert dialog. Please note, that alertcondition() does NOT create an alert, it just gives you more options in Create Alert dialog. Also, alertcondition() effect is invisible on chart.
 
 ## Syntax
-
-## alertcondition(condition, title, message) → void
-
-## Arguments
-
 - **`condition`** (series bool) Series of boolean values that is used for alert. True values mean alert fire, false - no alert. Required argument.
 
 - **`title`** (const string) Title of the alert condition. Optional argument.
@@ -3607,32 +4575,23 @@ alertcondition(close >= open, title='Alert on Green Bar', message='Green Bar!')
 
 Please note that an alertcondition call generates an additional plot. All such calls are taken into account when we calculate the number of the output series per script.
 
-## array.abs()
+## alert()
+
+## array.abs()2 overloads
 
 Returns an array containing the absolute value of each element in the original array.
 
 Syntax & Overloads
 
 ## array.abs(id) → array<float>
-
-## array.abs(id) → array<int>
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
-## array.avg()
-
+## array.new_float()
 The function returns the mean of an array's elements.
 
 Syntax & Overloads
 
 ## array.avg(id) → series float
-
-## array.avg(id) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 ### Example
@@ -3648,22 +4607,16 @@ plot(array.avg(a))
 
 ### Returns
 
-## Mean of array's elements.
+Mean of array's elements.
 
 ### Remarks
 
 Returns na if the id array is empty.
 
-## array.binary_search()
-
+## array.new_float()
 The function returns the index of the value, or -1 if the value is not found. The array to search must be sorted in ascending order.
 
 ## Syntax
-
-## array.binary_search(id, val) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`val`** (series int/float) The value to search for in the array.
@@ -3683,16 +4636,10 @@ plot(position)
 
 A binary search works on arrays pre-sorted in ascending order. It begins by comparing an element in the middle of the array with the target value. If the element matches the target value, its position in the array is returned. If the element's value is greater than the target value, the search continues in the lower half of the array. If the element's value is less than the target value, the search continues in the upper half of the array. By doing this recursively, the algorithm progressively eliminates smaller and smaller portions of the array in which the target value cannot lie.
 
-## array.binary_search_leftmost()
-
+## array.new_float()
 The function returns the index of the value if it is found. When the value is not found, the function returns the index of the next smallest element to the left of where the value would lie if it was in the array. The array to search must be sorted in ascending order.
 
 ## Syntax
-
-## array.binary_search_leftmost(id, val) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`val`** (series int/float) The value to search for in the array.
@@ -3723,16 +4670,10 @@ plot(position) // Plots 1
 
 A binary search works on arrays pre-sorted in ascending order. It begins by comparing an element in the middle of the array with the target value. If the element matches the target value, its position in the array is returned. If the element's value is greater than the target value, the search continues in the lower half of the array. If the element's value is less than the target value, the search continues in the upper half of the array. By doing this recursively, the algorithm progressively eliminates smaller and smaller portions of the array in which the target value cannot lie.
 
-## array.binary_search_rightmost()
-
+## array.new_float()
 The function returns the index of the value if it is found. When the value is not found, the function returns the index of the element to the right of where the value would lie if it was in the array. The array must be sorted in ascending order.
 
 ## Syntax
-
-## array.binary_search_rightmost(id, val) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`val`** (series int/float) The value to search for in the array.
@@ -3763,16 +4704,10 @@ plot(position) // Plots 3
 
 A binary search works on sorted arrays in ascending order. It begins by comparing an element in the middle of the array with the target value. If the element matches the target value, its position in the array is returned. If the element's value is greater than the target value, the search continues in the lower half of the array. If the element's value is less than the target value, the search continues in the upper half of the array. By doing this recursively, the algorithm progressively eliminates smaller and smaller portions of the array in which the target value cannot lie.
 
-## array.clear()
-
+## array.new_float()
 The function removes all elements from an array.
 
 ## Syntax
-
-## array.clear(id) → void
-
-## Arguments
-
 id (any array type) An array object.
 
 ### Example
@@ -3785,21 +4720,20 @@ array.clear(a)
 array.push(a, close)
 plot(array.get(a,0))
 plot(array.size(a))
-```
-
-## array.concat()
-
+See also
+array.new_float()
+array.insert()
+array.push()
+array.remove()
+array.pop()
+array.concat()
 The function is used to merge two arrays. It pushes all elements from the second array to the first array, and returns the first array.
-
-## Syntax
-
-## array.concat(id1, id2) → array<type>
-
-## Arguments
-
+Syntax
+array.concat(id1, id2) → array<type>
+Arguments
 id1 (any array type) The first array object.
-
 id2 (any array type) The second array object.
+```
 
 ### Example
 
@@ -3821,16 +4755,10 @@ plot(array.size(c))
 
 The first array with merged elements from the second array.
 
-## array.copy()
-
+## array.new_float()
 The function creates a copy of an existing array.
 
 ## Syntax
-
-## array.copy(id) → array<type>
-
-## Arguments
-
 id (any array type) An array object.
 
 ### Example
@@ -3848,10 +4776,9 @@ plot(array.sum(b) / length)
 
 ### Returns
 
-## A copy of an array.
+A copy of an array.
 
-## array.covariance()
-
+## array.new_float()
 The function returns the covariance of two arrays.
 
 ## Syntax
@@ -3881,30 +4808,23 @@ plot(array.covariance(a, b))
 
 ### Returns
 
-## The covariance of two arrays.
+The covariance of two arrays.
 
 ### Remarks
 
 If biased is true, function will calculate using a biased estimate of the entire population, if false - unbiased estimate of a sample. Returns na if both arrays are empty.
 
-## array.every()
-
+## array.new_float()
 Returns true if all elements of the id array are true, false otherwise.
 
 ## Syntax
-
-## array.every(id) → series bool
-
-## Arguments
-
 - **`id`** (array<bool>) An array object.
 
 ### Remarks
 
 This function also works with arrays of int and float types, in which case zero values are considered false, and all others true.
 
-## array.fill()
-
+## array.some()
 The function sets elements of an array to a single value. If no index is specified, all elements are set. If only a start index (default 0) is supplied, the elements starting at that index are set. If both index parameters are used, the elements from the starting index up to but not including the end index (default na) are set.
 
 ## Syntax
@@ -3929,19 +4849,17 @@ indicator("array.fill example")
 a = array.new_float(10)
 array.fill(a, close)
 plot(array.sum(a))
-```
-
-## array.first()
-
+See also
+array.new_float()
+array.set()
+array.slice()
+array.first()
 Returns the array's first element. Throws a runtime error if the array is empty.
-
-## Syntax
-
-## array.first(id) → series <type>
-
-## Arguments
-
+Syntax
+array.first(id) → series <type>
+Arguments
 id (any array type) An array object.
+```
 
 ### Example
 
@@ -3950,41 +4868,27 @@ id (any array type) An array object.
 indicator("array.first example")
 arr = array.new_int(3, 10)
 plot(array.first(arr))
-```
-
-## array.from()
-
+See also
+array.last()
+array.get()
+array.from()12 overloads
 The function takes a variable number of arguments with one of the types: int, float, bool, string, label, line, color, box, table, linefill, and returns an array of the corresponding type.
-
 Syntax & Overloads
-
-## array.from(arg0, arg1, ...) → array<type>
-
-## array.from(arg0, arg1, ...) → array<enum>
-
-## array.from(arg0, arg1, ...) → array<label>
-
-## array.from(arg0, arg1, ...) → array<line>
-
-## array.from(arg0, arg1, ...) → array<box>
-
-## array.from(arg0, arg1, ...) → array<table>
-
-## array.from(arg0, arg1, ...) → array<linefill>
-
-## array.from(arg0, arg1, ...) → array<string>
-
-## array.from(arg0, arg1, ...) → array<color>
-
-## array.from(arg0, arg1, ...) → array<int>
-
-## array.from(arg0, arg1, ...) → array<float>
-
-## array.from(arg0, arg1, ...) → array<bool>
-
-## Arguments
-
+array.from(arg0, arg1, ...) → array<type>
+array.from(arg0, arg1, ...) → array<enum>
+array.from(arg0, arg1, ...) → array<label>
+array.from(arg0, arg1, ...) → array<line>
+array.from(arg0, arg1, ...) → array<box>
+array.from(arg0, arg1, ...) → array<table>
+array.from(arg0, arg1, ...) → array<linefill>
+array.from(arg0, arg1, ...) → array<string>
+array.from(arg0, arg1, ...) → array<color>
+array.from(arg0, arg1, ...) → array<int>
+array.from(arg0, arg1, ...) → array<float>
+array.from(arg0, arg1, ...) → array<bool>
+Arguments
 arg0, arg1, ... (<arg..._type>) Array arguments.
+```
 
 ### Example
 
@@ -3997,7 +4901,7 @@ plot(close)
 
 ### Returns
 
-## The array element's value.
+The array element's value.
 
 ### Remarks
 
@@ -4008,11 +4912,6 @@ This function can accept up to 4,000 'int', 'float', 'bool', or 'color' argument
 The function returns the value of the element at the specified index.
 
 ## Syntax
-
-## array.get(id, index) → series <type>
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`index`** (series int) The index of the element whose value is to be returned.
@@ -4030,22 +4929,16 @@ plot(array.get(a, 9))
 
 ### Returns
 
-## The array element's value.
+The array element's value.
 
 ### Remarks
 
 If the index is positive, the function counts forwards from the beginning of the array to the end. The index of the first element is 0, and the index of the last element is array.size() - 1. If the index is negative, the function counts backwards from the end of the array to the beginning. In this case, the index of the last element is -1, and the index of the first element is negative array.size(). For example, for an array that contains three elements, all of the following are valid arguments for the index parameter: 0, 1, 2, -1, -2, -3.
 
-## array.includes()
-
+## array.new_float()
 The function returns true if the value was found in an array, false otherwise.
 
 ## Syntax
-
-## array.includes(id, value) → series bool
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`value`** (series <type of the array's elements>) The value to search in the array.
@@ -4066,16 +4959,10 @@ plot(p)
 
 True if the value was found in the array, false otherwise.
 
-## array.indexof()
-
+## array.new_float()
 The function returns the index of the first occurrence of the value, or -1 if the value is not found.
 
 ## Syntax
-
-## array.indexof(id, value) → series int
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`value`** (series <type of the array's elements>) The value to search in the array.
@@ -4092,18 +4979,12 @@ plot(index)
 
 ### Returns
 
-## The index of an element.
+The index of an element.
 
-## array.insert()
-
+## array.lastindexof()
 The function changes the contents of an array by adding new elements in place.
 
 ## Syntax
-
-## array.insert(id, index, value) → void
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`index`** (series int) The index at which to insert the value.
@@ -4124,16 +5005,10 @@ plot(array.get(a, 5))
 
 If the index is positive, the function counts forwards from the beginning of the array to the end. The index of the first element is 0, and the index of the last element is array.size() - 1. If the index is negative, the function counts backwards from the end of the array to the beginning. In this case, the index of the last element is -1, and the index of the first element is negative array.size(). For example, for an array that contains three elements, all of the following are valid arguments for the index parameter: 0, 1, 2, -1, -2, -3.
 
-## array.join()
-
+## array.new_float()
 The function creates and returns a new string by concatenating all the elements of an array, separated by the specified separator string.
 
 ## Syntax
-
-## array.join(id, separator) → series string
-
-## Arguments
-
 - **`id`** (array<int/float/string>) An array object.
 
 - **`separator`** (series string) The string used to separate each array element.
@@ -4145,19 +5020,20 @@ The function creates and returns a new string by concatenating all the elements 
 indicator("array.join example")
 a = array.new_float(5, 5)
 label.new(bar_index, close, array.join(a, ","))
-```
-
-## array.last()
-
+See also
+array.new_float()
+array.set()
+array.insert()
+array.remove()
+array.pop()
+array.unshift()
+array.last()
 Returns the array's last element. Throws a runtime error if the array is empty.
-
-## Syntax
-
-## array.last(id) → series <type>
-
-## Arguments
-
+Syntax
+array.last(id) → series <type>
+Arguments
 id (any array type) An array object.
+```
 
 ### Example
 
@@ -4166,21 +5042,17 @@ id (any array type) An array object.
 indicator("array.last example")
 arr = array.new_int(3, 10)
 plot(array.last(arr))
-```
-
-## array.lastindexof()
-
+See also
+array.first()
+array.get()
+array.lastindexof()
 The function returns the index of the last occurrence of the value, or -1 if the value is not found.
-
-## Syntax
-
-## array.lastindexof(id, value) → series int
-
-## Arguments
-
+Syntax
+array.lastindexof(id, value) → series int
+Arguments
 id (any array type) An array object.
-
-- **`value`** (series <type of the array's elements>) The value to search in the array.
+value (series <type of the array's elements>) The value to search in the array.
+```
 
 ### Example
 
@@ -4192,18 +5064,16 @@ index = array.lastindexof(a, high)
 plot(index)
 ```
 
-## array.max()
+### Returns
 
+The index of an element.
+
+## array.new_float()
 The function returns the greatest value, or the nth greatest value in a given array.
 
 Syntax & Overloads
 
 ## array.max(id, nth) → series float
-
-## array.max(id, nth) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`nth`** (series int) The nth greatest value to return, where zero is the greatest. Optional. The default is zero.
@@ -4226,18 +5096,12 @@ The greatest or the nth greatest value in the array.
 
 Returns na if the id array is empty.
 
-## array.median()
-
+## array.new_float()
 The function returns the median of an array's elements.
 
 Syntax & Overloads
 
 ## array.median(id) → series float
-
-## array.median(id) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 ### Example
@@ -4259,18 +5123,12 @@ The median of the array's elements.
 
 Returns na if the id array is empty.
 
-## array.min()
-
+## array.median()
 The function returns the smallest value, or the nth smallest value in a given array.
 
 Syntax & Overloads
 
 ## array.min(id, nth) → series float
-
-## array.min(id, nth) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`nth`** (series int) The nth smallest value to return, where zero is the smallest. Optional. The default is zero.
@@ -4293,18 +5151,12 @@ The smallest or the nth smallest value in the array.
 
 Returns na if the id array is empty.
 
-## array.mode()
-
+## array.new_float()
 The function returns the mode of an array's elements. If there are several values with the same frequency, it returns the smallest value.
 
 Syntax & Overloads
 
 ## array.mode(id) → series float
-
-## array.mode(id) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 ### Example
@@ -4326,16 +5178,10 @@ The most frequently occurring value from the id array. If none exists, returns t
 
 Returns na if the id array is empty.
 
-## array.new_bool()
-
+## array.new_float()
 The function creates a new array object of bool type elements.
 
 ## Syntax
-
-## array.new_bool(size, initial_value) → array<bool>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series bool) Initial value of all array elements. Optional. The default is 'false'.
@@ -4358,16 +5204,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new_box()
-
+## array.new_float()
 The function creates a new array object of box type elements.
 
 ## Syntax
-
-## array.new_box(size, initial_value) → array<box>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series box) Initial value of all array elements. Optional. The default is 'na'.
@@ -4390,16 +5230,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new_color()
-
+## array.new_float()
 The function creates a new array object of color type elements.
 
 ## Syntax
-
-## array.new_color(size, initial_value) → array<color>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series color) Initial value of all array elements. Optional. The default is 'na'.
@@ -4423,15 +5257,9 @@ The ID of an array object which may be used in other array.*() functions.
 An array index starts from 0.
 
 ## array.new_float()
-
 The function creates a new array object of float type elements.
 
 ## Syntax
-
-## array.new_float(size, initial_value) → array<float>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series int/float) Initial value of all array elements. Optional. The default is 'na'.
@@ -4454,16 +5282,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new_int()
-
+## array.new_color()
 The function creates a new array object of int type elements.
 
 ## Syntax
-
-## array.new_int(size, initial_value) → array<int>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series int) Initial value of all array elements. Optional. The default is 'na'.
@@ -4486,16 +5308,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new_label()
-
+## array.new_float()
 The function creates a new array object of label type elements.
 
 ## Syntax
-
-## array.new_label(size, initial_value) → array<label>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series label) Initial value of all array elements. Optional. The default is 'na'.
@@ -4543,16 +5359,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new_line()
-
+## array.new_float()
 The function creates a new array object of line type elements.
 
 ## Syntax
-
-## array.new_line(size, initial_value) → array<line>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series line) Initial value of all array elements. Optional. The default is 'na'.
@@ -4578,16 +5388,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new_linefill()
-
+## array.new_float()
 The function creates a new array object of linefill type elements.
 
 ## Syntax
-
-## array.new_linefill(size, initial_value) → array<linefill>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array.
 
 - **`initial_value`** (series linefill) Initial value of all array elements.
@@ -4605,11 +5409,6 @@ An array index starts from 0.
 The function creates a new array object of string type elements.
 
 ## Syntax
-
-## array.new_string(size, initial_value) → array<string>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series string) Initial value of all array elements. Optional. The default is 'na'.
@@ -4632,16 +5431,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new_table()
-
+## array.new_float()
 The function creates a new array object of table type elements.
 
 ## Syntax
-
-## array.new_table(size, initial_value) → array<table>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 - **`initial_value`** (series table) Initial value of all array elements. Optional. The default is 'na'.
@@ -4664,16 +5457,10 @@ The ID of an array object which may be used in other array.*() functions.
 
 An array index starts from 0.
 
-## array.new<type>()
-
+## array.new_float()
 The function creates a new array object of <type> elements.
 
 ## Syntax
-
-## array.new<type>(size, initial_value) → array<type>
-
-## Arguments
-
 - **`size`** (series int) Initial size of an array. Optional. The default is 0.
 
 initial_value (<array_type>) Initial value of all array elements. Optional. The default is 'na'.
@@ -4734,18 +5521,12 @@ An array index starts from 0.
 
 If you want to initialize an array and specify all its elements at the same time, then use the function array.from.
 
-## array.percentile_linear_interpolation()2 overloads
-
+## array.from()
 - **`Returns the value for which the specified percentage of array values`** (percentile) are less than or equal to it, using linear interpolation.
 
 Syntax & Overloads
 
 ## array.percentile_linear_interpolation(id, percentage) → series float
-
-## array.percentile_linear_interpolation(id, percentage) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`percentage`** (series int/float) The percentage of values that must be equal or less than the returned value.
@@ -4756,18 +5537,12 @@ In statistics, the percentile is the percent of ranking items that appear at or 
 
 Returns na if the id array is empty.
 
-## array.percentile_nearest_rank()
-
+## array.new_float()
 Returns the value for which the specified percentage of array values (percentile) are less than or equal to it, using the nearest-rank method.
 
 Syntax & Overloads
 
 ## array.percentile_nearest_rank(id, percentage) → series float
-
-## array.percentile_nearest_rank(id, percentage) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`percentage`** (series int/float) The percentage of values that must be equal or less than the returned value.
@@ -4778,18 +5553,12 @@ In statistics, the percentile is the percent of ranking items that appear at or 
 
 Returns na if the id array is empty.
 
-## array.percentrank()
-
+## array.new_float()
 Returns the percentile rank of the element at the specified index.
 
 Syntax & Overloads
 
 ## array.percentrank(id, index) → series float
-
-## array.percentrank(id, index) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`index`** (series int) The index of the element for which the percentile rank should be calculated.
@@ -4800,16 +5569,10 @@ Percentile rank is the number of elements in the array that are less than or equ
 
 Returns na if the id array is empty.
 
-## array.pop()
-
+## array.new_float()
 The function removes the last element from an array and returns its value.
 
 ## Syntax
-
-## array.pop(id) → series <type>
-
-## Arguments
-
 id (any array type) An array object.
 
 ### Example
@@ -4827,16 +5590,10 @@ plot(removedEl)
 
 The value of the removed element.
 
-## array.push()
-
+## array.new_float()
 The function appends a value to an array.
 
 ## Syntax
-
-## array.push(id, value) → void
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`value`** (series <type of the array's elements>) The value of the element added to the end of the array.
@@ -4849,21 +5606,21 @@ indicator("array.push example")
 a = array.new_float(5, 0)
 array.push(a, open)
 plot(array.get(a, 5))
-```
-
-## array.range()
-
+See also
+array.new_float()
+array.set()
+array.insert()
+array.remove()
+array.pop()
+array.unshift()
+array.range()2 overloads
 The function returns the difference between the min and max values from a given array.
-
 Syntax & Overloads
-
-## array.range(id) → series float
-
-## array.range(id) → series int
-
-## Arguments
-
-- **`id`** (array<int/float>) An array object.
+array.range(id) → series float
+array.range(id) → series int
+Arguments
+id (array<int/float>) An array object.
+```
 
 ### Example
 
@@ -4884,16 +5641,10 @@ The difference between the min and max values in the array.
 
 Returns na if the id array is empty.
 
-## array.remove()
-
+## array.new_float()
 The function changes the contents of an array by removing the element with the specified index.
 
 ## Syntax
-
-## array.remove(id, index) → series <type>
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`index`** (series int) The index of the element to remove.
@@ -4917,16 +5668,10 @@ The value of the removed element.
 
 If the index is positive, the function counts forwards from the beginning of the array to the end. The index of the first element is 0, and the index of the last element is array.size() - 1. If the index is negative, the function counts backwards from the end of the array to the beginning. In this case, the index of the last element is -1, and the index of the first element is negative array.size(). For example, for an array that contains three elements, all of the following are valid arguments for the index parameter: 0, 1, 2, -1, -2, -3.
 
-## array.reverse()
-
+## array.new_float()
 The function reverses an array. The first array element becomes the last, and the last array element becomes the first.
 
 ## Syntax
-
-## array.reverse(id) → void
-
-## Arguments
-
 id (any array type) An array object.
 
 ### Example
@@ -4940,23 +5685,21 @@ for i = 0 to 9
 plot(array.get(a, 0))
 array.reverse(a)
 plot(array.get(a, 0))
-```
-
-## array.set()
-
+See also
+array.new_float()
+array.sort()
+array.push()
+array.set()
+array.avg()
+array.set()
 The function sets the value of the element at the specified index.
-
-## Syntax
-
-## array.set(id, index, value) → void
-
-## Arguments
-
+Syntax
+array.set(id, index, value) → void
+Arguments
 id (any array type) An array object.
-
-- **`index`** (series int) The index of the element to be modified.
-
-- **`value`** (series <type of the array's elements>) The new value to be set.
+index (series int) The index of the element to be modified.
+value (series <type of the array's elements>) The new value to be set.
+```
 
 ### Example
 
@@ -4973,16 +5716,10 @@ plot(array.sum(a) / 10)
 
 If the index is positive, the function counts forwards from the beginning of the array to the end. The index of the first element is 0, and the index of the last element is array.size() - 1. If the index is negative, the function counts backwards from the end of the array to the beginning. In this case, the index of the last element is -1, and the index of the first element is negative array.size(). For example, for an array that contains three elements, all of the following are valid arguments for the index parameter: 0, 1, 2, -1, -2, -3.
 
-## array.shift()
-
+## array.new_float()
 The function removes an array's first element and returns its value.
 
 ## Syntax
-
-## array.shift(id) → series <type>
-
-## Arguments
-
 id (any array type) An array object.
 
 ### Example
@@ -5000,16 +5737,10 @@ plot(removedEl)
 
 The value of the removed element.
 
-## array.size()
-
+## array.unshift()
 The function returns the number of elements in an array.
 
 ## Syntax
-
-## array.size(id) → series int
-
-## Arguments
-
 id (any array type) An array object.
 
 ### Example
@@ -5032,16 +5763,10 @@ plot(array.size(slice))
 
 The number of elements in the array.
 
-## array.slice()
-
+## array.new_float()
 The function creates a slice from an existing array. If an object from the slice changes, the changes are applied to both the new and the original arrays.
 
 ## Syntax
-
-## array.slice(id, index_from, index_to) → array<type>
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`index_from`** (series int) Zero-based index at which to begin extraction.
@@ -5067,32 +5792,20 @@ plot(array.sum(slice) / 5)
 
 A shallow copy of an array's slice.
 
-## array.some()
-
+## array.new_float()
 Returns true if at least one element of the id array is true, false otherwise.
 
 ## Syntax
-
-## array.some(id) → series bool
-
-## Arguments
-
 - **`id`** (array<bool>) An array object.
 
 ### Remarks
 
 This function also works with arrays of int and float types, in which case zero values are considered false, and all others true.
 
-## array.sort()
-
+## array.every()
 The function sorts the elements of an array.
 
 ## Syntax
-
-## array.sort(id, order) → void
-
-## Arguments
-
 - **`id`** (array<int/float/string>) An array object.
 
 - **`order`** (series sort_order) The sort order: order.ascending (default) or order.descending.
@@ -5108,21 +5821,21 @@ for i = 0 to 5
 array.sort(a, order.descending)
 if barstate.islast
     label.new(bar_index, close, str.tostring(a))
-```
-
-## array.sort_indices()
-
+See also
+array.new_float()
+array.insert()
+array.slice()
+array.reverse()
+order.ascending
+order.descending
+array.sort_indices()
 Returns an array of indices which, when used to index the original array, will access its elements in their sorted order. It does not modify the original array.
-
-## Syntax
-
-## array.sort_indices(id, order) → array<int>
-
-## Arguments
-
-- **`id`** (array<int/float/string>) An array object.
-
-- **`order`** (series sort_order) The sort order: order.ascending or order.descending. Optional. The default is order.ascending.
+Syntax
+array.sort_indices(id, order) → array<int>
+Arguments
+id (array<int/float/string>) An array object.
+order (series sort_order) The sort order: order.ascending or order.descending. Optional. The default is order.ascending.
+```
 
 ### Example
 
@@ -5134,21 +5847,21 @@ sortedIndices = array.sort_indices(a) // [1, 2, 4, 0, 3]
 indexOfSmallestValue = array.get(sortedIndices, 0) // 1
 smallestValue = array.get(a, indexOfSmallestValue) // -2
 plot(smallestValue)
-```
-
-## array.standardize()
-
+See also
+array.new_float()
+array.insert()
+array.slice()
+array.reverse()
+order.ascending
+order.descending
+array.standardize()2 overloads
 The function returns the array of standardized elements.
-
 Syntax & Overloads
-
-## array.standardize(id) → array<float>
-
-## array.standardize(id) → array<int>
-
-## Arguments
-
-- **`id`** (array<int/float>) An array object.
+array.standardize(id) → array<float>
+array.standardize(id) → array<int>
+Arguments
+id (array<int/float>) An array object.
+```
 
 ### Example
 
@@ -5165,20 +5878,14 @@ plot(array.max(b))
 
 ### Returns
 
-## The array of standardized elements.
+The array of standardized elements.
 
-## array.stdev()
-
+## array.max()
 The function returns the standard deviation of an array's elements.
 
 Syntax & Overloads
 
 ## array.stdev(id, biased) → series float
-
-## array.stdev(id, biased) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 - **`biased`** (series bool) Determines which estimate should be used. Optional. The default is true.
@@ -5204,18 +5911,12 @@ If biased is true, the function calculates using a biased estimate of the entire
 
 Returns na if the id array is empty.
 
-## array.sum()
-
+## array.new_float()
 The function returns the sum of an array's elements.
 
 Syntax & Overloads
 
 ## array.sum(id) → series float
-
-## array.sum(id) → series int
-
-## Arguments
-
 - **`id`** (array<int/float>) An array object.
 
 ### Example
@@ -5237,16 +5938,10 @@ The sum of the array's elements.
 
 Returns na if the id array is empty.
 
-## array.unshift()
-
+## array.new_float()
 The function inserts the value at the beginning of the array.
 
 ## Syntax
-
-## array.unshift(id, value) → void
-
-## Arguments
-
 id (any array type) An array object.
 
 - **`value`** (series <type of the array's elements>) The value to add to the start of the array.
@@ -5259,23 +5954,21 @@ indicator("array.unshift example")
 a = array.new_float(5, 0)
 array.unshift(a, open)
 plot(array.get(a, 0))
-```
-
-## array.variance()
-
+See also
+array.shift()
+array.set()
+array.insert()
+array.remove()
+array.indexof()
+array.variance()2 overloads
 The function returns the variance of an array's elements.
-
 Syntax & Overloads
-
-## array.variance(id, biased) → series float
-
-## array.variance(id, biased) → series int
-
-## Arguments
-
-- **`id`** (array<int/float>) An array object.
-
-- **`biased`** (series bool) Determines which estimate should be used. Optional. The default is true.
+array.variance(id, biased) → series float
+array.variance(id, biased) → series int
+Arguments
+id (array<int/float>) An array object.
+biased (series bool) Determines which estimate should be used. Optional. The default is true.
+```
 
 ### Example
 
@@ -5298,9 +5991,8 @@ If biased is true, function will calculate using a biased estimate of the entire
 
 Returns na if the id array is empty.
 
-## barcolor()
-
-## Set color of bars.
+## array.new_float()
+Set color of bars.
 
 ## Syntax
 
@@ -5326,31 +6018,23 @@ barcolor(color, offset, editable, show_last, title, display) → void
 //@version=6
 indicator("barcolor example", overlay=true)
 barcolor(close < open ? color.black : color.white)
-```
-
-## bgcolor()
-
+See also
+bgcolor()
+plot()
+fill()
+bgcolor()
 Fill background of bars with specified color.
-
-## Syntax
-
+Syntax
 bgcolor(color, offset, editable, show_last, title, display, force_overlay) → void
-
-## Arguments
-
-- **`color`** (series color) Color of the filled background. You can use constants like 'red' or '#ff001a' as well as complex expressions like 'close >= open ? color.green : color.red'. Required argument.
-
-- **`offset`** (simple int) Shifts the color series to the left or to the right on the given number of bars. Default is 0.
-
-- **`editable`** (input bool) If true then bgcolor style will be editable in Format dialog. Default is true.
-
-- **`show_last`** (input int) Optional. The number of bars, counting backwards from the most recent bar, on which the function can draw.
-
-- **`title`** (const string) Title of the bgcolor. Optional argument.
-
-- **`display`** (input plot_simple_display) Controls where the bgcolor is displayed. Possible values are: display.none, display.all. Default is display.all.
-
-- **`force_overlay`** (const bool) If true, the plotted results will display on the main chart pane, even when the script occupies a separate pane. Optional. The default is false.
+Arguments
+color (series color) Color of the filled background. You can use constants like 'red' or '#ff001a' as well as complex expressions like 'close >= open ? color.green : color.red'. Required argument.
+offset (simple int) Shifts the color series to the left or to the right on the given number of bars. Default is 0.
+editable (input bool) If true then bgcolor style will be editable in Format dialog. Default is true.
+show_last (input int) Optional. The number of bars, counting backwards from the most recent bar, on which the function can draw.
+title (const string) Title of the bgcolor. Optional argument.
+display (input plot_simple_display) Controls where the bgcolor is displayed. Possible values are: display.none, display.all. Default is display.all.
+force_overlay (const bool) If true, the plotted results will display on the main chart pane, even when the script occupies a separate pane. Optional. The default is false.
+```
 
 ### Example
 
@@ -5358,56 +6042,39 @@ bgcolor(color, offset, editable, show_last, title, display, force_overlay) → v
 //@version=6
 indicator("bgcolor example", overlay=true)
 bgcolor(close < open ? color.new(color.red,70) : color.new(color.green, 70))
-```
-
-## bool()
-
+See also
+barcolor()
+plot()
+fill()
+bool()4 overloads
 Converts the x value to a bool value. Returns false if x is na, false, or an int/float value equal to 0. Returns true for all other possible values.
-
 Syntax & Overloads
-
-## bool(x) → const bool
-
-## bool(x) → input bool
-
-## bool(x) → simple bool
-
-## bool(x) → series bool
-
-## Arguments
-
-- **`x`** (simple int/float/bool) The value to convert to the specified type, usually na.
+bool(x) → const bool
+bool(x) → input bool
+bool(x) → simple bool
+bool(x) → series bool
+Arguments
+x (simple int/float/bool) The value to convert to the specified type, usually na.
+```
 
 ### Returns
 
 The value of the argument after casting to bool.
 
-## box()
-
-## Casts na to box.
+## float()
+Casts na to box.
 
 ## Syntax
-
-## box(x) → series box
-
-## Arguments
-
 - **`x`** (series box) The value to convert to the specified type, usually na.
 
 ### Returns
 
 The value of the argument after casting to box.
 
-## box.copy()
-
-## Clones the box object.
+## float()
+Clones the box object.
 
 ## Syntax
-
-## box.copy(id) → series box
-
-## Arguments
-
 - **`id`** (series box) Box object.
 
 ### Example
@@ -5424,86 +6091,60 @@ if barstate.islastconfirmedhistory
     box.set_lefttop(BoxPrev, bar_index[LOOKBACK * 2], highest[50])
     box.set_rightbottom(BoxPrev, bar_index[LOOKBACK], lowest[50])
     box.set_bgcolor(BoxPrev, color.new(color.red, 80))
-```
-
-## box.delete()
-
+See also
+box.new()
+box.delete()
+box.delete()
 Deletes the specified box object. If it has already been deleted, does nothing.
-
-## Syntax
-
-## box.delete(id) → void
-
-## Arguments
-
-- **`id`** (series box) A box object to delete.
-
-## box.get_bottom()
-
+Syntax
+box.delete(id) → void
+Arguments
+id (series box) A box object to delete.
+See also
+box.new()
+box.get_bottom()
 Returns the price value of the bottom border of the box.
-
-## Syntax
-
-## box.get_bottom(id) → series float
-
-## Arguments
-
-- **`id`** (series box) A box object.
+Syntax
+box.get_bottom(id) → series float
+Arguments
+id (series box) A box object.
+```
 
 ### Returns
 
-## The price value.
+The price value.
 
-## box.get_left()
-
+## box.new()
 Returns the bar index or the UNIX time (depending on the last value used for 'xloc') of the left border of the box.
 
 ## Syntax
-
-## box.get_left(id) → series int
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 ### Returns
 
 A bar index or a UNIX timestamp (in milliseconds).
 
-## box.get_right()
-
+## box.new()
 Returns the bar index or the UNIX time (depending on the last value used for 'xloc') of the right border of the box.
 
 ## Syntax
-
-## box.get_right(id) → series int
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 ### Returns
 
 A bar index or a UNIX timestamp (in milliseconds).
 
-## box.get_top()
-
+## box.new()
 Returns the price value of the top border of the box.
 
 ## Syntax
-
-## box.get_top(id) → series float
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 ### Returns
 
-## The price value.
+The price value.
 
-## box.new()2 overloads
-
+## box.new()
 Creates a new box object.
 
 Syntax & Overloads
@@ -5563,86 +6204,59 @@ box.set_bgcolor(b, color.green)
 
 The ID of a box object which may be used in box.set_*() and box.get_*() functions.
 
-## box.set_bgcolor()
-
+## box.delete()
 Sets the background color of the box.
 
 ## Syntax
-
-## box.set_bgcolor(id, color) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`color`** (series color) New background color.
+
+## box.new()
 
 ## box.set_border_color()
 
 Sets the border color of the box.
 
 ## Syntax
-
-## box.set_border_color(id, color) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`color`** (series color) New border color.
+
+## box.new()
 
 ## box.set_border_style()
 
 Sets the border style of the box.
 
 ## Syntax
-
-## box.set_border_style(id, style) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`style`** (series string) New border style.
 
-## box.set_border_width()
-
+## box.new()
 Sets the border width of the box.
 
 ## Syntax
-
-## box.set_border_width(id, width) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`width`** (series int) Width of the four borders, in pixels.
+
+## box.new()
 
 ## box.set_bottom()
 
 Sets the bottom coordinate of the box.
 
 ## Syntax
-
-## box.set_bottom(id, bottom) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`bottom`** (series int/float) Price value of the bottom border.
 
-## box.set_bottom_right_point()
-
+## box.new()
 Sets the bottom-right corner location of the id box to point.
 
 ## Syntax
-
-## box.set_bottom_right_point(id, point) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`point`** (chart.point) A chart.point object.
@@ -5652,113 +6266,66 @@ Sets the bottom-right corner location of the id box to point.
 Sets extending type of the border of this box object. When extend.none is used, the horizontal borders start at the left border and end at the right border. With extend.left or extend.right, the horizontal borders are extended indefinitely to the left or right of the box, respectively. With extend.both, the horizontal borders are extended on both sides.
 
 ## Syntax
-
-## box.set_extend(id, extend) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`extend`** (series string) New extending type.
 
-## box.set_left()
-
+## box.new()
 Sets the left coordinate of the box.
 
 ## Syntax
-
-## box.set_left(id, left) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`left`** (series int) Bar index or bar time of the left border. Note that objects positioned using xloc.bar_index cannot be drawn further than 500 bars into the future.
 
-## box.set_lefttop()
-
+## box.new()
 Sets the left and top coordinates of the box.
 
 ## Syntax
-
-## box.set_lefttop(id, left, top) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`left`** (series int) Bar index or bar time of the left border.
 
 - **`top`** (series int/float) Price value of the top border.
 
-## box.set_right()
-
+## box.new()
 Sets the right coordinate of the box.
 
 ## Syntax
-
-## box.set_right(id, right) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`right`** (series int) Bar index or bar time of the right border. Note that objects positioned using xloc.bar_index cannot be drawn further than 500 bars into the future.
 
-## box.set_rightbottom()
-
+## box.new()
 Sets the right and bottom coordinates of the box.
 
 ## Syntax
-
-## box.set_rightbottom(id, right, bottom) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`right`** (series int) Bar index or bar time of the right border.
 
 - **`bottom`** (series int/float) Price value of the bottom border.
 
-## box.set_text()
-
+## box.new()
 The function sets the text in the box.
 
 ## Syntax
-
-## box.set_text(id, text) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`text`** (series string) The text to be displayed inside the box.
 
 ## box.set_text_color()
-
 The function sets the color of the text inside the box.
 
 ## Syntax
-
-## box.set_text_color(id, text_color) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`text_color`** (series color) The color of the text.
 
-## box.set_text_font_family()
-
+## box.set_text()
 The function sets the font family of the text inside the box.
 
 ## Syntax
-
-## box.set_text_font_family(id, text_font_family) → void
-
-## Arguments
-
 - **`id`** (series box) A box object.
 
 - **`text_font_family`** (series string) The font family of the text. Possible values: font.family_default, font.family_monospace.
@@ -5771,149 +6338,116 @@ indicator("Example of setting the box font")
 if barstate.islastconfirmedhistory
     b = box.new(bar_index, open-ta.tr, bar_index-50, open-ta.tr*5, text="monospace")
     box.set_text_font_family(b, font.family_monospace)
-```
-
-## box.set_text_formatting()
-
+See also
+box.new()
+font.family_default
+font.family_monospace
+box.set_text_formatting()
 Sets the formatting attributes the drawing applies to displayed text.
-
-## Syntax
-
-## box.set_text_formatting(id, text_formatting) → void
-
-## Arguments
-
-- **`id`** (series box) A box object.
-
-- **`text_formatting`** (const text_format) The formatting of the displayed text. Formatting options support addition. For example, text.format_bold + text.format_italic will make the text both bold and italicized. Possible values: text.format_none, text.format_bold, text.format_italic. Optional. The default is text.format_none.
-
-## box.set_text_halign()
-
+Syntax
+box.set_text_formatting(id, text_formatting) → void
+Arguments
+id (series box) A box object.
+text_formatting (const text_format) The formatting of the displayed text. Formatting options support addition. For example, text.format_bold + text.format_italic will make the text both bold and italicized. Possible values: text.format_none, text.format_bold, text.format_italic. Optional. The default is text.format_none.
+See also
+box.set_text_color()
+box.set_text_size()
+box.set_text_valign()
+box.set_text_halign()
+box.set_text()
+box.set_text_halign()
 The function sets the horizontal alignment of the box's text.
-
-## Syntax
-
-## box.set_text_halign(id, text_halign) → void
-
-## Arguments
-
-- **`id`** (series box) A box object.
-
-- **`text_halign`** (series string) The horizontal alignment of a box's text. Possible values: text.align_left, text.align_center, text.align_right.
-
-## box.set_text_size()
-
+Syntax
+box.set_text_halign(id, text_halign) → void
+Arguments
+id (series box) A box object.
+text_halign (series string) The horizontal alignment of a box's text. Possible values: text.align_left, text.align_center, text.align_right.
+See also
+box.set_text()
+box.set_text_size()
+box.set_text_valign()
+box.set_text_color()
+box.set_text_size()
 The function sets the size of the box's text.
-
-## Syntax
-
-## box.set_text_size(id, text_size) → void
-
-## Arguments
-
-- **`id`** (series box) A box object.
-
-- **`text_size`** (series int/string) Size of the box's text. The size can be any positive integer, or one of the size.* built-in constant strings. The constant strings and their equivalent integer values are: size.auto (0), size.tiny (8), size.small (10), size.normal (14), size.large (20), size.huge (36).
-
-## box.set_text_valign()
-
+Syntax
+box.set_text_size(id, text_size) → void
+Arguments
+id (series box) A box object.
+text_size (series int/string) Size of the box's text. The size can be any positive integer, or one of the size.* built-in constant strings. The constant strings and their equivalent integer values are: size.auto (0), size.tiny (8), size.small (10), size.normal (14), size.large (20), size.huge (36).
+See also
+box.set_text()
+box.set_text_color()
+box.set_text_valign()
+box.set_text_halign()
+box.set_text_valign()
 The function sets the vertical alignment of a box's text.
-
-## Syntax
-
-## box.set_text_valign(id, text_valign) → void
-
-## Arguments
-
-- **`id`** (series box) A box object.
-
-- **`text_valign`** (series string) The vertical alignment of the box's text. Possible values: text.align_top, text.align_center, text.align_bottom.
-
-## box.set_text_wrap()
-
+Syntax
+box.set_text_valign(id, text_valign) → void
+Arguments
+id (series box) A box object.
+text_valign (series string) The vertical alignment of the box's text. Possible values: text.align_top, text.align_center, text.align_bottom.
+See also
+box.set_text()
+box.set_text_size()
+box.set_text_color()
+box.set_text_halign()
+box.set_text_wrap()
 The function sets the mode of wrapping of the text inside the box.
-
-## Syntax
-
-## box.set_text_wrap(id, text_wrap) → void
-
-## Arguments
-
-- **`id`** (series box) A box object.
-
-- **`text_wrap`** (series string) Whether to wrap text. Wrapped text starts a new line when it reaches the side of the box. Wrapped text lower than the bottom of the box is not displayed. Unwrapped text stays on a single line and is displayed past the width of the box if it is too long. If the text_size is 0 or text.wrap_auto, this setting has no effect. Possible values: text.wrap_none, text.wrap_auto.
-
-## box.set_top()
-
+Syntax
+box.set_text_wrap(id, text_wrap) → void
+Arguments
+id (series box) A box object.
+text_wrap (series string) Whether to wrap text. Wrapped text starts a new line when it reaches the side of the box. Wrapped text lower than the bottom of the box is not displayed. Unwrapped text stays on a single line and is displayed past the width of the box if it is too long. If the text_size is 0 or text.wrap_auto, this setting has no effect. Possible values: text.wrap_none, text.wrap_auto.
+See also
+box.set_text()
+box.set_text_size()
+box.set_text_valign()
+box.set_text_halign()
+box.set_text_color()
+box.set_top()
 Sets the top coordinate of the box.
-
-## Syntax
-
-## box.set_top(id, top) → void
-
-## Arguments
-
-- **`id`** (series box) A box object.
-
-- **`top`** (series int/float) Price value of the top border.
-
-## box.set_top_left_point()
-
+Syntax
+box.set_top(id, top) → void
+Arguments
+id (series box) A box object.
+top (series int/float) Price value of the top border.
+See also
+box.new()
+box.get_top()
+box.set_top_left_point()
 Sets the top-left corner location of the id box to point.
-
-## Syntax
-
-## box.set_top_left_point(id, point) → void
-
-## Arguments
-
-- **`id`** (series box) A box object.
-
-- **`point`** (chart.point) A chart.point object.
-
-## box.set_xloc()
-
+Syntax
+box.set_top_left_point(id, point) → void
+Arguments
+id (series box) A box object.
+point (chart.point) A chart.point object.
+box.set_xloc()
 Sets the left and right borders of a box and updates its xloc property.
-
-## Syntax
-
+Syntax
 box.set_xloc(id, left, right, xloc) → void
-
-## Arguments
-
-- **`id`** (series box) The ID of the box object to update.
-
-- **`left`** (series int) The bar index or timestamp for the left border of the box.
-
-- **`right`** (series int) The bar index or timestamp for the right border of the box.
-
-- **`xloc`** (series string) Determines whether the box treats the left and right arguments as bar indices or timestamps. Possible values: xloc.bar_index and xloc.bar_time. If the value is xloc.bar_index, the arguments represent bar indices. If xloc.bar_time, the arguments represent UNIX timestamps.
-
-## chart.point.copy()
-
+Arguments
+id (series box) The ID of the box object to update.
+left (series int) The bar index or timestamp for the left border of the box.
+right (series int) The bar index or timestamp for the right border of the box.
+xloc (series string) Determines whether the box treats the left and right arguments as bar indices or timestamps. Possible values: xloc.bar_index and xloc.bar_time. If the value is xloc.bar_index, the arguments represent bar indices. If xloc.bar_time, the arguments represent UNIX timestamps.
+See also
+box.new()
+xloc.bar_index
+xloc.bar_time
+chart.point.copy()
 Creates a copy of a chart.point object with the specified id.
-
-## Syntax
-
-## chart.point.copy(id) → chart.point
-
-## Arguments
-
-- **`id`** (chart.point) A chart.point object.
-
-## chart.point.from_index()
-
+Syntax
+chart.point.copy(id) → chart.point
+Arguments
+id (chart.point) A chart.point object.
+chart.point.from_index()
 Returns a chart.point object with index as its x-coordinate and price as its y-coordinate.
-
-## Syntax
-
-## chart.point.from_index(index, price) → chart.point
-
-## Arguments
-
-- **`index`** (series int) The x-coordinate of the point, expressed as a bar index value.
-
-- **`price`** (series int/float) The y-coordinate of the point.
+Syntax
+chart.point.from_index(index, price) → chart.point
+Arguments
+index (series int) The x-coordinate of the point, expressed as a bar index value.
+price (series int/float) The y-coordinate of the point.
+```
 
 ### Remarks
 
@@ -5924,11 +6458,6 @@ The time field values of chart.point instances returned from this function will 
 Returns a chart.point object with time as its x-coordinate and price as its y-coordinate.
 
 ## Syntax
-
-## chart.point.from_time(time, price) → chart.point
-
-## Arguments
-
 - **`time`** (series int) The x-coordinate of the point, expressed as a UNIX time value, in milliseconds.
 
 - **`price`** (series int/float) The y-coordinate of the point.
@@ -5942,11 +6471,6 @@ The index field values of chart.point instances returned from this function will
 Creates a new chart.point object with the specified time, index, and price.
 
 ## Syntax
-
-## chart.point.new(time, index, price) → chart.point
-
-## Arguments
-
 - **`time`** (series int) The x-coordinate of the point, expressed as a UNIX time value, in milliseconds.
 
 - **`index`** (series int) The x-coordinate of the point, expressed as a bar index value.
@@ -5959,8 +6483,6 @@ Whether a drawing object uses a point's time or index field as an x-coordinate d
 
 It's important to note that this function does not verify that the time and index values refer to the same bar.
 
-See also
-
 ## polyline.new()
 
 ## chart.point.now()
@@ -5968,55 +6490,31 @@ See also
 Returns a chart.point object with price as the y-coordinate
 
 ## Syntax
-
-## chart.point.now(price) → chart.point
-
-## Arguments
-
 - **`price`** (series int/float) The y-coordinate of the point. Optional. The default is close.
 
 ### Remarks
 
 The chart.point instance returned from this function records values for its index and time fields on the bar it executed on, making it suitable for use with drawing objects of any xloc type.
 
-## color()
+## color()4 overloads
 
 Casts na to color
 
 Syntax & Overloads
 
 ## color(x) → const color
-
-## color(x) → input color
-
-## color(x) → simple color
-
-## color(x) → series color
-
-## Arguments
-
 - **`x`** (const color) The value to convert to the specified type, usually na.
 
 ### Returns
 
 The value of the argument after casting to color.
 
-## color.b()
-
+## float()
 Retrieves the value of the color's blue component.
 
 Syntax & Overloads
 
 ## color.b(color) → const float
-
-## color.b(color) → input float
-
-## color.b(color) → simple float
-
-## color.b(color) → series float
-
-## Arguments
-
 - **`color`** (const color) Color.
 
 ### Example
@@ -6026,6 +6524,10 @@ Syntax & Overloads
 indicator("color.b", overlay=true)
 plot(color.b(color.blue))
 ```
+
+### Returns
+
+The value (0 to 255) of the color's blue component.
 
 ## color.from_gradient()
 
@@ -6073,15 +6575,6 @@ Retrieves the value of the color's green component.
 Syntax & Overloads
 
 ## color.g(color) → const float
-
-## color.g(color) → input float
-
-## color.g(color) → simple float
-
-## color.g(color) → series float
-
-## Arguments
-
 - **`color`** (const color) Color.
 
 ### Example
@@ -6103,15 +6596,6 @@ Function color applies the specified transparency to the given color.
 Syntax & Overloads
 
 ## color.new(color, transp) → const color
-
-## color.new(color, transp) → input color
-
-## color.new(color, transp) → simple color
-
-## color.new(color, transp) → series color
-
-## Arguments
-
 - **`color`** (const color) Color to apply transparency to.
 
 - **`transp`** (const int/float) Possible values are from 0 (not transparent) to 100 (invisible).
@@ -6126,7 +6610,7 @@ plot(close, color=color.new(color.red, 50))
 
 ### Returns
 
-## Color with specified transparency.
+Color with specified transparency.
 
 ### Remarks
 
@@ -6139,15 +6623,6 @@ Retrieves the value of the color's red component.
 Syntax & Overloads
 
 ## color.r(color) → const float
-
-## color.r(color) → input float
-
-## color.r(color) → simple float
-
-## color.r(color) → series float
-
-## Arguments
-
 - **`color`** (const color) Color.
 
 ### Example
@@ -6196,7 +6671,7 @@ plot(close, color=color.rgb(255, 0, 0, 50))
 
 ### Returns
 
-## Color with specified transparency.
+Color with specified transparency.
 
 ### Remarks
 
@@ -6204,20 +6679,11 @@ plot(close, color=color.rgb(255, 0, 0, 50))
 
 ## color.t()4 overloads
 
-## Retrieves the color's transparency.
+Retrieves the color's transparency.
 
 Syntax & Overloads
 
 ## color.t(color) → const float
-
-## color.t(color) → input float
-
-## color.t(color) → simple float
-
-## color.t(color) → series float
-
-## Arguments
-
 - **`color`** (const color) Color.
 
 ### Example
@@ -6237,11 +6703,6 @@ The value (0-100) of the color's transparency.
 Calculates the day number of the month, in a specified time zone, from a UNIX timestamp.
 
 ## Syntax
-
-## dayofmonth(time, timezone) → series int
-
-## Arguments
-
 - **`time`** (series int) A UNIX timestamp in milliseconds.
 
 - **`timezone`** (series string) Optional. Specifies the time zone of the returned day number. The value can be a time zone string in UTC/GMT offset notation (e.g., "UTC-5") or IANA time zone database notation (e.g., "America/New_York"). The default is syminfo.timezone.
@@ -6254,16 +6715,10 @@ The calculated day of the month, expressed in the specified time zone.
 
 A UNIX timestamp represents the number of milliseconds elapsed since 00:00 UTC on 1970-01-01. The meaning of a UNIX timestamp does not change relative to any time zone.
 
-## dayofweek()
-
+## dayofmonth
 Calculates the day number of the week, in a specified time zone, from a UNIX timestamp.
 
 ## Syntax
-
-## dayofweek(time, timezone) → series int
-
-## Arguments
-
 - **`time`** (series int) A UNIX timestamp in milliseconds.
 
 - **`timezone`** (series string) Optional. Specifies the time zone of the returned day number. The value can be a time zone string in UTC/GMT offset notation (e.g., "UTC-5") or IANA time zone database notation (e.g., "America/New_York"). The default is syminfo.timezone.
@@ -6276,8 +6731,7 @@ The calculated day number, expressed in the specified time zone.
 
 A UNIX timestamp represents the number of milliseconds elapsed since 00:00 UTC on 1970-01-01. The meaning of a UNIX timestamp does not change relative to any time zone.
 
-## fill()3 overloads
-
+## dayofweek
 Fills background between two plots or hlines with a given color.
 
 Syntax & Overloads
@@ -6340,52 +6794,39 @@ botCol = input.color(color.blue)
 topLine = hline(100, color = topCol, linestyle = hline.style_solid)
 botLine = hline(0,   color = botCol, linestyle = hline.style_solid)
 fill(topLine, botLine, topVal, botVal, topCol, botCol)
-```
-
-## fixnan()3 overloads
-
+See also
+plot()
+barcolor()
+bgcolor()
+hline()
+color.new()
+fixnan()3 overloads
 For a given series replaces NaN values with previous nearest non-NaN value.
-
 Syntax & Overloads
-
-## fixnan(source) → series color
-
-## fixnan(source) → series int
-
-## fixnan(source) → series float
-
-## Arguments
-
-- **`source`** (series color) Source used for the calculation.
+fixnan(source) → series color
+fixnan(source) → series int
+fixnan(source) → series float
+Arguments
+source (series color) Source used for the calculation.
+```
 
 ### Returns
 
-## Series without na gaps.
+Series without na gaps.
 
-## float()4 overloads
-
+## na()
 Casts na to float
 
 Syntax & Overloads
 
 ## float(x) → const float
-
-## float(x) → input float
-
-## float(x) → simple float
-
-## float(x) → series float
-
-## Arguments
-
 - **`x`** (const int/float) The value to convert to the specified type, usually na.
 
 ### Returns
 
 The value of the argument after casting to float.
 
-## hline()
-
+## int()
 Renders a horizontal line at a given fixed price level.
 
 ## Syntax
@@ -6424,14 +6865,7 @@ fill(h1, h2, color=color.new(color.green, 90))
 
 An hline object, that can be used in fill()
 
-## hour()
-
-## Syntax
-
-## hour(time, timezone) → series int
-
-## Arguments
-
+## fill()
 - **`time`** (series int) UNIX time in milliseconds.
 
 - **`timezone`** (series string) Allows adjusting the returned value to a time zone specified in either UTC/GMT notation (e.g., "UTC-5", "GMT+0530") or as an IANA time zone database name (e.g., "America/New_York"). Optional. The default is syminfo.timezone.
@@ -6444,8 +6878,7 @@ Hour (in exchange timezone) for provided UNIX time.
 
 UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
-## indicator()
-
+## hour
 This declaration statement designates the script as an indicator and sets a number of indicator-related properties.
 
 ## Syntax
@@ -6500,8 +6933,7 @@ plot(close)
 
 Every indicator script must have one indicator() call.
 
-## input()6 overloads
-
+## strategy()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function automatically detects the type of the argument used for 'defval' and uses the corresponding input widget.
 
 Syntax & Overloads
@@ -6544,37 +6976,18 @@ plot(i_switch ? open : na)
 ```
 
 ## i_len = input(7, "Length")
-
-## i_src = input(close, "Source")
-
-## plot(ta.sma(i_src, i_len))
-
-## i_border = input(142.50, "Price Border")
-
-## hline(i_border)
-
 bgcolor(close > i_border ? color.green : color.red)
 
 ## i_col = input(color.red, "Plot Color")
-
-## plot(close, color=i_col)
-
-## i_text = input("Hello!", "Message")
-
-## l = label.new(bar_index, high, text=i_text)
-
-## label.delete(l[1])
-
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input() function always should be assigned to a variable, see examples above.
 
 ## input.bool()
-
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a checkmark to the script's inputs.
 
 ## Syntax
@@ -6610,14 +7023,13 @@ plot(i_switch ? open : na)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.bool() function always should be assigned to a variable, see examples above.
 
-## input.color()
-
+## input.int()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a color picker that allows the user to select a color and transparency, either from a palette or a hex value.
 
 ## Syntax
@@ -6653,14 +7065,13 @@ plot(close, color=i_col)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.color() function always should be assigned to a variable, see examples above.
 
-## input.enum()
-
+## input.bool()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a dropdown with options based on the enum fields passed to its defval and options parameters.
 
 The text for each option in the resulting dropdown corresponds to the titles of the included fields. If a field's title is not specified in the enum declaration, its title is the string representation of its name.
@@ -6717,14 +7128,13 @@ bgcolor(inSession ? color.new(color.green, 90) : na, title = "Active session hig
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 All fields included in the defval and options arguments must belong to the same enum.
 
-## input.float()2 overloads
-
+## input.text_area()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a field for a float input to the script's inputs.
 
 Syntax & Overloads
@@ -6766,14 +7176,13 @@ plot(math.cos(i_angle2) > 0 ? close : open, "cos", color=color.red)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.float() function always should be assigned to a variable, see examples above.
 
-## input.int()2 overloads
-
+## input.bool()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a field for an integer input to the script's inputs.
 
 Syntax & Overloads
@@ -6815,14 +7224,13 @@ plot(ta.sma(close, i_len2))
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.int() function always should be assigned to a variable, see examples above.
 
-## input.price()
-
+## input.bool()
 Adds a price input to the script's "Settings/Inputs" tab. The user can change the price in the settings or by selecting the indicator and dragging the price line.
 
 ## Syntax
@@ -6862,7 +7270,7 @@ plot(price1)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
@@ -6870,8 +7278,7 @@ The user can change the input's value by specifying a new value in the "Settings
 
 If an input.time() and input.price() function call in the script share a unique inline argument and have matching group arguments, those calls create a single interactive point marker on the chart. The user can move that marker to adjust the input time and price values simultaneously.
 
-## input.session()
-
+## input.bool()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds two dropdowns that allow the user to specify the beginning and the end of a session using the session selector and returns the result as a string.
 
 ## Syntax
@@ -6910,14 +7317,13 @@ bgcolor(time == t ? color.green : na)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.session() function always should be assigned to a variable, see examples above.
 
-## input.source()
-
+## input.bool()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a dropdown that allows the user to select a source for the calculation, e.g. close, hl2, etc. The user can also select an output from another indicator on their chart as the source.
 
 ## Syntax
@@ -6953,14 +7359,13 @@ plot(i_src)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.source() function always should be assigned to a variable, see examples above.
 
-## input.string()
-
+## input.bool()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a field for a string input to the script's inputs.
 
 ## Syntax
@@ -6999,14 +7404,13 @@ label.delete(l[1])
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.string() function always should be assigned to a variable, see examples above.
 
-## input.symbol()
-
+## input.text_area()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a field that allows the user to select a specific symbol using the symbol search and returns that symbol, paired with its exchange prefix, as a string.
 
 ## Syntax
@@ -7043,14 +7447,13 @@ plot(s)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.symbol() function always should be assigned to a variable, see examples above.
 
-## input.text_area()
-
+## input.bool()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a field for a multiline text input.
 
 ## Syntax
@@ -7084,14 +7487,13 @@ plot(close)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.text_area() function always should be assigned to a variable, see examples above.
 
-## input.time()
-
+## input.string()
 Adds two inputs to the script's "Settings/Inputs" tab on the same line: one for the date and one for the time. The user can change the price in the settings or by selecting the indicator and dragging the price line. The function returns a date/time value in UNIX format.
 
 ## Syntax
@@ -7128,7 +7530,7 @@ label.delete(l[1])
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
@@ -7136,8 +7538,7 @@ The user can change the input's value by specifying a new value in the "Settings
 
 If an input.time() and input.price() function call in the script share a unique inline argument and have matching group arguments, those calls create a single interactive point marker on the chart. The user can move that marker to adjust the input time and price values simultaneously.
 
-## input.timeframe()
-
+## input.bool()
 Adds an input to the Inputs tab of your script's Settings, which allows you to provide configuration options to script users. This function adds a dropdown that allows the user to select a specific timeframe via the timeframe selector and returns it as a string. The selector includes the custom timeframes a user may have added using the chart's Timeframe dropdown.
 
 ## Syntax
@@ -7176,60 +7577,38 @@ plot(s)
 
 ### Returns
 
-## Value of input variable.
+Value of input variable.
 
 ### Remarks
 
 Result of input.timeframe() function always should be assigned to a variable, see examples above.
 
-## int()4 overloads
-
+## input.bool()
 Casts na or truncates float value to int
 
 Syntax & Overloads
 
 ## int(x) → const int
-
-## int(x) → input int
-
-## int(x) → simple int
-
-## int(x) → series int
-
-## Arguments
-
 - **`x`** (const int/float) The value to convert to the specified type, usually na.
 
 ### Returns
 
 The value of the argument after casting to int.
 
-## label()
-
+## float()
 Casts na to label
 
 ## Syntax
-
-## label(x) → series label
-
-## Arguments
-
 - **`x`** (series label) The value to convert to the specified type, usually na.
 
 ### Returns
 
 The value of the argument after casting to label.
 
-## label.copy()
-
-## Clones the label object.
+## float()
+Clones the label object.
 
 ## Syntax
-
-## label.copy(id) → series label
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 ### Example
@@ -7255,28 +7634,19 @@ if barstate.islastconfirmedhistory
 
 New label ID object which may be passed to label.setXXX and label.getXXX functions.
 
-## label.delete()
-
+## label.new()
 Deletes the specified label object. If it has already been deleted, does nothing.
 
 ## Syntax
-
-## label.delete(id) → void
-
-## Arguments
-
 - **`id`** (series label) Label object to delete.
+
+## label.new()
 
 ## label.get_text()
 
 Returns the text of this label object.
 
 ## Syntax
-
-## label.get_text(id) → series string
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 ### Example
@@ -7293,16 +7663,13 @@ label.new(time, close, text = a + " new", xloc=xloc.bar_time)
 
 String object containing the text of this label.
 
+## label.new()
+
 ## label.get_x()
 
 Returns UNIX time or bar index (depending on the last xloc value set) of this label's position.
 
 ## Syntax
-
-## label.get_x(id) → series int
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 ### Example
@@ -7319,21 +7686,20 @@ plot(time - label.get_x(my_label)) //draws zero plot
 
 UNIX timestamp (in milliseconds) or bar index.
 
+## label.new()
+
 ## label.get_y()
 
 Returns price of this label's position.
 
 ## Syntax
-
-## label.get_y(id) → series float
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 ### Returns
 
-## Floating point value representing price.
+Floating point value representing price.
+
+## label.new()
 
 ## label.new()2 overloads
 
@@ -7389,30 +7755,21 @@ label.set_size(label1, size.large)
 
 Label ID object which may be passed to label.setXXX and label.getXXX functions.
 
-## label.set_color()
-
+## label.delete()
 Sets label border and arrow color.
 
 ## Syntax
-
-## label.set_color(id, color) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`color`** (series color) New label border and arrow color.
+
+## label.new()
 
 ## label.set_point()
 
 Sets the location of the id label to point.
 
 ## Syntax
-
-## label.set_point(id, point) → void
-
-## Arguments
-
 - **`id`** (series label) A label object.
 
 - **`point`** (chart.point) A chart.point object.
@@ -7422,53 +7779,33 @@ Sets the location of the id label to point.
 Sets arrow and text size of the specified label object.
 
 ## Syntax
-
-## label.set_size(id, size) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`size`** (series int/string) Size of the label. Accepts a positive int value or one of the built-in size.* constants. The constants and their equivalent numeric sizes are: size.auto (0), size.tiny (~7), size.small (~10), size.normal (12), size.large (18), size.huge (24). The default value is size.normal, which represents the numeric size of 12.
 
-## label.set_style()
-
-## Sets label style.
+## size.auto
+Sets label style.
 
 ## Syntax
-
-## label.set_style(id, style) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`style`** (series string) New label style. Possible values: label.style_none, label.style_xcross, label.style_cross, label.style_triangleup, label.style_triangledown, label.style_flag, label.style_circle, label.style_arrowup, label.style_arrowdown, label.style_label_up, label.style_label_down, label.style_label_left, label.style_label_right, label.style_label_lower_left, label.style_label_lower_right, label.style_label_upper_left, label.style_label_upper_right, label.style_label_center, label.style_square, label.style_diamond, label.style_text_outline.
+
+## label.new()
 
 ## label.set_text()
 
 Sets label text
 
 ## Syntax
-
-## label.set_text(id, text) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`text`** (series string) New label text.
 
-## label.set_text_font_family()
-
+## label.new()
 The function sets the font family of the text inside the label.
 
 ## Syntax
-
-## label.set_text_font_family(id, text_font_family) → void
-
-## Arguments
-
 - **`id`** (series label) A label object.
 
 - **`text_font_family`** (series string) The font family of the text. Possible values: font.family_default, font.family_monospace.
@@ -7481,152 +7818,111 @@ indicator("Example of setting the label font")
 if barstate.islastconfirmedhistory
     l = label.new(bar_index, 0, "monospace", yloc=yloc.abovebar)
     label.set_text_font_family(l, font.family_monospace)
+See also
+label.new()
+font.family_default
+font.family_monospace
+label.set_text_formatting()
+Sets the formatting attributes the drawing applies to displayed text.
+Syntax
+label.set_text_formatting(id, text_formatting) → void
+Arguments
+id (series label) Label object.
+text_formatting (const text_format) The formatting of the displayed text. Formatting options support addition. For example, text.format_bold + text.format_italic will make the text both bold and italicized. Possible values: text.format_none, text.format_bold, text.format_italic. Optional. The default is text.format_none.
+See also
+label.new()
+label.set_text()
+label.set_textalign()
+Sets the alignment for the label text.
+Syntax
+label.set_textalign(id, textalign) → void
+Arguments
+id (series label) Label object.
+textalign (series string) Label text alignment. Possible values: text.align_left, text.align_center, text.align_right.
+See also
+text.align_left
+text.align_center
+text.align_right
+label.new()
+label.set_textcolor()
+Sets color of the label text.
+Syntax
+label.set_textcolor(id, textcolor) → void
+Arguments
+id (series label) Label object.
+textcolor (series color) New text color.
+See also
+label.new()
+label.set_tooltip()
 ```
 
-## label.set_text_formatting()
-
-Sets the formatting attributes the drawing applies to displayed text.
+Sets the tooltip text.
 
 ## Syntax
-
-## label.set_text_formatting(id, text_formatting) → void
-
-## Arguments
-
-- **`id`** (series label) Label object.
-
-- **`text_formatting`** (const text_format) The formatting of the displayed text. Formatting options support addition. For example, text.format_bold + text.format_italic will make the text both bold and italicized. Possible values: text.format_none, text.format_bold, text.format_italic. Optional. The default is text.format_none.
-
-## label.set_textalign()
-
-Sets the alignment for the label text.
-
-## Syntax
-
-## label.set_textalign(id, textalign) → void
-
-## Arguments
-
-- **`id`** (series label) Label object.
-
-- **`textalign`** (series string) Label text alignment. Possible values: text.align_left, text.align_center, text.align_right.
-
-## label.set_textcolor()
-
-Sets color of the label text.
-
-## Syntax
-
-## label.set_textcolor(id, textcolor) → void
-
-## Arguments
-
-- **`id`** (series label) Label object.
-
-- **`textcolor`** (series color) New text color.
-
-## label.set_tooltip()
-
-## Sets the tooltip text.
-
-## Syntax
-
-## label.set_tooltip(id, tooltip) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`tooltip`** (series string) Tooltip text.
+
+## label.new()
 
 ## label.set_x()
 
 Sets bar index or bar time (depending on the xloc) of the label position.
 
 ## Syntax
-
-## label.set_x(id, x) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`x`** (series int) New bar index or bar time of the label position. Note that objects positioned using xloc.bar_index cannot be drawn further than 500 bars into the future.
+
+## label.new()
 
 ## label.set_xloc()
 
 Sets x-location and new bar index/time value.
 
 ## Syntax
-
-## label.set_xloc(id, x, xloc) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`x`** (series int) New bar index or bar time of the label position.
 
 - **`xloc`** (series string) New x-location value.
 
-## label.set_xy()
-
+## xloc.bar_index
 Sets bar index/time and price of the label position.
 
 ## Syntax
-
-## label.set_xy(id, x, y) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`x`** (series int) New bar index or bar time of the label position. Note that objects positioned using xloc.bar_index cannot be drawn further than 500 bars into the future.
 
 - **`y`** (series int/float) New price of the label position.
 
+## label.new()
+
 ## label.set_y()
 
 Sets price of the label position
 
 ## Syntax
-
-## label.set_y(id, y) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`y`** (series int/float) New price of the label position.
-
-See also
 
 ## label.new()
 
 ## label.set_yloc()
 
-## Sets new y-location calculation algorithm.
+Sets new y-location calculation algorithm.
 
 ## Syntax
-
-## label.set_yloc(id, yloc) → void
-
-## Arguments
-
 - **`id`** (series label) Label object.
 
 - **`yloc`** (series string) New y-location value.
 
-## library()
-
+## yloc.price
 Declaration statement identifying a script as a library.
 
 ## Syntax
-
-## library(title, overlay, dynamic_requests) → void
-
-## Arguments
-
 - **`title`** (const string) The title of the library and its identifier. It cannot contain spaces, special characters or begin with a digit. It is used as the publication's default title, and to uniquely identify the library in the import statement, when another script uses it. It is also used as the script's name on the chart.
 
 - **`overlay`** (const bool) If true, the script's visuals appear on the main chart pane if the user adds it to the chart directly, or in another script's pane if the user applies it to that script. If false, the script's visuals appear in a separate pane. Changes to the overlay value apply only after the user adds the script to the chart again. Additionally, if the user moves the script to another pane by selecting a "Move to" option in the script's "More" menu, it does not move back to its original pane after any updates to the source code. The default is false. Strategy-specific labels that display entries and exits will be displayed over the main chart regardless of this setting.
@@ -7643,34 +7939,25 @@ library("num_methods", overlay = true)
 export sinh(float x) =>
     (math.exp(x) - math.exp(-x)) / 2.0
 plot(sinh(0))
-```
-
-## line()
-
+See also
+indicator()
+strategy()
+line()
 Casts na to line
-
-## Syntax
-
-## line(x) → series line
-
-## Arguments
-
-- **`x`** (series line) The value to convert to the specified type, usually na.
+Syntax
+line(x) → series line
+Arguments
+x (series line) The value to convert to the specified type, usually na.
+```
 
 ### Returns
 
 The value of the argument after casting to line.
 
-## line.copy()
-
-## Clones the line object.
+## float()
+Clones the line object.
 
 ## Syntax
-
-## line.copy(id) → series line
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 ### Example
@@ -7693,28 +7980,19 @@ if barstate.islastconfirmedhistory
 
 New line ID object which may be passed to line.setXXX and line.getXXX functions.
 
-## line.delete()
-
+## line.new()
 Deletes the specified line object. If it has already been deleted, does nothing.
 
 ## Syntax
-
-## line.delete(id) → void
-
-## Arguments
-
 - **`id`** (series line) Line object to delete.
+
+## line.new()
 
 ## line.get_price()
 
 Returns the price level of a line at a given bar index.
 
 ## Syntax
-
-## line.get_price(id, x) → series float
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`x`** (series int) Bar index for which price is required.
@@ -7740,16 +8018,13 @@ The line is considered to have been created using 'extend=extend.both'.
 
 This function can only be called for lines created using 'xloc.bar_index'. If you try to call it for a line created with 'xloc.bar_time', it will generate an error.
 
+## line.new()
+
 ## line.get_x1()
 
 - **`Returns UNIX time or bar index`** (depending on the last xloc value set) of the first point of the line.
 
 ## Syntax
-
-## line.get_x1(id) → series int
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 ### Example
@@ -7766,45 +8041,46 @@ plot(time - line.get_x1(my_line)) //draws zero plot
 
 UNIX timestamp (in milliseconds) or bar index.
 
+## line.new()
+
 ## line.get_x2()
 
 - **`Returns UNIX time or bar index`** (depending on the last xloc value set) of the second point of the line.
 
 ## Syntax
-
-## line.get_x2(id) → series int
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 ### Returns
 
 UNIX timestamp (in milliseconds) or bar index.
 
+## line.new()
+
 ## line.get_y1()
 
 Returns price of the first point of the line.
 
 ## Syntax
-
-## line.get_y1(id) → series float
-
-## Arguments
-
 - **`id`** (series line) Line object.
+
+### Returns
+
+Price value.
+
+## line.new()
 
 ## line.get_y2()
 
 Returns price of the second point of the line.
 
 ## Syntax
-
-## line.get_y2(id) → series float
-
-## Arguments
-
 - **`id`** (series line) Line object.
+
+### Returns
+
+Price value.
+
+## line.new()
 
 ## line.new()2 overloads
 
@@ -7851,44 +8127,29 @@ line.set_width(line2, 5)
 
 Line ID object which may be passed to line.setXXX and line.getXXX functions.
 
-## line.set_color()
-
+## line.delete()
 Sets the line color
 
 ## Syntax
-
-## line.set_color(id, color) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`color`** (series color) New line color
+
+## line.new()
 
 ## line.set_extend()
 
 - **`Sets extending type of this line object. If extend=extend.none, draws segment starting at point`** (x1, y1) and ending at point (x2, y2). If extend is equal to extend.right or extend.left, draws a ray starting at point (x1, y1) or (x2, y2), respectively. If extend=extend.both, draws a straight line that goes through these points.
 
 ## Syntax
-
-## line.set_extend(id, extend) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`extend`** (series string) New extending type.
 
-## line.set_first_point()
-
+## extend.none
 Sets the first point of the id line to point.
 
 ## Syntax
-
-## line.set_first_point(id, point) → void
-
-## Arguments
-
 - **`id`** (series line) A line object.
 
 - **`point`** (chart.point) A chart.point object.
@@ -7898,11 +8159,6 @@ Sets the first point of the id line to point.
 Sets the second point of the id line to point.
 
 ## Syntax
-
-## line.set_second_point(id, point) → void
-
-## Arguments
-
 - **`id`** (series line) A line object.
 
 - **`point`** (chart.point) A chart.point object.
@@ -7912,56 +8168,41 @@ Sets the second point of the id line to point.
 Sets the line style
 
 ## Syntax
-
-## line.set_style(id, style) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`style`** (series string) New line style.
 
-## line.set_width()
-
-## Sets the line width.
+## line.style_solid
+Sets the line width.
 
 ## Syntax
-
-## line.set_width(id, width) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`width`** (series int) New line width in pixels.
+
+## line.new()
 
 ## line.set_x1()
 
 - **`Sets bar index or bar time`** (depending on the xloc) of the first point.
 
 ## Syntax
-
-## line.set_x1(id, x) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`x`** (series int) Bar index or bar time. Note that objects positioned using xloc.bar_index cannot be drawn further than 500 bars into the future.
+
+## line.new()
 
 ## line.set_x2()
 
 - **`Sets bar index or bar time`** (depending on the xloc) of the second point.
 
 ## Syntax
-
-## line.set_x2(id, x) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`x`** (series int) Bar index or bar time. Note that objects positioned using xloc.bar_index cannot be drawn further than 500 bars into the future.
+
+## line.new()
 
 ## line.set_xloc()
 
@@ -7981,92 +8222,68 @@ line.set_xloc(id, x1, x2, xloc) → void
 
 - **`xloc`** (series string) New x-location value.
 
-## line.set_xy1()
-
+## xloc.bar_index
 Sets bar index/time and price of the first point.
 
 ## Syntax
-
-## line.set_xy1(id, x, y) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`x`** (series int) Bar index or bar time. Note that objects positioned using xloc.bar_index cannot be drawn further than 500 bars into the future.
 
 - **`y`** (series int/float) Price.
 
+## line.new()
+
 ## line.set_xy2()
 
 Sets bar index/time and price of the second point
 
 ## Syntax
-
-## line.set_xy2(id, x, y) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`x`** (series int) Bar index or bar time.
 
 - **`y`** (series int/float) Price.
 
+## line.new()
+
 ## line.set_y1()
 
 Sets price of the first point
 
 ## Syntax
-
-## line.set_y1(id, y) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`y`** (series int/float) Price.
+
+## line.new()
 
 ## line.set_y2()
 
 Sets price of the second point.
 
 ## Syntax
-
-## line.set_y2(id, y) → void
-
-## Arguments
-
 - **`id`** (series line) Line object.
 
 - **`y`** (series int/float) Price.
 
+## line.new()
+
 ## linefill()
 
-## Casts na to linefill.
+Casts na to linefill.
 
 ## Syntax
-
-## linefill(x) → series linefill
-
-## Arguments
-
 - **`x`** (series linefill) The value to convert to the specified type, usually na.
 
 ### Returns
 
 The value of the argument after casting to linefill.
 
-## linefill.delete()
-
+## float()
 Deletes the specified linefill object. If it has already been deleted, does nothing.
 
 ## Syntax
-
-## linefill.delete(id) → void
-
-## Arguments
-
 - **`id`** (series linefill) A linefill object.
 
 ## linefill.get_line1()
@@ -8074,11 +8291,6 @@ Deletes the specified linefill object. If it has already been deleted, does noth
 Returns the ID of the first line used in the id linefill.
 
 ## Syntax
-
-## linefill.get_line1(id) → series line
-
-## Arguments
-
 - **`id`** (series linefill) A linefill object.
 
 ## linefill.get_line2()
@@ -8086,11 +8298,6 @@ Returns the ID of the first line used in the id linefill.
 Returns the ID of the second line used in the id linefill.
 
 ## Syntax
-
-## linefill.get_line2(id) → series line
-
-## Arguments
-
 - **`id`** (series linefill) A linefill object.
 
 ## linefill.new()
@@ -8124,11 +8331,6 @@ If both lines are extended in the same direction relative to the lines themselve
 The function sets the color of the linefill object passed to it.
 
 ## Syntax
-
-## linefill.set_color(id, color) → void
-
-## Arguments
-
 - **`id`** (series linefill) A linefill object.
 
 - **`color`** (series color) The color of the linefill object.
@@ -8176,7 +8378,7 @@ last10Perc = strategy.initial_capital / 10 > strategy.equity
 
 ### Returns
 
-## The formatted string.
+The formatted string.
 
 ### Remarks
 
@@ -8231,7 +8433,7 @@ last10Perc = strategy.initial_capital / 10 > strategy.equity
 
 ### Returns
 
-## The formatted string.
+The formatted string.
 
 ### Remarks
 
@@ -8286,7 +8488,7 @@ last10Perc = strategy.initial_capital / 10 > strategy.equity
 
 ### Returns
 
-## The formatted string.
+The formatted string.
 
 ### Remarks
 
@@ -8303,11 +8505,6 @@ The "Pine logs..." button is accessible from the "More" dropdown in the Pine Edi
 Clears the map, removing all key-value pairs from it.
 
 ## Syntax
-
-## map.clear(id) → void
-
-## Arguments
-
 id (any map type) A map object.
 
 ### Example
@@ -8321,21 +8518,20 @@ oddMap.put(2, false)
 oddMap.put(3, true)
 map.clear(oddMap)
 plot(oddMap.size())
-```
-
-## map.contains()
-
+See also
+map.new<type,type>()
+map.put_all()
+map.keys()
+map.values()
+map.remove()
+map.contains()
 Returns true if the key was found in the id map, false otherwise.
-
-## Syntax
-
-## map.contains(id, key) → series bool
-
-## Arguments
-
+Syntax
+map.contains(id, key) → series bool
+Arguments
 id (any map type) A map object.
-
-- **`key`** (series <type of the map's elements>) The key to search in the map.
+key (series <type of the map's elements>) The key to search in the map.
+```
 
 ### Example
 
@@ -8348,19 +8544,19 @@ p = close
 if map.contains(a, "open")
     p := a.get("open")
 plot(p)
-```
-
-## map.copy()
-
+See also
+map.new<type,type>()
+map.put()
+map.keys()
+map.values()
+map.size()
+map.copy()
 Creates a copy of an existing map.
-
-## Syntax
-
-## map.copy(id) → map<keyType, valueType>
-
-## Arguments
-
+Syntax
+map.copy(id) → map<keyType, valueType>
+Arguments
 id (any map type) A map object to copy.
+```
 
 ### Example
 
@@ -8380,16 +8576,10 @@ plot(b.get("example"))
 
 A copy of the id map.
 
-## map.get()
-
+## map.new<type,type>()
 Returns the value associated with the specified key in the id map.
 
 ## Syntax
-
-## map.get(id, key) → <value_type>
-
-## Arguments
-
 id (any map type) A map object.
 
 - **`key`** (series <type of the map's elements>) The key of the value to retrieve.
@@ -8404,19 +8594,19 @@ size = 10
 for i = 0 to size
     a.put(i, size-i)
 plot(map.get(a, 1))
-```
-
-## map.keys()
-
+See also
+map.new<type,type>()
+map.put()
+map.keys()
+map.values()
+map.contains()
+map.keys()
 Returns an array of all the keys in the id map. The resulting array is a copy and any changes to it are not reflected in the original map.
-
-## Syntax
-
-## map.keys(id) → array<type>
-
-## Arguments
-
+Syntax
+map.keys(id) → array<type>
+Arguments
 id (any map type) A map object.
+```
 
 ### Example
 
@@ -8440,7 +8630,6 @@ plot(ohlc/4)
 Maps maintain insertion order. The elements within the array returned by this function will also be in the insertion order.
 
 ## map.new<type,type>()
-
 Creates a new map object: a collection that consists of key-value pairs, where all keys are of the keyType, and all values are of the valueType.
 
 keyType can be a primitive type or enum. For example: int, float, bool, string, color.
@@ -8472,15 +8661,9 @@ Each key is unique and can only appear once. When adding a new value with a key 
 Maps maintain insertion order. Note that the order does not change when inserting a pair with a key that's already in the map. The new pair replaces the existing pair with the key in such cases.
 
 ## map.put()
-
 Puts a new key-value pair into the id map.
 
 ## Syntax
-
-## map.put(id, key, value) → <value_type>
-
-## Arguments
-
 id (any map type) A map object.
 
 - **`key`** (series <type of the map's elements>) The key to put into the map.
@@ -8509,16 +8692,10 @@ The previous value associated with key if the key was already present in the map
 
 Maps maintain insertion order. Note that the order does not change when inserting a pair with a key that's already in the map. The new pair replaces the existing pair with the key in such cases.
 
-## map.put_all()
-
+## map.new<type,type>()
 Puts all key-value pairs from the id2 map into the id map.
 
 ## Syntax
-
-## map.put_all(id, id2) → void
-
-## Arguments
-
 id (any map type) A map object to append to.
 
 id2 (any map type) A map object to be appended.
@@ -8535,21 +8712,20 @@ a.put("second", 15)
 b.put("third", 20)
 map.put_all(a, b)
 plot(a.get("third"))
-```
-
-## map.remove()
-
+See also
+map.new<type,type>()
+map.put()
+map.keys()
+map.values()
+map.remove()
+map.remove()
 Removes a key-value pair from the id map.
-
-## Syntax
-
-## map.remove(id, key) → <value_type>
-
-## Arguments
-
+Syntax
+map.remove(id, key) → <value_type>
+Arguments
 id (any map type) A map object.
-
-- **`key`** (series <type of the map's elements>) The key of the pair to remove from the map.
+key (series <type of the map's elements>) The key of the pair to remove from the map.
+```
 
 ### Example
 
@@ -8566,16 +8742,10 @@ plot(close, color = oldColorValue)
 
 The previous value associated with key if the key was present in the map, or na if there was no such key.
 
-## map.size()
-
+## map.new<type,type>()
 Returns the number of key-value pairs in the id map.
 
 ## Syntax
-
-## map.size(id) → series int
-
-## Arguments
-
 id (any map type) A map object.
 
 ### Example
@@ -8588,19 +8758,19 @@ size = 10
 for i = 0 to size
     a.put(i, size-i)
 plot(map.size(a))
-```
-
-## map.values()
-
+See also
+map.new<type,type>()
+map.put()
+map.keys()
+map.values()
+map.get()
+map.values()
 Returns an array of all the values in the id map. The resulting array is a copy and any changes to it are not reflected in the original map.
-
-## Syntax
-
-## map.values(id) → array<type>
-
-## Arguments
-
+Syntax
+map.values(id) → array<type>
+Arguments
 id (any map type) A map object.
+```
 
 ### Example
 
@@ -8623,31 +8793,17 @@ plot(ohlc/4)
 
 Maps maintain insertion order. The elements within the array returned by this function will also be in the insertion order.
 
-## math.abs()8 overloads
-
+## map.new<type,type>()
 Absolute value of number is number if number >= 0, or -number otherwise.
 
 Syntax & Overloads
 
 ## math.abs(number) → const int
-
-## math.abs(number) → input int
-
-## math.abs(number) → const float
-
-## math.abs(number) → simple int
-
-## math.abs(number) → input float
-
-## math.abs(number) → series int
-
-## math.abs(number) → simple float
-
-## math.abs(number) → series float
-
-## Arguments
-
 - **`number`** (const int) The number to use in the calculation.
+
+### Returns
+
+The absolute value of number.
 
 ## math.acos()4 overloads
 
@@ -8656,15 +8812,6 @@ The acos function returns the arccosine (in radians) of number such that cos(aco
 Syntax & Overloads
 
 ## math.acos(angle) → const float
-
-## math.acos(angle) → input float
-
-## math.acos(angle) → simple float
-
-## math.acos(angle) → series float
-
-## Arguments
-
 - **`angle`** (const int/float) The value, in radians, to use in the calculation.
 
 ### Returns
@@ -8678,15 +8825,6 @@ The asin function returns the arcsine (in radians) of number such that sin(asin(
 Syntax & Overloads
 
 ## math.asin(angle) → const float
-
-## math.asin(angle) → input float
-
-## math.asin(angle) → simple float
-
-## math.asin(angle) → series float
-
-## Arguments
-
 - **`angle`** (const int/float) The value, in radians, to use in the calculation.
 
 ### Returns
@@ -8700,15 +8838,6 @@ The atan function returns the arctangent (in radians) of number such that tan(at
 Syntax & Overloads
 
 ## math.atan(angle) → const float
-
-## math.atan(angle) → input float
-
-## math.atan(angle) → simple float
-
-## math.atan(angle) → series float
-
-## Arguments
-
 - **`angle`** (const int/float) The value, in radians, to use in the calculation.
 
 ### Returns
@@ -8729,44 +8858,28 @@ math.avg(number0, number1, ...) → series float
 
 - **`number0, number1, ...`** (simple int/float) A sequence of numbers to use in the calculation.
 
-## math.ceil()4 overloads
+### Returns
 
+Average.
+
+## math.sum()
 - **`Rounds the specified number up to the smallest whole number`** ("int" value) that is greater than or equal to it.
 
 Syntax & Overloads
 
 ## math.ceil(number) → const int
-
-## math.ceil(number) → input int
-
-## math.ceil(number) → simple int
-
-## math.ceil(number) → series int
-
-## Arguments
-
 - **`number`** (const int/float) The number to round.
 
 ### Returns
 
 The smallest "int" value that is greater than or equal to the number.
 
-## math.cos()4 overloads
-
+## math.floor()
 The cos function returns the trigonometric cosine of an angle.
 
 Syntax & Overloads
 
 ## math.cos(angle) → const float
-
-## math.cos(angle) → input float
-
-## math.cos(angle) → simple float
-
-## math.cos(angle) → series float
-
-## Arguments
-
 - **`angle`** (const int/float) Angle, in radians.
 
 ### Returns
@@ -8780,20 +8893,13 @@ The exp function of number is e raised to the power of number, where e is Euler'
 Syntax & Overloads
 
 ## math.exp(number) → const float
-
-## math.exp(number) → input float
-
-## math.exp(number) → simple float
-
-## math.exp(number) → series float
-
-## Arguments
-
 - **`number`** (const int/float) The number to use in the calculation.
 
 ### Returns
 
 A value representing e raised to the power of number.
+
+## math.pow()
 
 ## math.floor()4 overloads
 
@@ -8802,38 +8908,25 @@ A value representing e raised to the power of number.
 Syntax & Overloads
 
 ## math.floor(number) → const int
-
-## math.floor(number) → input int
-
-## math.floor(number) → simple int
-
-## math.floor(number) → series int
-
-## Arguments
-
 - **`number`** (const int/float) The number to round.
 
-## math.log()4 overloads
+### Returns
 
+The largest "int" value that is less than or equal to the number.
+
+## math.ceil()
 Natural logarithm of any number > 0 is the unique y such that e^y = number.
 
 Syntax & Overloads
 
 ## math.log(number) → const float
-
-## math.log(number) → input float
-
-## math.log(number) → simple float
-
-## math.log(number) → series float
-
-## Arguments
-
 - **`number`** (const int/float) The number to use in the calculation.
 
 ### Returns
 
-## The natural logarithm of number.
+The natural logarithm of number.
+
+## math.log10()
 
 ## math.log10()4 overloads
 
@@ -8842,20 +8935,13 @@ The common (or base 10) logarithm of number is the power to which 10 must be rai
 Syntax & Overloads
 
 ## math.log10(number) → const float
-
-## math.log10(number) → input float
-
-## math.log10(number) → simple float
-
-## math.log10(number) → series float
-
-## Arguments
-
 - **`number`** (const int/float) The number to use in the calculation.
 
 ### Returns
 
 The base 10 logarithm of number.
+
+## math.log()
 
 ## math.max()8 overloads
 
@@ -8896,6 +8982,8 @@ plot(math.max(close, math.max(open, 42)))
 
 The greatest of multiple given values.
 
+## math.min()
+
 ## math.min()8 overloads
 
 Returns the smallest of multiple values.
@@ -8935,22 +9023,15 @@ plot(math.min(close, math.min(open, 42)))
 
 The smallest of multiple given values.
 
+## math.max()
+
 ## math.pow()4 overloads
 
-## Mathematical power function.
+Mathematical power function.
 
 Syntax & Overloads
 
 ## math.pow(base, exponent) → const float
-
-## math.pow(base, exponent) → input float
-
-## math.pow(base, exponent) → simple float
-
-## math.pow(base, exponent) → series float
-
-## Arguments
-
 - **`base`** (const int/float) Specify the base to use.
 
 - **`exponent`** (const int/float) Specifies the exponent.
@@ -8967,8 +9048,7 @@ plot(math.pow(close, 2))
 
 base raised to the power of exponent. If base is a series, it is calculated elementwise.
 
-## math.random()
-
+## math.sqrt()
 Returns a pseudo-random value. The function will generate a different sequence of values for each script execution. Using the same value for the optional seed argument will produce a repeatable sequence.
 
 ## Syntax
@@ -8983,6 +9063,10 @@ math.random(min, max, seed) → series float
 
 - **`seed`** (series int) Optional argument. When the same seed is used, allows successive calls to the function to produce a repeatable set of values.
 
+### Returns
+
+A random value.
+
 ## math.round()8 overloads
 
 Returns the value of number rounded to the nearest integer, with ties rounding up. If the precision parameter is used, returns a float value rounded to that amount of decimal places.
@@ -8990,23 +9074,6 @@ Returns the value of number rounded to the nearest integer, with ties rounding u
 Syntax & Overloads
 
 ## math.round(number) → const int
-
-## math.round(number) → input int
-
-## math.round(number) → simple int
-
-## math.round(number) → series int
-
-## math.round(number, precision) → const float
-
-## math.round(number, precision) → input float
-
-## math.round(number, precision) → simple float
-
-## math.round(number, precision) → series float
-
-## Arguments
-
 - **`number`** (const int/float) The value to be rounded.
 
 ### Returns
@@ -9017,18 +9084,12 @@ The value of number rounded to the nearest integer, or according to precision.
 
 Note that for 'na' values function returns 'na'.
 
-## math.round_to_mintick()2 overloads
-
+## math.ceil()
 Returns the value rounded to the symbol's mintick, i.e. the nearest value that can be divided by syminfo.mintick, without the remainder, with ties rounding up.
 
 Syntax & Overloads
 
 ## math.round_to_mintick(number) → simple float
-
-## math.round_to_mintick(number) → series float
-
-## Arguments
-
 - **`number`** (simple int/float) The value to be rounded.
 
 ### Returns
@@ -9039,23 +9100,17 @@ The number rounded to tick precision.
 
 Note that for 'na' values function returns 'na'.
 
-## math.sign()4 overloads
-
+## math.ceil()
 Sign (signum) of number is zero if number is zero, 1.0 if number is greater than zero, -1.0 if number is less than zero.
 
 Syntax & Overloads
 
 ## math.sign(number) → const float
-
-## math.sign(number) → input float
-
-## math.sign(number) → simple float
-
-## math.sign(number) → series float
-
-## Arguments
-
 - **`number`** (const int/float) The number to use in the calculation.
+
+### Returns
+
+The sign of the argument.
 
 ## math.sin()4 overloads
 
@@ -9064,16 +9119,11 @@ The sin function returns the trigonometric sine of an angle.
 Syntax & Overloads
 
 ## math.sin(angle) → const float
-
-## math.sin(angle) → input float
-
-## math.sin(angle) → simple float
-
-## math.sin(angle) → series float
-
-## Arguments
-
 - **`angle`** (const int/float) Angle, in radians.
+
+### Returns
+
+The trigonometric sine of an angle.
 
 ## math.sqrt()4 overloads
 
@@ -9082,31 +9132,19 @@ Square root of any number >= 0 is the unique y >= 0 such that y^2 = number.
 Syntax & Overloads
 
 ## math.sqrt(number) → const float
-
-## math.sqrt(number) → input float
-
-## math.sqrt(number) → simple float
-
-## math.sqrt(number) → series float
-
-## Arguments
-
 - **`number`** (const int/float) The number to use in the calculation.
 
 ### Returns
 
-## The square root of number.
+The square root of number.
+
+## math.pow()
 
 ## math.sum()
 
 The sum function returns the sliding sum of last y values of x.
 
 ## Syntax
-
-## math.sum(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -9119,58 +9157,45 @@ Sum of source for length bars back.
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
 
-## math.tan()4 overloads
-
+## ta.cum()
 The tan function returns the trigonometric tangent of an angle.
 
 Syntax & Overloads
 
 ## math.tan(angle) → const float
-
-## math.tan(angle) → input float
-
-## math.tan(angle) → simple float
-
-## math.tan(angle) → series float
-
-## Arguments
-
 - **`angle`** (const int/float) Angle, in radians.
+
+### Returns
+
+The trigonometric tangent of an angle.
 
 ## math.todegrees()
 
 Returns an approximately equivalent angle in degrees from an angle measured in radians.
 
 ## Syntax
-
-## math.todegrees(radians) → series float
-
-## Arguments
-
 - **`radians`** (series int/float) Angle in radians.
+
+### Returns
+
+The angle value in degrees.
 
 ## math.toradians()
 
 Returns an approximately equivalent angle in radians from an angle measured in degrees.
 
 ## Syntax
-
-## math.toradians(degrees) → series float
-
-## Arguments
-
 - **`degrees`** (series int/float) Angle in degrees.
+
+### Returns
+
+The angle value in radians.
 
 ## matrix.add_col()
 
 Inserts a new column at the column index of the id matrix.
 
 ## Syntax
-
-## matrix.add_col(id, column, array_id) → void
-
-## Arguments
-
 id (any matrix type) The matrix object's ID (reference).
 
 - **`column`** (series int) Optional. The index of the new column. Must be a value from 0 to matrix.columns(id). All existing columns with indices that are greater than or equal to this value increase their index by one. The default is matrix.columns(id).
@@ -9229,16 +9254,10 @@ indicator("`matrix.add_col()` Example 2")
 
 Rather than add columns to an empty matrix, it is far more efficient to declare a matrix with explicit dimensions and fill it with values. Adding a column is also much slower than adding a row with the matrix.add_row() function.
 
-## matrix.add_row()
-
+## matrix.new<type>()
 Inserts a new row at the row index of the id matrix.
 
 ## Syntax
-
-## matrix.add_row(id, row, array_id) → void
-
-## Arguments
-
 id (any matrix type) The matrix object's ID (reference).
 
 - **`row`** (series int) Optional. The index of the new row. Must be a value from 0 to matrix.rows(id). All existing rows with indices that are greater than or equal to this value increase their index by one. The default is matrix.rows(id).
@@ -9297,18 +9316,12 @@ indicator("`matrix.add_row()` Example 2")
 
 Indexing of rows and columns starts at zero. Rather than add rows to an empty matrix, it is far more efficient to declare a matrix with explicit dimensions and fill it with values.
 
-## matrix.avg()2 overloads
-
+## matrix.new<type>()
 The function calculates the average of all elements in the matrix.
 
 Syntax & Overloads
 
 ## matrix.avg(id) → series float
-
-## matrix.avg(id) → series int
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -9333,16 +9346,10 @@ var x = matrix.avg(m)
 
 The average value from the id matrix.
 
-## matrix.col()
-
+## matrix.new<type>()
 The function creates a one-dimensional array from the elements of a matrix column.
 
 ## Syntax
-
-## matrix.col(id, column) → array<type>
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 - **`column`** (series int) Index of the required column.
@@ -9368,16 +9375,10 @@ An array ID containing the column values of the id matrix.
 
 Indexing of rows starts at 0.
 
-## matrix.columns()
-
+## matrix.new<type>()
 The function returns the number of columns in the matrix.
 
 ## Syntax
-
-## matrix.columns(id) → series int
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 ### Example
@@ -9398,16 +9399,10 @@ if barstate.islastconfirmedhistory
 
 The number of columns in the matrix id.
 
-## matrix.concat()
-
+## matrix.new<type>()
 The function appends the m2 matrix to the m1 matrix.
 
 ## Syntax
-
-## matrix.concat(id1, id2) → matrix<type>
-
-## Arguments
-
 - **`id1`** (any matrix type) Matrix object to concatenate into.
 
 id2 (any matrix type) Matrix object whose elements will be appended to id1.
@@ -9438,16 +9433,10 @@ Returns the id1 matrix concatenated with the id2 matrix.
 
 The number of columns in both matrices must be identical.
 
-## matrix.copy()
-
+## matrix.new<type>()
 The function creates a new matrix which is a copy of the original.
 
 ## Syntax
-
-## matrix.copy(id) → matrix<type>
-
-## Arguments
-
 id (any matrix type) A matrix object to copy.
 
 ### Example
@@ -9477,18 +9466,12 @@ if barstate.islastconfirmedhistory
 
 A new matrix object of the copied id matrix.
 
-## matrix.det()2 overloads
-
+## matrix.new<type>()
 The function returns the determinant of a square matrix.
 
 Syntax & Overloads
 
 ## matrix.det(id) → series float
-
-## matrix.det(id) → series int
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -9517,18 +9500,12 @@ The determinant value of the id matrix.
 
 Function calculation based on the LU decomposition algorithm.
 
-## matrix.diff()2 overloads
-
+## matrix.new<type>()
 The function returns a new matrix resulting from the subtraction between matrices id1 and id2, or of matrix id1 and an id2 scalar (a numerical value).
 
 Syntax & Overloads
 
 ## matrix.diff(id1, id2) → matrix<int>
-
-## matrix.diff(id1, id2) → matrix<float>
-
-## Arguments
-
 - **`id1`** (matrix<int>) Matrix to subtract from.
 
 - **`id2`** (series int/float/matrix<int>) Matrix object or a scalar value to be subtracted.
@@ -9576,18 +9553,12 @@ if barstate.islastconfirmedhistory
 
 A new matrix object containing the difference between id2 and id1.
 
-## matrix.eigenvalues()2 overloads
-
+## matrix.new<type>()
 The function returns an array containing the eigenvalues of a square matrix.
 
 Syntax & Overloads
 
 ## matrix.eigenvalues(id) → array<float>
-
-## matrix.eigenvalues(id) → array<int>
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -9622,18 +9593,12 @@ An array containing the eigenvalues of the id matrix.
 
 The function is calculated using "The Implicit QL Algorithm".
 
-## matrix.eigenvectors()2 overloads
-
+## matrix.new<type>()
 Returns a matrix of eigenvectors, in which each column is an eigenvector of the id matrix.
 
 Syntax & Overloads
 
 ## matrix.eigenvectors(id) → matrix<float>
-
-## matrix.eigenvectors(id) → matrix<int>
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -9668,20 +9633,13 @@ A new matrix containing the eigenvectors of the id matrix.
 
 The function is calculated using "The Implicit QL Algorithm".
 
-## matrix.elements_count()
-
+## matrix.new<type>()
 The function returns the total number of all matrix elements.
 
 ## Syntax
-
-## matrix.elements_count(id) → series int
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
-## matrix.fill()
-
+## matrix.new<type>()
 The function fills a rectangular area of the id matrix defined by the indices from_column to to_column (not including it) and from_row to to_row(not including it) with the value.
 
 ## Syntax
@@ -9714,23 +9672,21 @@ matrix.fill(m, hl2, 0, 2, 1, 3)
 // Display using a label.
 if barstate.islastconfirmedhistory
     label.new(bar_index, high, str.tostring(m))
-```
-
-## matrix.get()
-
+See also
+matrix.new<type>()
+matrix.get()
+matrix.set()
+matrix.columns()
+matrix.rows()
+matrix.get()
 The function returns the element with the specified index of the matrix.
-
-## Syntax
-
-## matrix.get(id, row, column) → <matrix_type>
-
-## Arguments
-
+Syntax
+matrix.get(id, row, column) → <matrix_type>
+Arguments
 id (any matrix type) A matrix object.
-
-- **`row`** (series int) Index of the required row.
-
-- **`column`** (series int) Index of the required column.
+row (series int) Index of the required row.
+column (series int) Index of the required column.
+```
 
 ### Example
 
@@ -9753,18 +9709,12 @@ The value of the element at the row and column index of the id matrix.
 
 Indexing of the rows and columns starts at zero.
 
-## matrix.inv()2 overloads
-
+## matrix.new<type>()
 The function returns the inverse of a square matrix.
 
 Syntax & Overloads
 
 ## matrix.inv(id) → matrix<float>
-
-## matrix.inv(id) → matrix<int>
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -9799,16 +9749,10 @@ A new matrix, which is the inverse of the id matrix.
 
 The function is calculated using the LU decomposition algorithm.
 
-## matrix.is_antidiagonal()
-
+## matrix.new<type>()
 The function determines if the matrix is anti-diagonal (all elements outside the secondary diagonal are zero).
 
 ## Syntax
-
-## matrix.is_antidiagonal(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
@@ -9819,16 +9763,10 @@ Returns true if the id matrix is ​​anti-diagonal, false otherwise.
 
 Returns false with non-square matrices.
 
-## matrix.is_antisymmetric()
-
+## matrix.new<type>()
 The function determines if a matrix is antisymmetric (its transpose equals its negative).
 
 ## Syntax
-
-## matrix.is_antisymmetric(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
@@ -9839,32 +9777,20 @@ Returns true, if the id matrix is antisymmetric, false otherwise.
 
 Returns false with non-square matrices.
 
-## matrix.is_binary()
-
+## matrix.new<type>()
 The function determines if the matrix is binary (when all elements of the matrix are 0 or 1).
 
 ## Syntax
-
-## matrix.is_binary(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
 
 Returns true if the id matrix is binary, false otherwise.
 
-## matrix.is_diagonal()
-
+## matrix.new<type>()
 The function determines if the matrix is diagonal (all elements outside the main diagonal are zero).
 
 ## Syntax
-
-## matrix.is_diagonal(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
@@ -9875,16 +9801,10 @@ Returns true if the id matrix is diagonal, false otherwise.
 
 Returns false with non-square matrices.
 
-## matrix.is_identity()
-
+## matrix.new<type>()
 The function determines if a matrix is an identity matrix (elements with ones on the main diagonal and zeros elsewhere).
 
 ## Syntax
-
-## matrix.is_identity(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
@@ -9895,48 +9815,30 @@ Returns true if id is an identity matrix, false otherwise.
 
 Returns false with non-square matrices.
 
-## matrix.is_square()
-
+## matrix.new<type>()
 The function determines if the matrix is square (it has the same number of rows and columns).
 
 ## Syntax
-
-## matrix.is_square(id) → series bool
-
-## Arguments
-
 id (any matrix type) Matrix object to test.
 
 ### Returns
 
 Returns true if the id matrix is square, false otherwise.
 
-## matrix.is_stochastic()
-
+## matrix.new<type>()
 The function determines if the matrix is stochastic.
 
 ## Syntax
-
-## matrix.is_stochastic(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
 
 Returns true if the id matrix is stochastic, false otherwise.
 
-## matrix.is_symmetric()
-
+## matrix.new<type>()
 The function determines if a square matrix is symmetric (elements are symmetric with respect to the main diagonal).
 
 ## Syntax
-
-## matrix.is_symmetric(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
@@ -9947,16 +9849,10 @@ Returns true if the id matrix is symmetric, false otherwise.
 
 Returns false with non-square matrices.
 
-## matrix.is_triangular()
-
+## matrix.new<type>()
 The function determines if the matrix is triangular (if all elements above or below the main diagonal are zero).
 
 ## Syntax
-
-## matrix.is_triangular(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to test.
 
 ### Returns
@@ -9967,34 +9863,22 @@ Returns true if the id matrix is triangular, false otherwise.
 
 Returns false with non-square matrices.
 
-## matrix.is_zero()
-
+## matrix.new<type>()
 The function determines if all elements of the matrix are zero.
 
 ## Syntax
-
-## matrix.is_zero(id) → series bool
-
-## Arguments
-
 - **`id`** (matrix<int/float>) Matrix object to check.
 
 ### Returns
 
 Returns true if all elements of the id matrix are zero, false otherwise.
 
-## matrix.kron()2 overloads
-
+## matrix.new<type>()
 The function returns the Kronecker product for the id1 and id2 matrices.
 
 Syntax & Overloads
 
 ## matrix.kron(id1, id2) → matrix<float>
-
-## matrix.kron(id1, id2) → matrix<int>
-
-## Arguments
-
 - **`id1`** (matrix<int/float>) First matrix object.
 
 - **`id2`** (matrix<int/float>) Second matrix object.
@@ -10027,18 +9911,12 @@ if barstate.islastconfirmedhistory
 
 A new matrix containing the Kronecker product of id1 and id2.
 
-## matrix.max()2 overloads
-
+## matrix.new<type>()
 The function returns the largest value from the matrix elements.
 
 Syntax & Overloads
 
 ## matrix.max(id) → series float
-
-## matrix.max(id) → series int
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -10063,18 +9941,12 @@ var x = matrix.max(m)
 
 The maximum value from the id matrix.
 
-## matrix.median()2 overloads
-
+## matrix.new<type>()
 The function calculates the median ("the middle" value) of matrix elements.
 
 Syntax & Overloads
 
 ## matrix.median(id) → series float
-
-## matrix.median(id) → series int
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -10099,18 +9971,12 @@ x = matrix.median(m)
 
 Note that na elements of the matrix are not considered when calculating the median.
 
-## matrix.min()2 overloads
-
+## matrix.new<type>()
 The function returns the smallest value from the matrix elements.
 
 Syntax & Overloads
 
 ## matrix.min(id) → series float
-
-## matrix.min(id) → series int
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -10135,18 +10001,12 @@ var x = matrix.min(m)
 
 The smallest value from the id matrix.
 
-## matrix.mode()2 overloads
-
+## matrix.new<type>()
 The function calculates the mode of the matrix, which is the most frequently occurring value from the matrix elements. When there are multiple values occurring equally frequently, the function returns the smallest of those values.
 
 Syntax & Overloads
 
 ## matrix.mode(id) → series float
-
-## matrix.mode(id) → series int
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -10175,22 +10035,12 @@ The most frequently occurring value from the id matrix. If none exists, returns 
 
 Note that na elements of the matrix are not considered when calculating the mode.
 
-## matrix.mult()4 overloads
-
+## matrix.new<type>()
 The function returns a new matrix resulting from the product between the matrices id1 and id2, or between an id1 matrix and an id2 scalar (a numerical value), or between an id1 matrix and an id2 vector (an array of values).
 
 Syntax & Overloads
 
 ## matrix.mult(id1, id2) → array<int>
-
-## matrix.mult(id1, id2) → array<float>
-
-## matrix.mult(id1, id2) → matrix<int>
-
-## matrix.mult(id1, id2) → matrix<float>
-
-## Arguments
-
 - **`id1`** (matrix<int>) First matrix object.
 
 - **`id2`** (array<int>) Second matrix object, value or array.
@@ -10273,15 +10123,9 @@ if barstate.islastconfirmedhistory
 A new matrix object containing the product of id2 and id1.
 
 ## matrix.new<type>()
-
 The function creates a new matrix object. A matrix is a two-dimensional data structure containing rows and columns. All elements in the matrix must be of the type specified in the type template ("<type>").
 
 ## Syntax
-
-## matrix.new<type>(rows, columns, initial_value) → matrix<type>
-
-## Arguments
-
 - **`rows`** (series int) Initial row count of the matrix. Optional. The default value is 0.
 
 - **`columns`** (series int) Initial column count of the matrix. Optional. The default value is 0.
@@ -10375,18 +10219,12 @@ if barstate.islastconfirmedhistory
 
 The ID of the new matrix object.
 
-## matrix.pinv()2 overloads
-
+## matrix.set()
 The function returns the pseudoinverse of a matrix.
 
 Syntax & Overloads
 
 ## matrix.pinv(id) → matrix<float>
-
-## matrix.pinv(id) → matrix<int>
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -10421,18 +10259,12 @@ A new matrix containing the pseudoinverse of the id matrix.
 
 The function is calculated using a Moore–Penrose inverse formula based on singular-value decomposition of a matrix. For non-singular square matrices this function returns the result of matrix.inv().
 
-## matrix.pow()2 overloads
-
+## matrix.new<type>()
 The function calculates the product of the matrix by itself power times.
 
 Syntax & Overloads
 
 ## matrix.pow(id, power) → matrix<float>
-
-## matrix.pow(id, power) → matrix<int>
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 - **`power`** (series int) The number of times the matrix will be multiplied by itself.
@@ -10460,16 +10292,10 @@ if barstate.islastconfirmedhistory
 
 The product of the id matrix by itself power times.
 
-## matrix.rank()
-
+## matrix.new<type>()
 The function calculates the rank of the matrix.
 
 ## Syntax
-
-## matrix.rank(id) → series int
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 ### Example
@@ -10500,16 +10326,10 @@ if barstate.islastconfirmedhistory
 
 The rank of the id matrix.
 
-## matrix.remove_col()
-
+## matrix.new<type>()
 The function removes the column at column index of the id matrix and returns an array containing the removed column's values.
 
 ## Syntax
-
-## matrix.remove_col(id, column) → array<type>
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 - **`column`** (series int) The index of the column to be removed. Optional. The default value is matrix.columns().
@@ -10548,16 +10368,10 @@ An array containing the elements of the column removed from the id matrix.
 
 Indexing of rows and columns starts at zero. It is far more efficient to declare matrices with explicit dimensions than to build them by adding or removing columns. Deleting a column is also much slower than deleting a row with the matrix.remove_row() function.
 
-## matrix.remove_row()
-
+## matrix.new<type>()
 The function removes the row at row index of the id matrix and returns an array containing the removed row's values.
 
 ## Syntax
-
-## matrix.remove_row(id, row) → array<type>
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 - **`row`** (series int) The index of the row to be deleted. Optional. The default value is matrix.rows().
@@ -10596,16 +10410,10 @@ An array containing the elements of the row removed from the id matrix.
 
 Indexing of rows and columns starts at zero. It is far more efficient to declare matrices with explicit dimensions than to build them by adding or removing rows.
 
-## matrix.reshape()
-
+## matrix.new<type>()
 The function rebuilds the id matrix to rows x cols dimensions.
 
 ## Syntax
-
-## matrix.reshape(id, rows, columns) → void
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 - **`rows`** (series int) The number of rows of the reshaped matrix.
@@ -10638,19 +10446,19 @@ if barstate.islastconfirmedhistory
     table.cell(t, 0, 1, str.tostring(m1))
     table.cell(t, 1, 0, "Reshaped matrix:")
     table.cell(t, 1, 1, str.tostring(m2))
-```
-
-## matrix.reverse()
-
+See also
+matrix.new<type>()
+matrix.get()
+matrix.set()
+matrix.add_row()
+matrix.add_col()
+matrix.reverse()
 The function reverses the order of rows and columns in the matrix id. The first row and first column become the last, and the last become the first.
-
-## Syntax
-
-## matrix.reverse(id) → void
-
-## Arguments
-
+Syntax
+matrix.reverse(id) → void
+Arguments
 id (any matrix type) A matrix object.
+```
 
 ### Example
 
@@ -10676,21 +10484,20 @@ if barstate.islastconfirmedhistory
     table.cell(t, 0, 1, str.tostring(m1))
     table.cell(t, 1, 0, "Reversed matrix:")
     table.cell(t, 1, 1, str.tostring(m2))
-```
-
-##     matrix.row()
-
+See also
+matrix.new<type>()
+matrix.set()
+matrix.columns()
+matrix.rows()
+matrix.reshape()
+matrix.row()
 The function creates a one-dimensional array from the elements of a matrix row.
-
-## Syntax
-
-## matrix.row(id, row) → array<type>
-
-## Arguments
-
+Syntax
+matrix.row(id, row) → array<type>
+Arguments
 id (any matrix type) A matrix object.
-
-- **`row`** (series int) Index of the required row.
+row (series int) Index of the required row.
+```
 
 ### Example
 
@@ -10713,16 +10520,10 @@ An array ID containing the row values of the id matrix.
 
 Indexing of rows starts at 0.
 
-## matrix.rows()
-
+## matrix.new<type>()
 The function returns the number of rows in the matrix.
 
 ## Syntax
-
-## matrix.rows(id) → series int
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 ### Example
@@ -10743,8 +10544,7 @@ if barstate.islastconfirmedhistory
 
 The number of rows in the matrix id.
 
-## matrix.set()
-
+## matrix.new<type>()
 The function assigns value to the element at the row and column of the id matrix.
 
 ## Syntax
@@ -10773,23 +10573,20 @@ matrix.set(m, 0, 1, 3)
 // Display using a label.
 if barstate.islastconfirmedhistory
     label.new(bar_index, high, str.tostring(m))
-```
-
-## matrix.sort()
-
+See also
+matrix.new<type>()
+matrix.get()
+matrix.columns()
+matrix.rows()
+matrix.sort()
 The function rearranges the rows in the id matrix following the sorted order of the values in the column.
-
-## Syntax
-
-## matrix.sort(id, column, order) → void
-
-## Arguments
-
-- **`id`** (matrix<int/float/string>) A matrix object to be sorted.
-
-- **`column`** (series int) Index of the column whose sorted values determine the new order of rows. Optional. The default value is 0.
-
-- **`order`** (series sort_order) The sort order. Possible values: order.ascending (default), order.descending.
+Syntax
+matrix.sort(id, column, order) → void
+Arguments
+id (matrix<int/float/string>) A matrix object to be sorted.
+column (series int) Index of the column whose sorted values determine the new order of rows. Optional. The default value is 0.
+order (series sort_order) The sort order. Possible values: order.ascending (default), order.descending.
+```
 
 ### Example
 
@@ -10816,27 +10613,22 @@ if barstate.islastconfirmedhistory
         table.cell(t, 0, 1, str.tostring(m1))
         table.cell(t, 1, 0, "Sorted matrix:")
         table.cell(t, 1, 1, str.tostring(m2))
-```
-
-## matrix.submatrix()
-
+See also
+matrix.new<type>()
+matrix.max()
+matrix.min()
+matrix.avg()
+matrix.submatrix()
 The function extracts a submatrix of the id matrix within the specified indices.
-
-## Syntax
-
+Syntax
 matrix.submatrix(id, from_row, to_row, from_column, to_column) → matrix<type>
-
-## Arguments
-
+Arguments
 id (any matrix type) A matrix object.
-
-- **`from_row`** (series int) Index of the row from which the extraction will begin (inclusive). Optional. The default value is 0.
-
-- **`to_row`** (series int) Index of the row where the extraction will end (non inclusive). Optional. The default value is matrix.rows().
-
-- **`from_column`** (series int) Index of the column from which the extraction will begin (inclusive). Optional. The default value is 0.
-
-- **`to_column`** (series int) Index of the column where the extraction will end (non inclusive). Optional. The default value is matrix.columns().
+from_row (series int) Index of the row from which the extraction will begin (inclusive). Optional. The default value is 0.
+to_row (series int) Index of the row where the extraction will end (non inclusive). Optional. The default value is matrix.rows().
+from_column (series int) Index of the column from which the extraction will begin (inclusive). Optional. The default value is 0.
+to_column (series int) Index of the column where the extraction will end (non inclusive). Optional. The default value is matrix.columns().
+```
 
 ### Example
 
@@ -10872,18 +10664,12 @@ A new matrix object containing the submatrix of the id matrix defined by the fro
 
 Indexing of the rows and columns starts at zero.
 
-## matrix.sum()2 overloads
-
+## matrix.new<type>()
 The function returns a new matrix resulting from the sum of two matrices id1 and id2, or of an id1 matrix and an id2 scalar (a numerical value).
 
 Syntax & Overloads
 
 ## matrix.sum(id1, id2) → matrix<int>
-
-## matrix.sum(id1, id2) → matrix<float>
-
-## Arguments
-
 - **`id1`** (matrix<int>) First matrix object.
 
 - **`id2`** (series int/float/matrix<int>) Second matrix object, or scalar value.
@@ -10931,16 +10717,10 @@ if barstate.islastconfirmedhistory
 
 A new matrix object containing the sum of id2 and id1.
 
-## matrix.swap_columns()
-
+## matrix.new<type>()
 The function swaps the columns at the index column1 and column2 in the id matrix.
 
 ## Syntax
-
-## matrix.swap_columns(id, column1, column2) → void
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 - **`column1`** (series int) Index of the first column to be swapped.
@@ -10977,16 +10757,10 @@ if barstate.islastconfirmedhistory
 
 Indexing of the rows and columns starts at zero.
 
-## matrix.swap_rows()
-
+## matrix.new<type>()
 The function swaps the rows at the index row1 and row2 in the id matrix.
 
 ## Syntax
-
-## matrix.swap_rows(id, row1, row2) → void
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 - **`row1`** (series int) Index of the first row to be swapped.
@@ -11025,18 +10799,12 @@ if barstate.islastconfirmedhistory
 
 Indexing of the rows and columns starts at zero.
 
-## matrix.trace()2 overloads
-
+## matrix.new<type>()
 The function calculates the trace of a matrix (the sum of the main diagonal's elements).
 
 Syntax & Overloads
 
 ## matrix.trace(id) → series float
-
-## matrix.trace(id) → series int
-
-## Arguments
-
 - **`id`** (matrix<int/float>) A matrix object.
 
 ### Example
@@ -11067,16 +10835,10 @@ if barstate.islastconfirmedhistory
 
 The trace of the id matrix.
 
-## matrix.transpose()
-
+## matrix.new<type>()
 The function creates a new, transposed version of the id. This interchanges the row and column index of each element.
 
 ## Syntax
-
-## matrix.transpose(id) → matrix<type>
-
-## Arguments
-
 id (any matrix type) A matrix object.
 
 ### Example
@@ -11107,8 +10869,7 @@ if barstate.islastconfirmedhistory
 
 A new matrix containing the transposed version of the id matrix.
 
-## max_bars_back()
-
+## matrix.new<type>()
 Function sets the maximum number of bars that is available for historical reference of a given built-in or user variable. When operator '[]' is applied to a variable - it is a reference to a historical value of that variable.
 
 - **`If an argument of an operator '[]' is a compile time constant value`** (e.g. 'v[10]', 'close[500]') then there is no need to use 'max_bars_back' function for that variable. Pine Script® compiler will use that constant value as history buffer size.
@@ -11116,11 +10877,6 @@ Function sets the maximum number of bars that is available for historical refere
 - **`If an argument of an operator '[]' is a value, calculated at runtime`** (e.g. 'v[i]' where 'i' - is a series variable) then Pine Script® attempts to autodetect the history buffer size at runtime. Sometimes it fails and the script crashes at runtime because it eventually refers to historical values that are out of the buffer. In that case you should use 'max_bars_back' to fix that problem manually.
 
 ## Syntax
-
-## max_bars_back(var, num) → void
-
-## Arguments
-
 - **`var`** (series int/float/bool/color/label/line) Series variable identifier for which history buffer should be resized. Possible values are: 'open', 'high', 'low', 'close', 'volume', 'time', or any user defined variable id.
 
 - **`num`** (const int) History buffer size which is the number of bars that could be referenced for variable 'var'.
@@ -11152,14 +10908,7 @@ At the moment 'max_bars_back' cannot be applied to built-ins like 'hl2', 'hlc3',
 
 If the indicator() or strategy() 'max_bars_back' parameter is used, all variables in the indicator are affected. This may result in excessive memory usage and cause runtime problems. When possible (i.e. when the cause is a variable rather than a function), please use the max_bars_back() function instead.
 
-## minute()
-
-## Syntax
-
-## minute(time, timezone) → series int
-
-## Arguments
-
+## indicator()
 - **`time`** (series int) UNIX time in milliseconds.
 
 - **`timezone`** (series string) Allows adjusting the returned value to a time zone specified in either UTC/GMT notation (e.g., "UTC-5", "GMT+0530") or as an IANA time zone database name (e.g., "America/New_York"). Optional. The default is syminfo.timezone.
@@ -11172,14 +10921,7 @@ Minute (in exchange timezone) for provided UNIX time.
 
 UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
-## month()
-
-## Syntax
-
-## month(time, timezone) → series int
-
-## Arguments
-
+## minute
 - **`time`** (series int) UNIX time in milliseconds.
 
 - **`timezone`** (series string) Allows adjusting the returned value to a time zone specified in either UTC/GMT notation (e.g., "UTC-5", "GMT+0530") or as an IANA time zone database name (e.g., "America/New_York"). Optional. The default is syminfo.timezone.
@@ -11194,18 +10936,12 @@ UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 
 
 Note that this function returns the month based on the time of the bar's open. For overnight sessions (e.g. EURUSD, where Monday session starts on Sunday, 17:00 UTC-4) this value can be lower by 1 than the month of the trading day.
 
-## na()2 overloads
-
-## Tests if x is na.
+## month
+Tests if x is na.
 
 Syntax & Overloads
 
 ## na(x) → simple bool
-
-## na(x) → series bool
-
-## Arguments
-
 - **`x`** (simple int/float) Value to be tested.
 
 ### Example
@@ -11224,26 +10960,12 @@ plot(nz(close[1], close))
 
 Returns true if x is na, false otherwise.
 
-## nz()6 overloads
-
+## na
 Replaces na (undefined) values with either a type-specific default value or a specified replacement.
 
 Syntax & Overloads
 
 ## nz(source, replacement) → simple color
-
-## nz(source, replacement) → simple int
-
-## nz(source, replacement) → series color
-
-## nz(source, replacement) → series int
-
-## nz(source, replacement) → simple float
-
-## nz(source, replacement) → series float
-
-## Arguments
-
 - **`source`** (simple color) The source series to process.
 
 - **`replacement`** (simple color) Optional. The value the function uses to replace na values in the source series. The default depends on the source type: 0 for "int", 0.0 for "float", or #00000000 for "color".
@@ -11260,8 +10982,7 @@ plot(nz(ta.sma(close, 100)))
 
 The value of source if it is not na. If the value of source is na, returns zero, or the replacement argument when one is used.
 
-## plot()
-
+## na
 Plots a series of data on the chart.
 
 ## Syntax
@@ -11318,8 +11039,7 @@ fill(p1, p2, color=color.new(color.green, 90))
 
 A plot object, that can be used in fill()
 
-## plotarrow()
-
+## plotshape()
 Plots up and down arrows on the chart. Up arrow is drawn at every indicator positive value, down arrow is drawn at every negative value. If indicator returns na then no arrow is drawn. Arrows has different height, the more absolute indicator value the longer arrow is drawn.
 
 ## Syntax
@@ -11367,8 +11087,7 @@ plotarrow(codiff, colorup=color.new(color.teal,40), colordown=color.new(color.or
 
 Use plotarrow() function in conjunction with 'overlay=true' indicator() parameter!
 
-## plotbar()
-
+## plot()
 Plots ohlc bars on the chart.
 
 ## Syntax
@@ -11414,6 +11133,8 @@ plotbar(open, high, low, close, title='Title', color = open < close ? color.gree
 Even if one value of open, high, low or close equal NaN then bar no draw.
 
 The maximal value of open, high, low or close will be set as 'high', and the minimal value will be set as 'low'.
+
+## plotcandle()
 
 ## plotcandle()
 
@@ -11466,6 +11187,8 @@ plotcandle(open, high, low, close, title='Title', color = open < close ? color.g
 Even if one value of open, high, low or close equal NaN then bar no draw.
 
 The maximal value of open, high, low or close will be set as 'high', and the minimal value will be set as 'low'.
+
+## plotbar()
 
 ## plotchar()
 
@@ -11520,8 +11243,7 @@ plotchar(data, char='❄')
 
 Use plotchar() function in conjunction with 'overlay=true' indicator() parameter!
 
-## plotshape()
-
+## plot()
 Plots visual shapes on the chart.
 
 ## Syntax
@@ -11573,16 +11295,10 @@ plotshape(data, style=shape.xcross)
 
 Use plotshape() function in conjunction with 'overlay=true' indicator() parameter!
 
-## polyline.delete()
-
+## plot()
 Deletes the specified polyline object. It has no effect if the id doesn't exist.
 
 ## Syntax
-
-## polyline.delete(id) → void
-
-## Arguments
-
 - **`id`** (series polyline) The polyline ID to delete.
 
 ## polyline.new()
@@ -11646,15 +11362,6 @@ p5y = input.price(0, "  ", confirm = true, inline = "p5")
     // Push new `chart.point` instances into the `points` array.
 
 ##     points.push(chart.point.from_time(p1x, p1y))
-
-##     points.push(chart.point.from_time(p2x, p2y))
-
-##     points.push(chart.point.from_time(p3x, p3y))
-
-##     points.push(chart.point.from_time(p4x, p4y))
-
-##     points.push(chart.point.from_time(p5x, p5y))
-
     // Add labels for each `chart.point` in `points`.
 
     l1p1 = label.new(points.get(0), text = "p1", xloc = xloc.bar_time, color = na)
@@ -11672,6 +11379,8 @@ p5y = input.price(0, "  ", confirm = true, inline = "p5")
 ### Returns
 
 The ID of a new polyline object that a script can use in other polyline.*() functions.
+
+## chart.point.new()
 
 ## request.currency_rate()
 
@@ -11740,7 +11449,6 @@ plot(s2)
 Requested series, or n/a if there is no dividends data for the specified symbol.
 
 ## request.earnings()
-
 Requests earnings data for the specified symbol.
 
 ## Syntax
@@ -11776,8 +11484,7 @@ plot(s2)
 
 Requested series, or n/a if there is no earnings data for the specified symbol.
 
-## request.economic()
-
+## request.dividends()
 Requests economic data for a symbol. Economic data includes information such as the state of a country's economy (GDP, inflation rate, etc.) or of a particular industry (steel production, ICU beds, etc.).
 
 ## Syntax
@@ -11805,7 +11512,7 @@ plot(e)
 
 ### Returns
 
-## Requested series.
+Requested series.
 
 ### Remarks
 
@@ -11813,7 +11520,9 @@ Economic data can also be accessed from charts, just like a regular symbol. Use 
 
 ## request.financial()
 
-## Requests financial series for symbol.
+## request.financial()
+
+Requests financial series for symbol.
 
 ## Syntax
 
@@ -11844,10 +11553,9 @@ plot(f)
 
 ### Returns
 
-## Requested series.
+Requested series.
 
-## request.quandl()
-
+## request.security()
 Note: This function has been deprecated due to the API change from NASDAQ Data Link. Requests for "QUANDL" symbols are no longer valid and requests for them return a runtime error.
 
 Some of the data previously provided by this function is available on TradingView through other feeds, such as "BCHAIN" or "FRED". Use Symbol Search to look for such data based on its description. Commitment of Traders (COT) data can be requested using the official LibraryCOT library.
@@ -11879,10 +11587,9 @@ plot(f)
 
 ### Returns
 
-## Requested series.
+Requested series.
 
 ## request.security()
-
 Requests the result of an expression from a specified context (symbol and timeframe).
 
 ## Syntax
@@ -11956,7 +11663,7 @@ plotcandle(array.get(ohlcArray, 0), array.get(ohlcArray, 1), array.get(ohlcArray
 
 ### Returns
 
-## A result determined by expression.
+A result determined by expression.
 
 ### Remarks
 
@@ -11968,8 +11675,7 @@ When using two calls to a request.*() function to evaluate the same expression f
 
 The symbol of a request.() call can be inherited if it is not specified precisely, i.e., if the symbol argument is an empty string or syminfo.tickerid. Similarly, the timeframe of a request.() call can be inherited if the timeframe argument is an empty string or timeframe.period. These values are normally taken from the chart on which the script is running. However, if request.*() function A is called from within the expression of request.*() function B, then function A can inherit the values from function B. See here for more information.
 
-## request.security_lower_tf()
-
+## syminfo.ticker
 Requests the results of an expression from a specified symbol on a timeframe lower than or equal to the chart's timeframe. It returns an array containing one element for each lower-timeframe bar within the chart bar. On a 5-minute chart, requesting data using a timeframe argument of "1" typically returns an array with five elements representing the value of the expression on each 1-minute bar, ordered by time with the earliest value first.
 
 ## Syntax
@@ -12019,8 +11725,7 @@ When using two calls to a request.*() function to evaluate the same expression f
 
 The symbol of a request.() call can be inherited if it is not specified precisely, i.e., if the symbol argument is an empty string or syminfo.tickerid. Similarly, the timeframe of a request.() call can be inherited if the timeframe argument is an empty string or timeframe.period. These values are normally taken from the chart that the script is running on. However, if request.*() function A is called from within the expression of request.*() function B, then function A can inherit the values from function B. See here for more information.
 
-## request.seed()
-
+## request.security()
 Requests the result of an expression evaluated on data from a user-maintained GitHub repository. **Note:**The creation of new Pine Seeds repositories is suspended; only existing repositories are currently supported. See the Pine Seeds documentation on GitHub to learn more.
 
 ## Syntax
@@ -12090,26 +11795,13 @@ plot(s2)
 
 Requested series, or n/a if there is no splits data for the specified symbol.
 
-## runtime.error()
-
+## request.earnings()
 When called, causes a runtime error with the error message specified in the message argument.
 
 ## Syntax
-
-## runtime.error(message) → void
-
-## Arguments
-
 - **`message`** (series string) Error message.
 
 ## second()
-
-## Syntax
-
-## second(time, timezone) → series int
-
-## Arguments
-
 - **`time`** (series int) UNIX time in milliseconds.
 
 - **`timezone`** (series string) Allows adjusting the returned value to a time zone specified in either UTC/GMT notation (e.g., "UTC-5", "GMT+0530") or as an IANA time zone database name (e.g., "America/New_York"). Optional. The default is syminfo.timezone.
@@ -12122,20 +11814,12 @@ Second (in exchange timezone) for provided UNIX time.
 
 UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
-## str.contains()3 overloads
-
+## second
 Returns true if the source string contains the str substring, false otherwise.
 
 Syntax & Overloads
 
 ## str.contains(source, str) → const bool
-
-## str.contains(source, str) → simple bool
-
-## str.contains(source, str) → series bool
-
-## Arguments
-
 - **`source`** (const string) Source string.
 
 - **`str`** (const string) The substring to search for.
@@ -12154,20 +11838,12 @@ plot(isFutures ? 1 : 0)
 
 True if the str was found in the source string, false otherwise.
 
-## str.endswith()3 overloads
-
+## str.pos()
 Returns true if the source string ends with the substring specified in str, false otherwise.
 
 Syntax & Overloads
 
 ## str.endswith(source, str) → const bool
-
-## str.endswith(source, str) → simple bool
-
-## str.endswith(source, str) → series bool
-
-## Arguments
-
 - **`source`** (const string) Source string.
 
 - **`str`** (const string) The substring to search for.
@@ -12175,6 +11851,8 @@ Syntax & Overloads
 ### Returns
 
 True if the source string ends with the substring specified in str, false otherwise.
+
+## str.startswith()
 
 ## str.format()2 overloads
 
@@ -12243,7 +11921,7 @@ label.new(bar_index - 8, close, text=s9)
 
 ### Returns
 
-## The formatted string.
+The formatted string.
 
 ### Remarks
 
@@ -12287,7 +11965,7 @@ if timeframe.change("1D")
 
 ### Returns
 
-## The formatted string.
+The formatted string.
 
 ### Remarks
 
@@ -12301,15 +11979,15 @@ M - Month. Not to be confused with lowercase m, which stands for minute.
 
 d - Day of the month.
 
-## a - AM/PM postfix.
+a - AM/PM postfix.
 
 h - Hour in the 12-hour format. The last hour of the day will be 11 in this format.
 
 H - Hour in the 24-hour format. The last hour of the day will be 23 in this format.
 
-## m - Minute.
+m - Minute.
 
-## s - Second.
+s - Second.
 
 S - Fractions of a second.
 
@@ -12322,14 +12000,11 @@ Returns an integer corresponding to the amount of chars in that string.
 Syntax & Overloads
 
 ## str.length(string) → const int
-
-## str.length(string) → simple int
-
-## str.length(string) → series int
-
-## Arguments
-
 - **`string`** (const string) Source string.
+
+### Returns
+
+The number of chars in source string.
 
 ## str.lower()3 overloads
 
@@ -12338,20 +12013,11 @@ Returns a new string with all letters converted to lowercase.
 Syntax & Overloads
 
 ## str.lower(source) → const string
-
-## str.lower(source) → simple string
-
-## str.lower(source) → series string
-
-## Arguments
-
 - **`source`** (const string) String to be converted.
 
 ### Returns
 
 A new string with all letters converted to lowercase.
-
-See also
 
 ## str.upper()
 
@@ -12362,11 +12028,6 @@ Returns the new substring of the source string if it matches a regex regular exp
 Syntax & Overloads
 
 ## str.match(source, regex) → simple string
-
-## str.match(source, regex) → series string
-
-## Arguments
-
 - **`source`** (simple string) Source string.
 
 - **`regex`** (simple string) The regular expression to which this string is to be matched.
@@ -12395,20 +12056,12 @@ Function returns first occurrence of the regular expression in the source string
 
 The backslash "\" symbol in theregex string needs to be escaped with additional backslash, e.g. "\\d" stands for regular expression "\d".
 
-## str.pos()3 overloads
-
+## str.contains()
 Returns the position of the first occurrence of the str string in the source string, 'na' otherwise.
 
 Syntax & Overloads
 
 ## str.pos(source, str) → const int
-
-## str.pos(source, str) → simple int
-
-## str.pos(source, str) → series int
-
-## Arguments
-
 - **`source`** (const string) Source string.
 
 - **`str`** (const string) The substring to search for.
@@ -12419,10 +12072,9 @@ Position of the str string in the source string.
 
 ### Remarks
 
-## Strings indexing starts at 0.
+Strings indexing starts at 0.
 
-## str.repeat()4 overloads
-
+## str.contains()
 Constructs a new string containing the source string repeated repeat times with the separator injected between each repeated instance.
 
 Syntax & Overloads
@@ -12451,6 +12103,10 @@ indicator("str.repeat")
 repeat = str.repeat("?", 3, ",") // Returns "?,?,?"
 label.new(bar_index,close,repeat)
 ```
+
+### Remarks
+
+Returns na if the source is na.
 
 ## str.replace()3 overloads
 
@@ -12492,10 +12148,9 @@ var newSource = str.replace(source, "FTX", "BINANCE", 0)
 
 ### Returns
 
-## Processed string.
+Processed string.
 
-## str.replace_all()2 overloads
-
+## str.replace_all()
 Replaces each occurrence of the target string in the source string with the replacement string.
 
 Syntax & Overloads
@@ -12512,19 +12167,22 @@ str.replace_all(source, target, replacement) → series string
 
 - **`replacement`** (simple string) String to be substituted for each occurrence of target string.
 
+### Returns
+
+Processed string.
+
 ## str.split()
 
 Divides a string into an array of substrings and returns its array id.
 
 ## Syntax
-
-## str.split(string, separator) → array<string>
-
-## Arguments
-
 - **`string`** (series string) Source string.
 
 - **`separator`** (series string) The string separating each substring.
+
+### Returns
+
+The id of an array of strings.
 
 ## str.startswith()3 overloads
 
@@ -12533,13 +12191,6 @@ Returns true if the source string starts with the substring specified in str, fa
 Syntax & Overloads
 
 ## str.startswith(source, str) → const bool
-
-## str.startswith(source, str) → simple bool
-
-## str.startswith(source, str) → series bool
-
-## Arguments
-
 - **`source`** (const string) Source string.
 
 - **`str`** (const string) The substring to search for.
@@ -12547,6 +12198,8 @@ Syntax & Overloads
 ### Returns
 
 True if the source string starts with the substring specified in str, false otherwise.
+
+## str.endswith()
 
 ## str.substring()3 overloads
 
@@ -12588,22 +12241,12 @@ The substring extracted from the source string.
 
 Strings indexing starts from 0. If begin_pos is equal to end_pos, the function returns an empty string.
 
-## str.tonumber()4 overloads
-
+## str.contains()
 Converts a value represented in string to its "float" equivalent.
 
 Syntax & Overloads
 
 ## str.tonumber(string) → const float
-
-## str.tonumber(string) → input float
-
-## str.tonumber(string) → simple float
-
-## str.tonumber(string) → series float
-
-## Arguments
-
 - **`string`** (const string) String containing the representation of an integer or floating point value.
 
 ### Returns
@@ -12615,17 +12258,6 @@ A "float" equivalent of the value in string. If the value is not a properly form
 Syntax & Overloads
 
 ## str.tostring(value) → const string
-
-## str.tostring(value, format) → simple string
-
-## str.tostring(value, format) → series string
-
-## str.tostring(value) → simple string
-
-## str.tostring(value) → series string
-
-## Arguments
-
 - **`value`** (const enum) Value or array ID whose elements are converted to a string.
 
 ### Returns
@@ -12657,15 +12289,6 @@ When x is na, the function returns "NaN".
 Syntax & Overloads
 
 ## str.trim(source) → const string
-
-## str.trim(source) → input string
-
-## str.trim(source) → simple string
-
-## str.trim(source) → series string
-
-## Arguments
-
 - **`source`** (const string) String to trim.
 
 ### Example
@@ -12688,20 +12311,11 @@ Returns a new string with all letters converted to uppercase.
 Syntax & Overloads
 
 ## str.upper(source) → const string
-
-## str.upper(source) → simple string
-
-## str.upper(source) → series string
-
-## Arguments
-
 - **`source`** (const string) String to be converted.
 
 ### Returns
 
 A new string with all letters converted to uppercase.
-
-See also
 
 ## str.lower()
 
@@ -12805,18 +12419,12 @@ Strategies always use the chart's prices to enter and exit positions. Using them
 
 The maximum number of orders a strategy can open, unless it uses Deep Backtesting mode, is 9000. If the strategy exceeds this limit, it removes the oldest order's information when a new entry appears in the "List of Trades" tab. The strategy.closedtrades.*() functions return na for trades opened or closed by removed orders. To retrieve the index of the oldest available closed trade, use the strategy.closedtrades.first_index variable.
 
-## strategy.cancel()
-
+## indicator()
 Cancels a pending or unfilled order with a specific identifier. If multiple unfilled orders share the same ID, calling this command with that ID as the id argument cancels all of them. If a script calls this command with an id representing the ID of a filled order, it has no effect.
 
 This command is most useful when working with price-based orders (e.g., limit orders). Calls to this command can also cancel market orders, but only if they execute on the same ticks as the order placement commands.
 
 ## Syntax
-
-## strategy.cancel(id) → void
-
-## Arguments
-
 - **`id`** (series string) The identifier of the unfilled order to cancel.
 
 ### Example
@@ -12829,17 +12437,12 @@ if conditionForBuy
     strategy.entry("Long", strategy.long, 1, limit = low) // Enter long using limit order at low price of current bar if `conditionForBuy` is `true`.
 if not conditionForBuy
     strategy.cancel("Long") // Cancel the entry order with name "Long" if `conditionForBuy` is `false`.
-```
-
-## strategy.cancel_all()
-
+strategy.cancel_all()
 Cancels all pending or unfilled orders, regardless of their identifiers.
-
 This command is most useful when working with price-based orders (e.g., limit orders). Calls to this command can also cancel market orders, but only if they execute on the same ticks as the order placement commands.
-
-## Syntax
-
-## strategy.cancel_all() → void
+Syntax
+strategy.cancel_all() → void
+```
 
 ### Example
 
@@ -12856,33 +12459,20 @@ if conditionForBuy2
 conditionForStopTrading = open < lowest2
 if conditionForStopTrading
     strategy.cancel_all() // Cancel both limit orders if `conditionForStopTrading` is `true`.
-```
-
-## strategy.close()
-
+strategy.close()
 Creates an order to exit from the part of a position opened by entry orders with a specific identifier. If multiple entries in the position share the same ID, the orders from this command apply to all those entries, starting from the first open trade, when its calls use that ID as the id argument.
-
 This command always generates market orders. To exit from a position using price-based orders (e.g., stop-loss orders), use the strategy.exit() command.
-
-## Syntax
-
+Syntax
 strategy.close(id, comment, qty, qty_percent, alert_message, immediately, disable_alert) → void
-
-## Arguments
-
-- **`id`** (series string) The entry identifier of the open trades to close.
-
-- **`comment`** (series string) Optional. Additional notes on the filled order. If the value is not an empty string, the Strategy Tester and the chart show this text for the order instead of the automatically generated exit identifier. The default is an empty string.
-
-- **`qty`** (series int/float) Optional. The number of contracts/lots/shares/units to close when an exit order fills. If specified, the command uses this value instead of qty_percent to determine the order size. The default is na, which means the order size depends on the qty_percent value.
-
-- **`qty_percent`** (series int/float) Optional. A value between 0 and 100 representing the percentage of the open trade quantity to close when an exit order fills. The percentage calculation depends on the total size of the open trades with the id entry identifier. The command ignores this parameter if the qty value is not na. The default is 100.
-
-- **`alert_message`** (series string) Optional. Custom text for the alert that fires when an order fills. If the "Message" field of the "Create Alert" dialog box contains the {{strategy.order.alert_message}} placeholder, the alert message replaces the placeholder with this text. The default is an empty string.
-
-- **`immediately`** (series bool) Optional. If true, the closing order executes on the same tick when the strategy places it, ignoring the strategy properties that restrict execution to the opening tick of the following bar. The default is false.
-
-- **`disable_alert`** (series bool) Optional. If true when the command creates an order, the strategy does not trigger an alert when that order fills. This parameter accepts a "series" value, meaning users can control which orders trigger alerts when they execute. The default is false.
+Arguments
+id (series string) The entry identifier of the open trades to close.
+comment (series string) Optional. Additional notes on the filled order. If the value is not an empty string, the Strategy Tester and the chart show this text for the order instead of the automatically generated exit identifier. The default is an empty string.
+qty (series int/float) Optional. The number of contracts/lots/shares/units to close when an exit order fills. If specified, the command uses this value instead of qty_percent to determine the order size. The default is na, which means the order size depends on the qty_percent value.
+qty_percent (series int/float) Optional. A value between 0 and 100 representing the percentage of the open trade quantity to close when an exit order fills. The percentage calculation depends on the total size of the open trades with the id entry identifier. The command ignores this parameter if the qty value is not na. The default is 100.
+alert_message (series string) Optional. Custom text for the alert that fires when an order fills. If the "Message" field of the "Create Alert" dialog box contains the {{strategy.order.alert_message}} placeholder, the alert message replaces the placeholder with this text. The default is an empty string.
+immediately (series bool) Optional. If true, the closing order executes on the same tick when the strategy places it, ignoring the strategy properties that restrict execution to the opening tick of the following bar. The default is false.
+disable_alert (series bool) Optional. If true when the command creates an order, the strategy does not trigger an alert when that order fills. This parameter accepts a "series" value, meaning users can control which orders trigger alerts when they execute. The default is false.
+```
 
 ### Example
 
@@ -12942,19 +12532,13 @@ if bar_index % 500 == 0
     strategy.close_all()
 // Plot the position size.
 plot(strategy.position_size)
-```
-
-## strategy.closedtrades.commission()
-
+strategy.closedtrades.commission()
 Returns the sum of entry and exit fees paid in the closed trade, expressed in strategy.account_currency.
-
-## Syntax
-
-## strategy.closedtrades.commission(trade_num) → series float
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
+Syntax
+strategy.closedtrades.commission(trade_num) → series float
+Arguments
+trade_num (series int) The trade number of the closed trade. The number of the first trade is zero.
+```
 
 ### Example
 
@@ -12968,19 +12552,16 @@ if bar_index % 20 == 0
     strategy.close("Long")
 // Plot total fees for the latest closed trade.
 plot(strategy.closedtrades.commission(strategy.closedtrades - 1))
-```
-
-## strategy.closedtrades.entry_bar_index()
-
+See also
+strategy()
+strategy.opentrades.commission()
+strategy.closedtrades.entry_bar_index()
 Returns the bar_index of the closed trade's entry.
-
-## Syntax
-
-## strategy.closedtrades.entry_bar_index(trade_num) → series int
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
+Syntax
+strategy.closedtrades.entry_bar_index(trade_num) → series int
+Arguments
+trade_num (series int) The trade number of the closed trade. The number of the first trade is zero.
+```
 
 ### Example
 
@@ -13000,19 +12581,16 @@ avgBarsPerTrade() =>
         sumBarsPerTrade += strategy.closedtrades.exit_bar_index(tradeNo) - strategy.closedtrades.entry_bar_index(tradeNo) + 1
     result = nz(sumBarsPerTrade / strategy.closedtrades)
 plot(avgBarsPerTrade())
-```
-
-## strategy.closedtrades.entry_comment()
-
+See also
+strategy.closedtrades.exit_bar_index()
+strategy.opentrades.entry_bar_index()
+strategy.closedtrades.entry_comment()
 Returns the comment message of the closed trade's entry, or na if there is no entry with this trade_num.
-
-## Syntax
-
-## strategy.closedtrades.entry_comment(trade_num) → series string
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
+Syntax
+strategy.closedtrades.entry_comment(trade_num) → series string
+Arguments
+trade_num (series int) The trade number of the closed trade. The number of the first trade is zero.
+```
 
 ### Example
 
@@ -13041,16 +12619,10 @@ var testTable = table.new(position.top_right, 1, 3, color.orange, border_width =
 
     table.cell(testTable, 0, 2, "Actual Entry Price: " + str.tostring(strategy.closedtrades.entry_price(strategy.closedtrades - 1)))
 
-## strategy.closedtrades.entry_id()
-
+## strategy()
 Returns the id of the closed trade's entry.
 
 ## Syntax
-
-## strategy.closedtrades.entry_id(trade_num) → series string
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13076,16 +12648,10 @@ Returns the id of the closed trade's entry.
 
 The function returns na if trade_num is not in the range: 0 to strategy.closedtrades-1.
 
-## strategy.closedtrades.entry_price()
-
+## strategy.closedtrades.entry_bar_index()
 Returns the price of the closed trade's entry.
 
 ## Syntax
-
-## strategy.closedtrades.entry_price(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13130,17 +12696,9 @@ avgProfitPct = nz(profitPct / strategy.closedtrades)
 ```
 
 ## plot(avgProfitPct)
-
-## strategy.closedtrades.entry_time()
-
 Returns the UNIX time of the closed trade's entry, expressed in milliseconds..
 
 ## Syntax
-
-## strategy.closedtrades.entry_time(trade_num) → series int
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13162,19 +12720,17 @@ avgTradeDuration() =>
 // Display average duration converted to seconds and formatted using 2 decimal points
 if barstate.islastconfirmedhistory
     label.new(bar_index, high, str.tostring(avgTradeDuration() / 1000, "#.##") + " seconds")
-```
-
-## strategy.closedtrades.exit_bar_index()
-
+See also
+strategy.opentrades.entry_time()
+strategy.closedtrades.exit_time()
+time
+strategy.closedtrades.exit_bar_index()
 Returns the bar_index of the closed trade's exit.
-
-## Syntax
-
-## strategy.closedtrades.exit_bar_index(trade_num) → series int
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
+Syntax
+strategy.closedtrades.exit_bar_index(trade_num) → series int
+Arguments
+trade_num (series int) The trade number of the closed trade. The number of the first trade is zero.
+```
 
 ### Example
 
@@ -13213,17 +12769,9 @@ avgBarsPerTrade() =>
 ```
 
 ## plot(avgBarsPerTrade())
-
-## strategy.closedtrades.exit_comment()
-
 Returns the comment message of the closed trade's exit, or na if there is no entry with this trade_num.
 
 ## Syntax
-
-## strategy.closedtrades.exit_comment(trade_num) → series string
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13273,16 +12821,10 @@ var testTable = table.new(position.top_right, 1, 4, color.orange, border_width =
 
     table.cell(testTable, 0, 3, "Trailing Stop: " + str.tostring(trailCount))
 
-## strategy.closedtrades.exit_id()
-
+## strategy()
 Returns the id of the closed trade's exit.
 
 ## Syntax
-
-## strategy.closedtrades.exit_id(trade_num) → series string
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13314,16 +12856,10 @@ Returns the id of the closed trade's exit.
 
 The function returns na if trade_num is not in the range: 0 to strategy.closedtrades-1.
 
-## strategy.closedtrades.exit_price()
-
+## strategy.closedtrades.exit_bar_index()
 Returns the price of the closed trade's exit.
 
 ## Syntax
-
-## strategy.closedtrades.exit_price(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13367,17 +12903,9 @@ avgProfitPct = nz(profitPct / strategy.closedtrades)
 ```
 
 ## plot(avgProfitPct)
-
-## strategy.closedtrades.exit_time()
-
 Returns the UNIX time of the closed trade's exit, expressed in milliseconds.
 
 ## Syntax
-
-## strategy.closedtrades.exit_time(trade_num) → series int
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13429,16 +12957,13 @@ if bar_index == 0
 
     strategy.exit("Long", stop = low * 0.9, profit = high * 2.5)
 
+## strategy.closedtrades.entry_time()
+
 ## strategy.closedtrades.max_drawdown()
 
 Returns the maximum drawdown of the closed trade, i.e., the maximum possible loss during the trade, expressed in strategy.account_currency.
 
 ## Syntax
-
-## strategy.closedtrades.max_drawdown(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13465,28 +12990,16 @@ maxTradeDrawDown() =>
 
 The function returns na if trade_num is not in the range: 0 to strategy.closedtrades - 1.
 
-## strategy.closedtrades.max_drawdown_percent()
-
+## strategy.opentrades.max_drawdown()
 Returns the maximum drawdown of the closed trade, i.e., the maximum possible loss during the trade, expressed as a percentage and calculated by formula: Lowest Value During Trade / (Entry Price x Quantity) * 100.
 
 ## Syntax
-
-## strategy.closedtrades.max_drawdown_percent(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
-## strategy.closedtrades.max_runup()
-
+## strategy.closedtrades.max_drawdown()
 Returns the maximum run up of the closed trade, i.e., the maximum possible profit during the trade, expressed in strategy.account_currency.
 
 ## Syntax
-
-## strategy.closedtrades.max_runup(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13508,29 +13021,15 @@ maxTradeRunUp() =>
 ```
 
 ## plot(maxTradeRunUp(), "Max trade runup")
-
-## strategy.closedtrades.max_runup_percent()
-
 Returns the maximum run-up of the closed trade, i.e., the maximum possible profit during the trade, expressed as a percentage and calculated by formula: Highest Value During Trade / (Entry Price x Quantity) * 100.
 
 ## Syntax
-
-## strategy.closedtrades.max_runup_percent(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
-## strategy.closedtrades.profit()
-
+## strategy.closedtrades.max_runup()
 Returns the profit/loss of the closed trade in the strategy's account currency, reduced by the trade's commissions. A positive returned value represents a profit, and a negative value represents a loss.
 
 ## Syntax
-
-## strategy.closedtrades.profit(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13555,20 +13054,10 @@ avgGrossProfit() =>
 ```
 
 ## plot(avgGrossProfit(), "Average gross profit")
-
-## strategy.closedtrades.profit_percent()
-
 Returns the profit/loss value of the closed trade, expressed as a percentage. Losses are expressed as negative values.
 
 ## Syntax
-
-## strategy.closedtrades.profit_percent(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
-
-See also
 
 ## strategy.closedtrades.profit()
 
@@ -13577,11 +13066,6 @@ See also
 Returns the direction and the number of contracts traded in the closed trade. If the value is > 0, the market position was long. If the value is < 0, the market position was short.
 
 ## Syntax
-
-## strategy.closedtrades.size(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
 ### Example
@@ -13623,17 +13107,9 @@ avgProfitPct = nz(profitPct / strategy.closedtrades)
 ```
 
 ## plot(avgProfitPct)
-
-## strategy.convert_to_account()
-
 Converts the value from the currency that the symbol on the chart is traded in (syminfo.currency) to the currency used by the strategy (strategy.account_currency).
 
 ## Syntax
-
-## strategy.convert_to_account(value) → series float
-
-## Arguments
-
 - **`value`** (series int/float) The value to be converted.
 
 ### Example
@@ -13666,17 +13142,9 @@ dateInput = input.time(timestamp("20 Jul 2021 00:00 +0300"), "From Date", confir
         (strategy.convert_to_account(money) - initialBal) / initialBal * 100
 
 ## plot(buyAndHoldReturnPct(dateInput))
-
-## strategy.convert_to_symbol()
-
 Converts the value from the currency used by the strategy (strategy.account_currency) to the currency that the symbol on the chart is traded in (syminfo.currency).
 
 ## Syntax
-
-## strategy.convert_to_symbol(value) → series float
-
-## Arguments
-
 - **`value`** (series int/float) The value to be converted.
 
 ### Example
@@ -13694,19 +13162,16 @@ if bar_index % 15 == 0
     strategy.entry("Long", strategy.long, qty = qt)
 if bar_index % 20 == 0
     strategy.close("Long")
-```
-
-## strategy.default_entry_qty()
-
+See also
+strategy()
+strategy.convert_to_account()
+strategy.default_entry_qty()
 Calculates the default quantity, in units, of an entry order from strategy.entry() or strategy.order() if it were to fill at the specified fill_price value. The calculation depends on several strategy properties, including default_qty_type, default_qty_value, currency, and other parameters in the strategy() function and their representation in the "Properties" tab of the strategy's settings.
-
-## Syntax
-
-## strategy.default_entry_qty(fill_price) → series float
-
-## Arguments
-
-- **`fill_price`** (series int/float) The fill price for which to calculate the default order quantity.
+Syntax
+strategy.default_entry_qty(fill_price) → series float
+Arguments
+fill_price (series int/float) The fill price for which to calculate the default order quantity.
+```
 
 ### Example
 
@@ -14051,11 +13516,6 @@ If a strategy.exit() call includes arguments for creating stop-loss and trailing
 Returns the sum of entry and exit fees paid in the open trade, expressed in strategy.account_currency.
 
 ## Syntax
-
-## strategy.opentrades.commission(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
 
 ### Example
@@ -14079,17 +13539,9 @@ tradeOpenGrossPL() =>
 ```
 
 ## plot(tradeOpenGrossPL())
-
-## strategy.opentrades.entry_bar_index()
-
 Returns the bar_index of the open trade's entry.
 
 ## Syntax
-
-## strategy.opentrades.entry_bar_index(trade_num) → series int
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
 
 ### Example
@@ -14114,19 +13566,9 @@ strategy("`strategy.opentrades.entry_bar_index` Example")
 // Close the long position after 10 bars.
 
 ## if barsSinceLastEntry() >= 10
-
-##     strategy.close("Long")
-
-## strategy.opentrades.entry_comment()
-
 Returns the comment message of the open trade's entry, or na if there is no entry with this trade_num.
 
 ## Syntax
-
-## strategy.opentrades.entry_comment(trade_num) → series string
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
 
 ### Example
@@ -14154,16 +13596,10 @@ var testTable = table.new(position.top_right, 1, 3, color.orange, border_width =
 
     table.cell(testTable, 0, 2, "Actual Entry Price: " + str.tostring(strategy.opentrades.entry_price(strategy.opentrades - 1)))
 
-## strategy.opentrades.entry_id()
-
+## strategy()
 Returns the id of the open trade's entry.
 
 ## Syntax
-
-## strategy.opentrades.entry_id(trade_num) → series string
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
 
 ### Example
@@ -14193,16 +13629,10 @@ Returns the id of the open trade's entry.
 
 The function returns na if trade_num is not in the range: 0 to strategy.opentrades-1.
 
-## strategy.opentrades.entry_price()
-
+## strategy.opentrades.entry_bar_index()
 Returns the price of the open trade's entry.
 
 ## Syntax
-
-## strategy.opentrades.entry_price(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
 
 ### Example
@@ -14243,17 +13673,9 @@ avgOpenPositionPrice() =>
 ```
 
 ## plot(avgOpenPositionPrice())
-
-## strategy.opentrades.entry_time()
-
 Returns the UNIX time of the open trade's entry, expressed in milliseconds.
 
 ## Syntax
-
-## strategy.opentrades.entry_time(trade_num) → series int
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
 
 ### Example
@@ -14270,19 +13692,16 @@ if bar_index % 20 == 0
 timeSinceLastEntry()=>
     strategy.opentrades > 0 ? (time - strategy.opentrades.entry_time(strategy.opentrades - 1)) : na
 plot(timeSinceLastEntry() / 1000 * 60 * 60 * 24, "Days since last entry")
-```
-
-## strategy.opentrades.max_drawdown()
-
+See also
+strategy.closedtrades.entry_time()
+strategy.closedtrades.exit_time()
+strategy.opentrades.max_drawdown()
 Returns the maximum drawdown of the open trade, i.e., the maximum possible loss during the trade, expressed in strategy.account_currency.
-
-## Syntax
-
-## strategy.opentrades.max_drawdown(trade_num) → series float
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
+Syntax
+strategy.opentrades.max_drawdown(trade_num) → series float
+Arguments
+trade_num (series int) The trade number of the open trade. The number of the first trade is zero.
+```
 
 ### Example
 
@@ -14324,28 +13743,16 @@ maxTradeDrawDown() =>
 
 The function returns na if trade_num is not in the range: 0 to strategy.closedtrades - 1.
 
-## strategy.opentrades.max_drawdown_percent()
-
+## strategy.closedtrades.max_drawdown()
 Returns the maximum drawdown of the open trade, i.e., the maximum possible loss during the trade, expressed as a percentage and calculated by formula: Lowest Value During Trade / (Entry Price x Quantity) * 100.
 
 ## Syntax
-
-## strategy.opentrades.max_drawdown_percent(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
 
-## strategy.opentrades.max_runup()
-
+## strategy.opentrades.max_drawdown()
 Returns the maximum run up of the open trade, i.e., the maximum possible profit during the trade, expressed in strategy.account_currency.
 
 ## Syntax
-
-## strategy.opentrades.max_runup(trade_num) → series float
-
-## Arguments
-
 - **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
 
 ### Example
@@ -14379,31 +13786,25 @@ maxOpenTradeRunUp() =>
         maxRunup := math.max(maxRunup, strategy.opentrades.max_runup(tradeNo))
     result = maxRunup
 plot(maxOpenTradeRunUp(), "Biggest max runup of all open trades")
-```
-
-## strategy.opentrades.max_runup_percent()
-
+See also
+strategy.closedtrades.max_runup()
+strategy.max_drawdown
+strategy.opentrades.max_runup_percent()
 Returns the maximum run-up of the open trade, i.e., the maximum possible profit during the trade, expressed as a percentage and calculated by formula: Highest Value During Trade / (Entry Price x Quantity) * 100.
-
-## Syntax
-
-## strategy.opentrades.max_runup_percent(trade_num) → series float
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
-
-## strategy.opentrades.profit()
-
+Syntax
+strategy.opentrades.max_runup_percent(trade_num) → series float
+Arguments
+trade_num (series int) The trade number of the closed trade. The number of the first trade is zero.
+See also
+strategy.opentrades.max_runup()
+strategy.max_runup
+strategy.opentrades.profit()
 Returns the profit/loss of the open trade, expressed in strategy.account_currency. Losses are expressed as negative values.
-
-## Syntax
-
-## strategy.opentrades.profit(trade_num) → series float
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
+Syntax
+strategy.opentrades.profit(trade_num) → series float
+Arguments
+trade_num (series int) The trade number of the open trade. The number of the first trade is zero.
+```
 
 ### Example
 
@@ -14437,31 +13838,26 @@ tradeOpenPL() =>
         sumProfit += strategy.opentrades.profit(tradeNo)
     result = sumProfit
 plot(tradeOpenPL(), "Profit of all open trades")
-```
-
-## strategy.opentrades.profit_percent()
-
+See also
+strategy.closedtrades.profit()
+strategy.openprofit
+strategy.netprofit
+strategy.grossprofit
+strategy.opentrades.profit_percent()
 Returns the profit/loss of the open trade, expressed as a percentage. Losses are expressed as negative values.
-
-## Syntax
-
-## strategy.opentrades.profit_percent(trade_num) → series float
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the closed trade. The number of the first trade is zero.
-
-## strategy.opentrades.size()
-
+Syntax
+strategy.opentrades.profit_percent(trade_num) → series float
+Arguments
+trade_num (series int) The trade number of the closed trade. The number of the first trade is zero.
+See also
+strategy.opentrades.profit()
+strategy.opentrades.size()
 Returns the direction and the number of contracts traded in the open trade. If the value is > 0, the market position was long. If the value is < 0, the market position was short.
-
-## Syntax
-
-## strategy.opentrades.size(trade_num) → series float
-
-## Arguments
-
-- **`trade_num`** (series int) The trade number of the open trade. The number of the first trade is zero.
+Syntax
+strategy.opentrades.size(trade_num) → series float
+Arguments
+trade_num (series int) The trade number of the open trade. The number of the first trade is zero.
+```
 
 ### Example
 
@@ -14500,43 +13896,30 @@ for tradeNo = 0 to strategy.opentrades - 1
 // Calculate average profit percent for all open trades.
 avgProfitPct = nz(profitPct / strategy.opentrades)
 plot(avgProfitPct)
-```
-
-## strategy.order()
-
+See also
+strategy.closedtrades.size()
+strategy.position_size
+strategy.opentrades
+strategy.closedtrades
+strategy.order()
 Creates a new order to open, add to, or exit from a position. If an unfilled order with the same id exists, a call to this command modifies that order.
-
 The resulting order's type depends on the limit and stop parameters. If the call does not contain limit or stop arguments, it creates a market order that executes on the next tick. If the call specifies a limit value but no stop value, it places a limit order that executes after the market price reaches the limit value or a better price (lower for buy orders and higher for sell orders). If the call specifies a stop value but no limit value, it places a stop order that executes after the market price reaches the stop value or a worse price (higher for buy orders and lower for sell orders). If the call contains limit and stop arguments, it creates a stop-limit order, which generates a limit order at the limit price only after the market price reaches the stop value or a worse price.
-
 Orders from this command, unlike those from strategy.entry(), are not affected by the pyramiding parameter of the strategy() declaration statement. Strategies can open any number of trades in the same direction with calls to this function.
-
 This command does not automatically reverse open positions because it does not exclusively create entry orders like strategy.entry() does. For example, if there is an open long position of five shares, an order from this command with a qty of 5 and a direction of strategy.short triggers the sale of five shares, which closes the position.
-
-## Syntax
-
+Syntax
 strategy.order(id, direction, qty, limit, stop, oca_name, oca_type, comment, alert_message, disable_alert) → void
-
-## Arguments
-
-- **`id`** (series string) The identifier of the order, which corresponds to an entry or exit ID in the strategy's trades after the order fills. If the strategy opens a new position after filling the order, the order's ID becomes the strategy.position_entry_name value. Strategy commands can reference the order ID to cancel or modify pending orders and generate exit orders for specific open trades. The Strategy Tester and the chart display the order ID unless the command specifies a comment value.
-
-- **`direction`** (series strategy_direction) The direction of the trade. Possible values: strategy.long for a long trade, strategy.short for a short one.
-
-- **`qty`** (series int/float) Optional. The number of contracts/shares/lots/units to trade when the order fills. The default is na, which means that the command uses the default_qty_type and default_qty_value parameters of the strategy() declaration statement to determine the quantity.
-
-- **`limit`** (series int/float) Optional. The limit price of the order. If specified, the command creates a limit or stop-limit order, depending on whether the stop value is also specified. The default is na, which means the resulting order is not of the limit or stop-limit type.
-
-- **`stop`** (series int/float) Optional. The stop price of the order. If specified, the command creates a stop or stop-limit order, depending on whether the limit value is also specified. The default is na, which means the resulting order is not of the stop or stop-limit type.
-
-- **`oca_name`** (series string) Optional. The name of the order's One-Cancels-All (OCA) group. When a pending order with the same oca_name and oca_type parameters executes, that order affects all unfilled orders in the group. The default is an empty string, which means the order does not belong to an OCA group.
-
-- **`oca_type`** (input string) Optional. Specifies how an unfilled order behaves when another pending order with the same oca_name and oca_type values executes. Possible values: strategy.oca.cancel, strategy.oca.reduce, strategy.oca.none. The default is strategy.oca.none.
-
-- **`comment`** (series string) Optional. Additional notes on the filled order. If the value is not an empty string, the Strategy Tester and the chart show this text for the order instead of the specified id. The default is an empty string.
-
-- **`alert_message`** (series string) Optional. Custom text for the alert that fires when an order fills. If the "Message" field of the "Create Alert" dialog box contains the {{strategy.order.alert_message}} placeholder, the alert message replaces the placeholder with this text. The default is an empty string.
-
-- **`disable_alert`** (series bool) Optional. If true when the command creates an order, the strategy does not trigger an alert when that order fills. This parameter accepts a "series" value, meaning users can control which orders trigger alerts when they execute. The default is false.
+Arguments
+id (series string) The identifier of the order, which corresponds to an entry or exit ID in the strategy's trades after the order fills. If the strategy opens a new position after filling the order, the order's ID becomes the strategy.position_entry_name value. Strategy commands can reference the order ID to cancel or modify pending orders and generate exit orders for specific open trades. The Strategy Tester and the chart display the order ID unless the command specifies a comment value.
+direction (series strategy_direction) The direction of the trade. Possible values: strategy.long for a long trade, strategy.short for a short one.
+qty (series int/float) Optional. The number of contracts/shares/lots/units to trade when the order fills. The default is na, which means that the command uses the default_qty_type and default_qty_value parameters of the strategy() declaration statement to determine the quantity.
+limit (series int/float) Optional. The limit price of the order. If specified, the command creates a limit or stop-limit order, depending on whether the stop value is also specified. The default is na, which means the resulting order is not of the limit or stop-limit type.
+stop (series int/float) Optional. The stop price of the order. If specified, the command creates a stop or stop-limit order, depending on whether the limit value is also specified. The default is na, which means the resulting order is not of the stop or stop-limit type.
+oca_name (series string) Optional. The name of the order's One-Cancels-All (OCA) group. When a pending order with the same oca_name and oca_type parameters executes, that order affects all unfilled orders in the group. The default is an empty string, which means the order does not belong to an OCA group.
+oca_type (input string) Optional. Specifies how an unfilled order behaves when another pending order with the same oca_name and oca_type values executes. Possible values: strategy.oca.cancel, strategy.oca.reduce, strategy.oca.none. The default is strategy.oca.none.
+comment (series string) Optional. Additional notes on the filled order. If the value is not an empty string, the Strategy Tester and the chart show this text for the order instead of the specified id. The default is an empty string.
+alert_message (series string) Optional. Custom text for the alert that fires when an order fills. If the "Message" field of the "Create Alert" dialog box contains the {{strategy.order.alert_message}} placeholder, the alert message replaces the placeholder with this text. The default is an empty string.
+disable_alert (series bool) Optional. If true when the command creates an order, the strategy does not trigger an alert when that order fills. This parameter accepts a "series" value, meaning users can control which orders trigger alerts when they execute. The default is false.
+```
 
 ### Example
 
@@ -14602,19 +13985,9 @@ if strategy.position_size > 0 and strategy.position_size[1] == 0
     // Stop extending the `profitLimit` and `lossStop` lines.
 
 ##     profitLimit.stopExtend()
-
-##     lossStop.stopExtend()
-
-## strategy.risk.allow_entry_in()
-
 This function can be used to specify in which market direction the strategy.entry() function is allowed to open positions.
 
 ## Syntax
-
-## strategy.risk.allow_entry_in(value) → void
-
-## Arguments
-
 - **`value`** (simple string) The allowed direction. Possible values: strategy.direction.all, strategy.direction.long, strategy.direction.short
 
 ### Example
@@ -14641,11 +14014,6 @@ if open < close
 The purpose of this rule is to cancel all pending orders, close all open positions and stop placing orders after a specified number of consecutive days with losses. The rule affects the whole strategy.
 
 ## Syntax
-
-## strategy.risk.max_cons_loss_days(count, alert_message) → void
-
-## Arguments
-
 - **`count`** (simple int) A required parameter. The allowed number of consecutive days with losses.
 
 - **`alert_message`** (simple string) An optional parameter which replaces the {{strategy.order.alert_message}} placeholder when it is used in the "Create Alert" dialog box's "Message" field.
@@ -14657,23 +14025,15 @@ The purpose of this rule is to cancel all pending orders, close all open positio
 strategy("risk.max_cons_loss_days Demo 1")
 strategy.risk.max_cons_loss_days(3) // No orders will be placed after 3 days, if each day is with loss.
 plot(strategy.position_size)
-```
-
-## strategy.risk.max_drawdown()
-
+strategy.risk.max_drawdown()
 The purpose of this rule is to determine maximum drawdown. The rule affects the whole strategy. Once the maximum drawdown value is reached, all pending orders are cancelled, all open positions are closed and no new orders can be placed.
-
-## Syntax
-
-## strategy.risk.max_drawdown(value, type, alert_message) → void
-
-## Arguments
-
-- **`value`** (simple int/float) A required parameter. The maximum drawdown value. It is specified either in money (base currency), or in percentage of maximum equity. For % of equity the range of allowed values is from 0 to 100.
-
-- **`type`** (simple string) A required parameter. The type of the value. Please specify one of the following values: strategy.percent_of_equity or strategy.cash. Note: if equity drops down to zero or to a negative and the 'strategy.percent_of_equity' is specified, all pending orders are cancelled, all open positions are closed and no new orders can be placed for good.
-
-- **`alert_message`** (simple string) An optional parameter which replaces the {{strategy.order.alert_message}} placeholder when it is used in the "Create Alert" dialog box's "Message" field.
+Syntax
+strategy.risk.max_drawdown(value, type, alert_message) → void
+Arguments
+value (simple int/float) A required parameter. The maximum drawdown value. It is specified either in money (base currency), or in percentage of maximum equity. For % of equity the range of allowed values is from 0 to 100.
+type (simple string) A required parameter. The type of the value. Please specify one of the following values: strategy.percent_of_equity or strategy.cash. Note: if equity drops down to zero or to a negative and the 'strategy.percent_of_equity' is specified, all pending orders are cancelled, all open positions are closed and no new orders can be placed for good.
+alert_message (simple string) An optional parameter which replaces the {{strategy.order.alert_message}} placeholder when it is used in the "Create Alert" dialog box's "Message" field.
+```
 
 ### Example
 
@@ -14691,21 +14051,14 @@ plot(strategy.position_size)
 strategy("risk.max_drawdown Demo 2", currency = "EUR")
 strategy.risk.max_drawdown(2000, strategy.cash) // set maximum drawdown to 2000 EUR from maximum equity
 plot(strategy.position_size)
-```
-
-## strategy.risk.max_intraday_filled_orders()
-
+strategy.risk.max_intraday_filled_orders()
 The purpose of this rule is to determine maximum number of filled orders per 1 day (per 1 bar, if chart resolution is higher than 1 day). The rule affects the whole strategy. Once the maximum number of filled orders is reached, all pending orders are cancelled, all open positions are closed and no new orders can be placed till the end of the current trading session.
-
-## Syntax
-
-## strategy.risk.max_intraday_filled_orders(count, alert_message) → void
-
-## Arguments
-
-- **`count`** (simple int) A required parameter. The maximum number of filled orders per 1 day.
-
-- **`alert_message`** (simple string) An optional parameter which replaces the {{strategy.order.alert_message}} placeholder when it is used in the "Create Alert" dialog box's "Message" field.
+Syntax
+strategy.risk.max_intraday_filled_orders(count, alert_message) → void
+Arguments
+count (simple int) A required parameter. The maximum number of filled orders per 1 day.
+alert_message (simple string) An optional parameter which replaces the {{strategy.order.alert_message}} placeholder when it is used in the "Create Alert" dialog box's "Message" field.
+```
 
 ### Example
 
@@ -14717,23 +14070,15 @@ if open > close
     strategy.entry("buy", strategy.long)
 if open < close
     strategy.entry("sell", strategy.short)
+strategy.risk.max_intraday_loss()
+The maximum loss value allowed during a day. It is specified either in money (base currency), or in percentage of maximum intraday equity (0 -100).
+Syntax
+strategy.risk.max_intraday_loss(value, type, alert_message) → void
+Arguments
+value (simple int/float) A required parameter. The maximum loss value. It is specified either in money (base currency), or in percentage of maximum intraday equity. For % of equity the range of allowed values is from 0 to 100.
+type (simple string) A required parameter. The type of the value. Please specify one of the following values: strategy.percent_of_equity or strategy.cash. Note: if equity drops down to zero or to a negative and the strategy.percent_of_equity is specified, all pending orders are cancelled, all open positions are closed and no new orders can be placed for good.
+alert_message (simple string) An optional parameter which replaces the {{strategy.order.alert_message}} placeholder when it is used in the "Create Alert" dialog box's "Message" field.
 ```
-
-## strategy.risk.max_intraday_loss()
-
-- **`The maximum loss value allowed during a day. It is specified either in money`** (base currency), or in percentage of maximum intraday equity (0 -100).
-
-## Syntax
-
-## strategy.risk.max_intraday_loss(value, type, alert_message) → void
-
-## Arguments
-
-- **`value`** (simple int/float) A required parameter. The maximum loss value. It is specified either in money (base currency), or in percentage of maximum intraday equity. For % of equity the range of allowed values is from 0 to 100.
-
-- **`type`** (simple string) A required parameter. The type of the value. Please specify one of the following values: strategy.percent_of_equity or strategy.cash. Note: if equity drops down to zero or to a negative and the strategy.percent_of_equity is specified, all pending orders are cancelled, all open positions are closed and no new orders can be placed for good.
-
-- **`alert_message`** (simple string) An optional parameter which replaces the {{strategy.order.alert_message}} placeholder when it is used in the "Create Alert" dialog box's "Message" field.
 
 ### Example
 
@@ -14779,19 +14124,9 @@ priceChg = (close - beginPrice)
 ```
 
 ## hline(absCashLoss)
-
-## plot(priceChg)
-
-## strategy.risk.max_position_size()
-
 The purpose of this rule is to determine maximum size of a market position. The rule affects the following function: strategy.entry(). The 'entry' quantity can be reduced (if needed) to such number of contracts/shares/lots/units, so the total position size doesn't exceed the value specified in 'strategy.risk.max_position_size'. If minimum possible quantity still violates the rule, the order will not be placed.
 
 ## Syntax
-
-## strategy.risk.max_position_size(contracts) → void
-
-## Arguments
-
 - **`contracts`** (simple int/float) A required parameter. Maximum number of contracts/shares/lots/units in a position.
 
 ### Example
@@ -14803,42 +14138,27 @@ strategy.risk.max_position_size(10)
 if open > close
     strategy.entry("buy", strategy.long)
 plot(strategy.position_size) // max plot value will be 10
-```
-
-## string()4 overloads
-
+string()4 overloads
 Casts na to string
-
 Syntax & Overloads
-
-## string(x) → const string
-
-## string(x) → input string
-
-## string(x) → simple string
-
-## string(x) → series string
-
-## Arguments
-
-- **`x`** (const string) The value to convert to the specified type, usually na.
+string(x) → const string
+string(x) → input string
+string(x) → simple string
+string(x) → series string
+Arguments
+x (const string) The value to convert to the specified type, usually na.
+```
 
 ### Returns
 
 The value of the argument after casting to string.
 
-## syminfo.prefix()2 overloads
-
+## float()
 Returns exchange prefix of the symbol, e.g. "NASDAQ".
 
 Syntax & Overloads
 
 ## syminfo.prefix(symbol) → simple string
-
-## syminfo.prefix(symbol) → series string
-
-## Arguments
-
 - **`symbol`** (simple string) Symbol. Note that the symbol should be passed with a prefix. For example: "NASDAQ:AAPL" instead of "AAPL".
 
 ### Example
@@ -14862,18 +14182,12 @@ Returns exchange prefix of the symbol, e.g. "NASDAQ".
 
 The result of the function is used in the ticker.new()/ticker.modify() and request.security().
 
-## syminfo.ticker()2 overloads
-
+## syminfo.tickerid
 Returns symbol name without exchange prefix, e.g. "AAPL".
 
 Syntax & Overloads
 
 ## syminfo.ticker(symbol) → simple string
-
-## syminfo.ticker(symbol) → series string
-
-## Arguments
-
 - **`symbol`** (simple string) Symbol. Note that the symbol should be passed with a prefix. For example: "NASDAQ:AAPL" instead of "AAPL".
 
 ### Example
@@ -14897,8 +14211,7 @@ Returns symbol name without exchange prefix, e.g. "AAPL".
 
 The result of the function is used in the ticker.new()/ticker.modify() and request.security().
 
-## ta.alma()
-
+## syminfo.tickerid
 Arnaud Legoux Moving Average. It uses Gaussian distribution as weights for moving average.
 
 ## Syntax
@@ -14940,22 +14253,16 @@ plot(pine_alma(close, 9, 0.85, 6))
 
 ### Returns
 
-## Arnaud Legoux Moving Average.
+Arnaud Legoux Moving Average.
 
 ### Remarks
 
 na values in the source series are included in calculations and will produce an na result.
 
-## ta.atr()
-
+## ta.sma()
 Function atr (average true range) returns the RMA of true range. True range is max(high - low, abs(high - close[1]), abs(low - close[1])).
 
 ## Syntax
-
-## ta.atr(length) → series float
-
-## Arguments
-
 - **`length`** (simple int) Length (number of bars back).
 
 ### Example
@@ -14975,22 +14282,16 @@ pine_atr(length) =>
 
 ### Returns
 
-## Average true range.
+Average true range.
 
 ### Remarks
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
 
-## ta.barssince()
-
+## ta.tr()
 Counts the number of bars since the last time the condition was true.
 
 ## Syntax
-
-## ta.barssince(condition) → series int
-
-## Arguments
-
 - **`condition`** (series bool) The condition to check for.
 
 ### Example
@@ -15012,8 +14313,7 @@ If the condition has never been met prior to the current bar, the function retur
 
 Please note that using this variable/function can cause indicator repainting.
 
-## ta.bb()
-
+## ta.lowestbars()
 - **`Bollinger Bands. A Bollinger Band is a technical analysis tool defined by a set of lines plotted two standard deviations`** (positively and negatively) away from a simple moving average (SMA) of the security's price, but can be adjusted to user preferences.
 
 ## Syntax
@@ -15046,21 +14346,15 @@ f_bb(src, length, mult) =>
 ```
 
 ## plot(pineMiddle)
-
-## plot(pineUpper)
-
-## plot(pineLower)
-
 ### Returns
 
-## Bollinger Bands.
+Bollinger Bands.
 
 ### Remarks
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
 
-## ta.bbw()
-
+## ta.sma()
 Bollinger Bands Width. The Bollinger Band Width is the difference between the upper and the lower Bollinger Bands divided by the middle band.
 
 ## Syntax
@@ -15098,11 +14392,27 @@ indicator("ta.bbw")
 
 ### Returns
 
-## Bollinger Bands Width.
+Bollinger Bands Width.
 
 ### Remarks
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.bb()
+- **`The CCI`** (commodity channel index) is calculated as the difference between the typical price of a commodity and its simple moving average, divided by the mean absolute deviation of the typical price. The index is scaled by an inverse factor of 0.015 to provide more readable numbers.
+
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (series int) Number of bars (length).
+
+### Returns
+
+Commodity channel index of source for length bars back.
+
+### Remarks
+
+na values in the source series are ignored.
 
 ## ta.change()3 overloads
 
@@ -15111,13 +14421,6 @@ Compares the current source value to its value length bars ago and returns the d
 Syntax & Overloads
 
 ## ta.change(source, length) → series int
-
-## ta.change(source, length) → series float
-
-## ta.change(source, length) → series bool
-
-## Arguments
-
 - **`source`** (series int) Source series.
 
 - **`length`** (series int) How far the past source value is offset from the current one, in bars. Optional. The default is 1.
@@ -15143,6 +14446,74 @@ The difference between the values when they are numerical. When a 'bool' source 
 
 na values in the source series are included in calculations and will produce an na result.
 
+## ta.mom()
+Chande Momentum Oscillator. Calculates the difference between the sum of recent gains and the sum of recent losses and then divides the result by the sum of all price movement over the same period.
+
+## Syntax
+- **`series`** (series int/float) Series of values to process.
+
+- **`length`** (series int) Number of bars (length).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.cmo")
+plot(ta.cmo(close, 5), color=color.yellow)
+// the same on pine
+f_cmo(src, length) =>
+    float mom = ta.change(src)
+    float sm1 = math.sum((mom >= 0) ? mom : 0.0, length)
+    float sm2 = math.sum((mom >= 0) ? 0.0 : -mom, length)
+    100 * (sm1 - sm2) / (sm1 + sm2)
+```
+
+## plot(f_cmo(close, 5))
+
+### Returns
+
+Chande Momentum Oscillator.
+
+### Remarks
+
+na values in the source series are ignored.
+
+## ta.rsi()
+The cog (center of gravity) is an indicator based on statistics and the Fibonacci golden ratio.
+
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (series int) Number of bars (length).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.cog", overlay=true)
+plot(ta.cog(close, 10))
+// the same on pine
+pine_cog(source, length) =>
+    sum = math.sum(source, length)
+    num = 0.0
+    for i = 0 to length - 1
+        price = source[i]
+        num := num + price * (i + 1)
+    -num / sum
+```
+
+## plot(pine_cog(close, 10))
+
+### Returns
+
+Center of Gravity.
+
+### Remarks
+
+na values in the source series are ignored.
+
+## ta.stoch()
+
 ## ta.correlation()
 
 Correlation coefficient. Describes the degree to which two series tend to deviate from their ta.sma() values.
@@ -15161,38 +14532,67 @@ ta.correlation(source1, source2, length) → series float
 
 ### Returns
 
-## Correlation coefficient.
+Correlation coefficient.
 
 ### Remarks
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## request.security()
+- **`source1`** (series int/float) First data series.
+
+- **`source2`** (series int/float) Second data series.
+
+### Returns
+
+true if two series have crossed each other, otherwise false.
+
+## ta.change()
+
+## ta.crossover()
+
+The source1-series is defined as having crossed over source2-series if, on the current bar, the value of source1 is greater than the value of source2, and on the previous bar, the value of source1 was less than or equal to the value of source2.
+
+## Syntax
+- **`source1`** (series int/float) First data series.
+
+- **`source2`** (series int/float) Second data series.
+
+### Returns
+
+true if source1 crossed over source2 otherwise false.
+
+## ta.crossunder()
+
+The source1-series is defined as having crossed under source2-series if, on the current bar, the value of source1 is less than the value of source2, and on the previous bar, the value of source1 was greater than or equal to the value of source2.
+
+## Syntax
+- **`source1`** (series int/float) First data series.
+
+- **`source2`** (series int/float) Second data series.
+
+### Returns
+
+true if source1 crossed under source2 otherwise false.
 
 ## ta.cum()
 
 Cumulative (total) sum of source. In other words it's a sum of all elements of source.
 
 ## Syntax
-
-## ta.cum(source) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Source used for the calculation.
 
 ### Returns
 
-## Total sum series.
+Total sum series.
+
+## math.sum()
 
 ## ta.dev()
 
 Measure of difference between the series and it's ta.sma()
 
 ## Syntax
-
-## ta.dev(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -15222,8 +14622,7 @@ Deviation of source for length bars back.
 
 na values in the source series are ignored.
 
-## ta.dmi()
-
+## ta.variance()
 The dmi function returns the directional movement index.
 
 ## Syntax
@@ -15253,16 +14652,42 @@ plot(diminus, color=color.orange, title="-DI")
 
 - **`Tuple of three DMI series: Positive Directional Movement`** (+DI), Negative Directional Movement (-DI) and Average Directional Movement Index (ADX).
 
-## ta.falling()
+## ta.rsi()
+The ema function returns the exponentially weighted moving average. In ema weighting factors decrease exponentially. It calculates by using a formula: EMA = alpha * source + (1 - alpha) * EMA[1], where alpha = 2 / (length + 1).
 
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (simple int) Number of bars (length).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.ema")
+plot(ta.ema(close, 15))
+//the same on pine
+pine_ema(src, length) =>
+    alpha = 2 / (length + 1)
+    sum = 0.0
+    sum := na(sum[1]) ? src : alpha * src + (1 - alpha) * nz(sum[1])
+plot(pine_ema(close,15))
+```
+
+### Returns
+
+Exponential moving average of source with alpha = 2 / (length + 1).
+
+### Remarks
+
+Please note that using this variable/function can cause indicator repainting.
+
+na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.sma()
 Test if the source series is now falling for length bars long.
 
 ## Syntax
-
-## ta.falling(source, length) → series bool
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -15275,23 +14700,20 @@ true if current source value is less than any previous source value for length b
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
 
+## ta.rising()
+
 ## ta.highest()
 
 Highest value for a given number of bars back.
 
 ## Syntax
-
-## ta.highest(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
 
 ### Returns
 
-## Highest value in the series.
+Highest value in the series.
 
 ### Remarks
 
@@ -15301,23 +14723,17 @@ One arg version: length is the number of bars back. Algorithm uses high as a sou
 
 na values in the source series are ignored.
 
-## ta.highestbars()
-
+## ta.lowest()
 Highest value offset for a given number of bars back.
 
 ## Syntax
-
-## ta.highestbars(source, length) → series int
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
 
 ### Returns
 
-## Offset to the highest bar.
+Offset to the highest bar.
 
 ### Remarks
 
@@ -15327,8 +14743,126 @@ One arg version: length is the number of bars back. Algorithm uses high as a sou
 
 na values in the source series are ignored.
 
-## ta.linreg()
+## ta.lowest()
+The hma function returns the Hull Moving Average.
 
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (simple int) Number of bars.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Hull Moving Average")
+src = input(defval=close, title="Source")
+length = input(defval=9, title="Length")
+hmaBuildIn = ta.hma(src, length)
+plot(hmaBuildIn, title="Hull MA", color=#674EA7)
+```
+
+### Returns
+
+Hull moving average of 'source' for 'length' bars back.
+
+### Remarks
+
+na values in the source series are ignored.
+
+## ta.ema()
+Keltner Channels. Keltner channel is a technical analysis indicator showing a central moving average line plus channel lines at a distance above and below.
+
+## Syntax
+
+ta.kc(series, length, mult, useTrueRange) → [series float, series float, series float]
+
+## Arguments
+
+- **`series`** (series int/float) Series of values to process.
+
+- **`length`** (simple int) Number of bars (length).
+
+- **`mult`** (simple int/float) Standard deviation factor.
+
+- **`useTrueRange`** (simple bool) An optional parameter. Specifies if True Range is used; default is true. If the value is false, the range will be calculated with the expression (high - low).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.kc")
+[middle, upper, lower] = ta.kc(close, 5, 4)
+plot(middle, color=color.yellow)
+plot(upper, color=color.yellow)
+plot(lower, color=color.yellow)
+// the same on pine
+f_kc(src, length, mult, useTrueRange) =>
+    float basis = ta.ema(src, length)
+    float span = (useTrueRange) ? ta.tr : (high - low)
+    float rangeEma = ta.ema(span, length)
+    [basis, basis + rangeEma * mult, basis - rangeEma * mult]
+[pineMiddle, pineUpper, pineLower] = f_kc(close, 5, 4, true)
+```
+
+## plot(pineMiddle)
+### Returns
+
+Keltner Channels.
+
+### Remarks
+
+na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.ema()
+Keltner Channels Width. The Keltner Channels Width is the difference between the upper and the lower Keltner Channels divided by the middle channel.
+
+## Syntax
+
+ta.kcw(series, length, mult, useTrueRange) → series float
+
+## Arguments
+
+- **`series`** (series int/float) Series of values to process.
+
+- **`length`** (simple int) Number of bars (length).
+
+- **`mult`** (simple int/float) Standard deviation factor.
+
+- **`useTrueRange`** (simple bool) An optional parameter. Specifies if True Range is used; default is true. If the value is false, the range will be calculated with the expression (high - low).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.kcw")
+```
+
+## plot(ta.kcw(close, 5, 4), color=color.yellow)
+
+// the same on pine
+
+## f_kcw(src, length, mult, useTrueRange) =>
+
+##     float basis = ta.ema(src, length)
+
+- **`float span =`** (useTrueRange) ? ta.tr : (high - low)
+
+##     float rangeEma = ta.ema(span, length)
+
+    ((basis + rangeEma * mult) - (basis - rangeEma * mult)) / basis
+
+## plot(f_kcw(close, 5, 4, true))
+
+### Returns
+
+Keltner Channels Width.
+
+### Remarks
+
+na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.kc()
 - **`Linear regression curve. A line that best fits the prices specified over a user-defined time period. It is calculated using the least squares method. The result of this function is calculated using the formula: linreg = intercept + slope *`** (length - 1 - offset), where intercept and slope are the values calculated with the least squares method on source series.
 
 ## Syntax
@@ -15343,23 +14877,26 @@ ta.linreg(source, length, offset) → series float
 
 - **`offset`** (simple int) Offset.
 
+### Returns
+
+Linear regression curve.
+
+### Remarks
+
+na values in the source series are included in calculations and will produce an na result.
+
 ## ta.lowest()
 
 Lowest value for a given number of bars back.
 
 ## Syntax
-
-## ta.lowest(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
 
 ### Returns
 
-## Lowest value in the series.
+Lowest value in the series.
 
 ### Remarks
 
@@ -15369,23 +14906,17 @@ One arg version: length is the number of bars back. Algorithm uses low as a sour
 
 na values in the source series are ignored.
 
-## ta.lowestbars()
-
+## ta.highest()
 Lowest value offset for a given number of bars back.
 
 ## Syntax
-
-## ta.lowestbars(source, length) → series int
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars back.
 
 ### Returns
 
-## Offset to the lowest bar.
+Offset to the lowest bar.
 
 ### Remarks
 
@@ -15395,17 +14926,61 @@ One arg version: length is the number of bars back. Algorithm uses low as a sour
 
 na values in the source series are ignored.
 
-## ta.max()
-
-Returns the all-time high value of source from the beginning of the chart up to the current bar.
+## ta.lowest()
+MACD (moving average convergence/divergence). It is supposed to reveal changes in the strength, direction, momentum, and duration of a trend in a stock's price.
 
 ## Syntax
 
-## ta.max(source) → series float
+ta.macd(source, fastlen, slowlen, siglen) → [series float, series float, series float]
 
 ## Arguments
 
+- **`source`** (series int/float) Series of values to process.
+
+- **`fastlen`** (simple int) Fast Length parameter.
+
+- **`slowlen`** (simple int) Slow Length parameter.
+
+- **`siglen`** (simple int) Signal Length parameter.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("MACD")
+[macdLine, signalLine, histLine] = ta.macd(close, 12, 26, 9)
+plot(macdLine, color=color.blue)
+plot(signalLine, color=color.orange)
+plot(histLine, color=color.red, style=plot.style_histogram)
+If you need only one value, use placeholders '_' like this:
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("MACD")
+[_, signalLine, _] = ta.macd(close, 12, 26, 9)
+plot(signalLine, color=color.orange)
+```
+
+### Returns
+
+Tuple of three MACD series: MACD line, signal line and histogram line.
+
+### Remarks
+
+na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.sma()
+Returns the all-time high value of source from the beginning of the chart up to the current bar.
+
+## Syntax
 - **`source`** (series int/float) Source used for the calculation.
+
+### Remarks
+
+## na
 
 ## ta.median()2 overloads
 
@@ -15414,18 +14989,13 @@ Returns the median of the series.
 Syntax & Overloads
 
 ## ta.median(source, length) → series int
-
-## ta.median(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
 
 ### Returns
 
-## The median of the series.
+The median of the series.
 
 ### Remarks
 
@@ -15436,11 +15006,6 @@ na values in the source series are ignored; the function calculates on the lengt
 Money Flow Index. The Money Flow Index (MFI) is a technical oscillator that uses price and volume for identifying overbought or oversold conditions in an asset.
 
 ## Syntax
-
-## ta.mfi(series, length) → series float
-
-## Arguments
-
 - **`series`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -15470,23 +15035,21 @@ indicator("Money Flow Index")
 
 ### Returns
 
-## Money Flow Index.
+Money Flow Index.
 
 ### Remarks
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
 
-## ta.min()
-
+## ta.rsi()
 Returns the all-time low value of source from the beginning of the chart up to the current bar.
 
 ## Syntax
-
-## ta.min(source) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Source used for the calculation.
+
+### Remarks
+
+## na
 
 ## ta.mode()2 overloads
 
@@ -15495,11 +15058,6 @@ Returns the mode of the series. If there are several values with the same freque
 Syntax & Overloads
 
 ## ta.mode(source, length) → series int
-
-## ta.mode(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -15517,11 +15075,6 @@ na values in the source series are ignored; the function calculates on the lengt
 Momentum of source price and source price length bars ago. This is simply a difference: source - source[length].
 
 ## Syntax
-
-## ta.mom(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Offset from the current bar to the previous bar.
@@ -15533,6 +15086,8 @@ Momentum of source price and source price length bars ago.
 ### Remarks
 
 na values in the source series are included in calculations and will produce an na result.
+
+## ta.change()
 
 ## ta.percentile_linear_interpolation()
 
@@ -15559,6 +15114,8 @@ P-th percentile of source series for length bars back.
 Note that a percentile calculated using this method will NOT always be a member of the input data set.
 
 na values in the source series are included in calculations and will produce an na result.
+
+## ta.percentile_nearest_rank()
 
 ## ta.percentile_nearest_rank()
 
@@ -15590,16 +15147,13 @@ The 100th percentile is defined to be the largest value in the input data set.
 
 na values in the source series are ignored.
 
+## ta.percentile_linear_interpolation()
+
 ## ta.percentrank()
 
 Percent rank is the percents of how many previous values was less than or equal to the current value of given series.
 
 ## Syntax
-
-## ta.percentrank(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -15617,11 +15171,6 @@ na values in the source series are included in calculations and will produce an 
 Calculates the pivot point levels using the specified type and anchor.
 
 ## Syntax
-
-## ta.pivot_point_levels(type, anchor, developing) → array<float>
-
-## Arguments
-
 - **`type`** (series string) The type of pivot point levels. Possible values: "Traditional", "Fibonacci", "Woodie", "Classic", "DM", "Camarilla".
 
 - **`anchor`** (series bool) The condition that triggers the reset of the pivot point calculations. When true, calculations reset; when false, results calculated at the last reset persist.
@@ -15727,11 +15276,6 @@ Returns the difference between the min and max values in a series.
 Syntax & Overloads
 
 ## ta.range(source, length) → series int
-
-## ta.range(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -15749,11 +15293,6 @@ na values in the source series are ignored; the function calculates on the lengt
 - **`Calculates the Rank Correlation Index`** (RCI), which measures the directional consistency of price movements. It evaluates the monotonic relationship between a source series and the bar index over length bars using Spearman's rank correlation coefficient. The resulting value is scaled to a range of -100 to 100, where 100 indicates the source consistently increased over the period, and -100 indicates it consistently decreased. Values between -100 and 100 reflect varying degrees of upward or downward consistency.
 
 ## Syntax
-
-## ta.rci(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (simple int) Number of bars (length).
@@ -15767,11 +15306,6 @@ The Rank Correlation Index, a value between -100 to 100.
 Test if the source series is now rising for length bars long.
 
 ## Syntax
-
-## ta.rising(source, length) → series bool
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -15783,6 +15317,291 @@ true if current source is greater than any previous source for length bars back,
 ### Remarks
 
 na values in the source series are ignored.
+
+## ta.falling()
+
+## ta.rma()
+
+Moving average used in RSI. It is the exponentially weighted moving average with alpha = 1 / length.
+
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (simple int) Number of bars (length).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.rma")
+plot(ta.rma(close, 15))
+//the same on pine
+pine_rma(src, length) =>
+    alpha = 1/length
+    sum = 0.0
+    sum := na(sum[1]) ? ta.sma(src, length) : alpha * src + (1 - alpha) * nz(sum[1])
+plot(pine_rma(close, 15))
+```
+
+### Returns
+
+Exponential moving average of source with alpha = 1 / length.
+
+### Remarks
+
+na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.sma()
+Calculates the percentage of change (rate of change) between the current value of source and its value length bars ago.
+
+It is calculated by the formula: 100 * change(src, length) / src[length].
+
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (series int) Number of bars (length).
+
+### Returns
+
+The rate of change of source for length bars back.
+
+### Remarks
+
+na values in the source series are included in calculations and will produce an na result.
+
+## ta.rsi()
+
+Relative strength index. It is calculated using the ta.rma() of upward and downward changes of source over the last length bars.
+
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (simple int) Number of bars (length).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.rsi")
+plot(ta.rsi(close, 7))
+// same on pine, but less efficient
+pine_rsi(x, y) =>
+    u = math.max(x - x[1], 0) // upward ta.change
+    d = math.max(x[1] - x, 0) // downward ta.change
+    rs = ta.rma(u, y) / ta.rma(d, y)
+    res = 100 - 100 / (1 + rs)
+    res
+```
+
+## plot(pine_rsi(close, 7))
+
+### Returns
+
+Relative strength index.
+
+### Remarks
+
+na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.rma()
+
+## ta.sar()
+
+Parabolic SAR (parabolic stop and reverse) is a method devised by J. Welles Wilder, Jr., to find potential reversals in the market price direction of traded goods.
+
+## Syntax
+
+ta.sar(start, inc, max) → series float
+
+## Arguments
+
+- **`start`** (simple int/float) Start.
+
+- **`inc`** (simple int/float) Increment.
+
+- **`max`** (simple int/float) Maximum.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.sar")
+plot(ta.sar(0.02, 0.02, 0.2), style=plot.style_cross, linewidth=3)
+// The same on Pine Script®
+pine_sar(start, inc, max) =>
+    var float result = na
+    var float maxMin = na
+    var float acceleration = na
+    var bool isBelow = false
+    bool isFirstTrendBar = false
+    if bar_index == 1
+        if close > close[1]
+            isBelow := true
+            maxMin := high
+            result := low[1]
+        else
+            isBelow := false
+            maxMin := low
+            result := high[1]
+        isFirstTrendBar := true
+        acceleration := start
+    result := result + acceleration * (maxMin - result)
+    if isBelow
+        if result > low
+            isFirstTrendBar := true
+            isBelow := false
+            result := math.max(high, maxMin)
+            maxMin := low
+            acceleration := start
+    else
+        if result < high
+            isFirstTrendBar := true
+            isBelow := true
+            result := math.min(low, maxMin)
+            maxMin := high
+            acceleration := start
+    if not isFirstTrendBar
+        if isBelow
+            if high > maxMin
+                maxMin := high
+                acceleration := math.min(acceleration + inc, max)
+        else
+            if low < maxMin
+                maxMin := low
+                acceleration := math.min(acceleration + inc, max)
+    if isBelow
+        result := math.min(result, low[1])
+        if bar_index > 1
+            result := math.min(result, low[2])
+```
+
+##     else
+
+##         result := math.max(result, high[1])
+
+        if bar_index > 1
+
+##             result := math.max(result, high[2])
+### Returns
+
+Parabolic SAR.
+
+## ta.sma()
+
+The sma function returns the moving average, that is the sum of last y values of x, divided by y.
+
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (series int) Number of bars (length).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.sma")
+plot(ta.sma(close, 15))
+// same on pine, but much less efficient
+pine_sma(x, y) =>
+    sum = 0.0
+    for i = 0 to y - 1
+        sum := sum + x[i] / y
+    sum
+plot(pine_sma(close, 15))
+```
+
+### Returns
+
+Simple moving average of source for length bars back.
+
+### Remarks
+
+na values in the source series are ignored.
+
+## ta.ema()
+ta.stdev(source, length, biased) → series float
+
+## Arguments
+
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (series int) Number of bars (length).
+
+- **`biased`** (series bool) Determines which estimate should be used. Optional. The default is true.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.stdev")
+plot(ta.stdev(close, 5))
+//the same on pine
+isZero(val, eps) => math.abs(val) <= eps
+```
+
+## SUM(fst, snd) =>
+
+    EPS = 1e-10
+
+    res = fst + snd
+
+##     if isZero(res, EPS)
+
+        res := 0
+
+##     else
+
+##         if not isZero(res, 1e-4)
+
+            res := res
+
+##         else
+    for i = 0 to length - 1
+
+##         sum = SUM(src[i], -avg)
+
+        sumOfSquareDeviations := sumOfSquareDeviations + sum * sum
+
+##     stdev = math.sqrt(sumOfSquareDeviations / length)
+
+## plot(pine_stdev(close, 5))
+
+### Returns
+
+Standard deviation.
+
+### Remarks
+
+If biased is true, function will calculate using a biased estimate of the entire population, if false - unbiased estimate of a sample.
+
+na values in the source series are ignored; the function calculates on the length quantity of non-na values.
+
+## ta.dev()
+Stochastic. It is calculated by a formula: 100 * (close - lowest(low, length)) / (highest(high, length) - lowest(low, length)).
+
+## Syntax
+
+ta.stoch(source, high, low, length) → series float
+
+## Arguments
+
+- **`source`** (series int/float) Source series.
+
+- **`high`** (series int/float) Series of high.
+
+- **`low`** (series int/float) Series of low.
+
+- **`length`** (series int) Length (number of bars back).
+
+### Returns
+
+Stochastic.
+
+### Remarks
+
+na values in the source series are ignored.
+
+## ta.cog()
 
 ## ta.supertrend()
 
@@ -15863,16 +15682,39 @@ plot(pineDirection > 0 ? Pine_Supertrend : na, "Down direction", color = color.r
 
 - **`Tuple of two supertrend series: supertrend line and direction of trend. Possible values are 1`** (down direction) and -1 (up direction).
 
-## ta.tr()
+## ta.macd()
 
+## ta.swma()
+
+Symmetrically weighted moving average with fixed length: 4. Weights: [1/6, 2/6, 2/6, 1/6].
+
+## Syntax
+- **`source`** (series int/float) Source series.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.swma")
+plot(ta.swma(close))
+// same on pine, but less efficient
+pine_swma(x) =>
+    x[3] * 1 / 6 + x[2] * 2 / 6 + x[1] * 2 / 6 + x[0] * 1 / 6
+plot(pine_swma(close))
+```
+
+### Returns
+
+Symmetrically weighted moving average.
+
+### Remarks
+
+na values in the source series are included in calculations and will produce an na result.
+
+## ta.sma()
 Calculates the current bar's true range. Unlike a bar's actual range (high - low), true range accounts for potential gaps by taking the maximum of the current bar's actual range and the absolute distances from the previous bar's close to the current bar's high and low. The formula is: math.max(high - low, math.abs(high - close[1]), math.abs(low - close[1])).
 
 ## Syntax
-
-## ta.tr(handle_na) → series float
-
-## Arguments
-
 - **`handle_na`** (simple bool) Defines how the function calculates the result when the previous bar's close is na. If true, the function returns the bar's high - low value. If false, it returns na.
 
 ### Returns
@@ -15883,8 +15725,7 @@ True range. It is math.max(high - low, math.abs(high - close[1]), math.abs(low -
 
 ta.tr(false) is exactly the same as ta.tr.
 
-## ta.tsi()
-
+## ta.tr
 True strength index. It uses moving averages of the underlying momentum of a financial instrument.
 
 ## Syntax
@@ -15944,8 +15785,7 @@ plot(ta.valuewhen(ta.cross(slow, fast), close, 1))
 
 This function requires execution on every bar. It is not recommended to use it inside a for or while loop structure, where its behavior can be unexpected. Please note that using this function can cause indicator repainting.
 
-## ta.variance()
-
+## ta.lowestbars()
 - **`Variance is the expectation of the squared deviation of a series from its mean`** (ta.sma()), and it informally measures how far a set of numbers are spread out from their mean.
 
 ## Syntax
@@ -15970,9 +15810,8 @@ If biased is true, function will calculate using a biased estimate of the entire
 
 na values in the source series are ignored; the function calculates on the length quantity of non-na values.
 
-## ta.vwap()2 overloads
-
-## Volume weighted average price.
+## ta.dev()
+Volume weighted average price.
 
 Syntax & Overloads
 
@@ -16021,16 +15860,13 @@ A VWAP series, or a tuple [vwap, upper_band, lower_band] if stdev_mult is specif
 
 Calculations only begin the first time the anchor condition becomes true. Until then, the function returns na.
 
+## ta.vwap
+
 ## ta.vwma()
 
 The vwma function returns volume-weighted moving average of source for length bars back. It is the same as: sma(source * volume, length) / sma(volume, length).
 
 ## Syntax
-
-## ta.vwma(source, length) → series float
-
-## Arguments
-
 - **`source`** (series int/float) Series of values to process.
 
 - **`length`** (series int) Number of bars (length).
@@ -16055,24 +15891,73 @@ Volume-weighted moving average of source for length bars back.
 
 na values in the source series are ignored.
 
-## table()
+## ta.sma()
+The wma function returns weighted moving average of source for length bars back. In wma weighting factors decrease in arithmetical progression.
 
+## Syntax
+- **`source`** (series int/float) Series of values to process.
+
+- **`length`** (series int) Number of bars (length).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ta.wma")
+plot(ta.wma(close, 15))
+// same on pine, but much less efficient
+pine_wma(x, y) =>
+    norm = 0.0
+    sum = 0.0
+    for i = 0 to y - 1
+        weight = (y - i) * y
+        norm := norm + weight
+        sum := sum + x[i] * weight
+    sum / norm
+plot(pine_wma(close, 15))
+```
+
+### Returns
+
+Weighted moving average of source for length bars back.
+
+### Remarks
+
+na values in the source series are ignored.
+
+## ta.sma()
+Williams %R. The oscillator shows the current closing price in relation to the high and low of the past 'length' bars.
+
+## Syntax
+- **`length`** (series int) Number of bars.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Williams %R", shorttitle="%R", format=format.price, precision=2)
+plot(ta.wpr(14), title="%R", color=color.new(#ff6d00, 0))
+```
+
+### Returns
+
+Williams %R.
+
+### Remarks
+
+na values in the source series are ignored.
+
+## ta.mfi()
 Casts na to table
 
 ## Syntax
-
-## table(x) → series table
-
-## Arguments
-
 - **`x`** (series table) The value to convert to the specified type, usually na.
 
 ### Returns
 
 The value of the argument after casting to table.
 
-## table.cell()
-
+## float()
 The function defines a cell in the table and sets its attributes.
 
 ## Syntax
@@ -16118,7 +16003,6 @@ Each table.cell() call overwrites all previously defined properties of a cell. I
 - **`A single script can only display one table in each of the possible locations. If table.cell() is used on several bars to change the same attribute of a cell`** (e.g. change the background color of the cell to red on the first bar, then to yellow on the second bar), only the last change will be reflected in the table, i.e., the cell’s background will be yellow. Avoid unnecessary setting of cell properties by enclosing function calls in an if barstate.islast block whenever possible, to restrict their execution to the last bar of the series.
 
 ## table.cell_set_bgcolor()
-
 The function sets the background color of the cell.
 
 ## Syntax
@@ -16136,7 +16020,6 @@ table.cell_set_bgcolor(table_id, column, row, bgcolor) → void
 - **`bgcolor`** (series color) The background color of the cell.
 
 ## table.cell_set_height()
-
 The function sets the height of cell.
 
 ## Syntax
@@ -16153,8 +16036,7 @@ table.cell_set_height(table_id, column, row, height) → void
 
 - **`height`** (series int/float) The height of the cell as a % of the chart window. Passing 0 auto-adjusts the height based on the text inside of the cell.
 
-## table.cell_set_text()
-
+## table.cell_set_bgcolor()
 The function sets the text in the specified cell.
 
 ## Syntax
@@ -16179,43 +16061,44 @@ indicator("TABLE example")
 var tLog = table.new(position = position.top_left, rows = 1, columns = 2, bgcolor = color.yellow, border_width=1)
 table.cell(tLog, row = 0, column = 0, text = "sometext", text_color = color.blue)
 table.cell_set_text(tLog, row = 0, column = 0, text = "sometext")
-```
-
-## table.cell_set_text_color()
-
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text_color()
+table.cell_set_text_halign()
+table.cell_set_text_size()
+table.cell_set_text_valign()
+table.cell_set_width()
+table.cell_set_tooltip()
+table.cell_set_text_formatting()
+table.cell_set_text_color()
 The function sets the color of the text inside the cell.
-
-## Syntax
-
+Syntax
 table.cell_set_text_color(table_id, column, row, text_color) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`text_color`** (series color) The color of the text.
-
-## table.cell_set_text_font_family()
-
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+text_color (series color) The color of the text.
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text()
+table.cell_set_text_halign()
+table.cell_set_text_size()
+table.cell_set_text_valign()
+table.cell_set_width()
+table.cell_set_tooltip()
+table.cell_set_text_font_family()
 The function sets the font family of the text inside the cell.
-
-## Syntax
-
+Syntax
 table.cell_set_text_font_family(table_id, column, row, text_font_family) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`text_font_family`** (series string) The font family of the text. Possible values: font.family_default, font.family_monospace.
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+text_font_family (series string) The font family of the text. Possible values: font.family_default, font.family_monospace.
+```
 
 ### Example
 
@@ -16225,97 +16108,93 @@ indicator("Example of setting the table cell font")
 var t = table.new(position.top_left, rows = 1, columns = 1)
 table.cell(t, 0, 0, "monospace", text_color = color.blue)
 table.cell_set_text_font_family(t, 0, 0, font.family_monospace)
-```
-
-## table.cell_set_text_formatting()
-
+See also
+table.new()
+font.family_default
+font.family_monospace
+table.cell_set_text_formatting()
 Sets the formatting attributes the drawing applies to displayed text.
-
-## Syntax
-
+Syntax
 table.cell_set_text_formatting(table_id, column, row, text_formatting) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`text_formatting`** (const text_format) The formatting of the displayed text. Formatting options support addition. For example, text.format_bold + text.format_italic will make the text both bold and italicized. Possible values: text.format_none, text.format_bold, text.format_italic. Optional. The default is text.format_none.
-
-## table.cell_set_text_halign()
-
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+text_formatting (const text_format) The formatting of the displayed text. Formatting options support addition. For example, text.format_bold + text.format_italic will make the text both bold and italicized. Possible values: text.format_none, text.format_bold, text.format_italic. Optional. The default is text.format_none.
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text_color()
+table.cell_set_text_halign()
+table.cell_set_text_size()
+table.cell_set_text_valign()
+table.cell_set_width()
+table.cell_set_tooltip()
+table.cell_set_text()
+table.cell_set_text_halign()
 The function sets the horizontal alignment of the cell's text.
-
-## Syntax
-
+Syntax
 table.cell_set_text_halign(table_id, column, row, text_halign) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`text_halign`** (series string) The horizontal alignment of a cell's text. Possible values: text.align_left, text.align_center, text.align_right.
-
-## table.cell_set_text_size()
-
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+text_halign (series string) The horizontal alignment of a cell's text. Possible values: text.align_left, text.align_center, text.align_right.
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text()
+table.cell_set_text_color()
+table.cell_set_text_size()
+table.cell_set_text_valign()
+table.cell_set_width()
+table.cell_set_tooltip()
+table.cell_set_text_size()
 The function sets the size of the cell's text.
-
-## Syntax
-
+Syntax
 table.cell_set_text_size(table_id, column, row, text_size) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`text_size`** (series int/string) Size of the object. The size can be any positive integer, or one of the size.* built-in constant strings. The constant strings and their equivalent integer values are: size.auto (0), size.tiny (8), size.small (10), size.normal (14), size.large (20), size.huge (36). The default value is size.normal or 14.
-
-## table.cell_set_text_valign()
-
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+text_size (series int/string) Size of the object. The size can be any positive integer, or one of the size.* built-in constant strings. The constant strings and their equivalent integer values are: size.auto (0), size.tiny (8), size.small (10), size.normal (14), size.large (20), size.huge (36). The default value is size.normal or 14.
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text()
+table.cell_set_text_color()
+table.cell_set_text_halign()
+table.cell_set_text_valign()
+table.cell_set_width()
+table.cell_set_tooltip()
+table.cell_set_text_valign()
 The function sets the vertical alignment of a cell's text.
-
-## Syntax
-
+Syntax
 table.cell_set_text_valign(table_id, column, row, text_valign) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`text_valign`** (series string) The vertical alignment of the cell's text. Possible values: text.align_top, text.align_center, text.align_bottom.
-
-## table.cell_set_tooltip()
-
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+text_valign (series string) The vertical alignment of the cell's text. Possible values: text.align_top, text.align_center, text.align_bottom.
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text()
+table.cell_set_text_color()
+table.cell_set_text_halign()
+table.cell_set_text_size()
+table.cell_set_width()
+table.cell_set_tooltip()
+table.cell_set_tooltip()
 The function sets the tooltip in the specified cell.
-
-## Syntax
-
+Syntax
 table.cell_set_tooltip(table_id, column, row, tooltip) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`tooltip`** (series string) The tooltip to be displayed inside the cell.
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+tooltip (series string) The tooltip to be displayed inside the cell.
+```
 
 ### Example
 
@@ -16325,45 +16204,44 @@ indicator("TABLE example")
 var tLog = table.new(position = position.top_left, rows = 1, columns = 2, bgcolor = color.yellow, border_width=1)
 table.cell(tLog, row = 0, column = 0, text = "sometext", text_color = color.blue)
 table.cell_set_tooltip(tLog, row = 0, column = 0, tooltip = "sometext")
-```
-
-## table.cell_set_width()
-
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text_color()
+table.cell_set_text_halign()
+table.cell_set_text_size()
+table.cell_set_text_valign()
+table.cell_set_width()
+table.cell_set_text()
+table.cell_set_width()
 The function sets the width of the cell.
-
-## Syntax
-
+Syntax
 table.cell_set_width(table_id, column, row, width) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`column`** (series int) The index of the cell's column. Numbering starts at 0.
-
-- **`row`** (series int) The index of the cell's row. Numbering starts at 0.
-
-- **`width`** (series int/float) The width of the cell as a % of the chart window. Passing 0 auto-adjusts the width based on the text inside of the cell.
-
-## table.clear()
-
+Arguments
+table_id (series table) A table object.
+column (series int) The index of the cell's column. Numbering starts at 0.
+row (series int) The index of the cell's row. Numbering starts at 0.
+width (series int/float) The width of the cell as a % of the chart window. Passing 0 auto-adjusts the width based on the text inside of the cell.
+See also
+table.cell_set_bgcolor()
+table.cell_set_height()
+table.cell_set_text()
+table.cell_set_text_color()
+table.cell_set_text_halign()
+table.cell_set_text_size()
+table.cell_set_text_valign()
+table.cell_set_tooltip()
+table.clear()
 The function removes a cell or a sequence of cells from the table. The cells are removed in a rectangle shape where the start_column and start_row specify the top-left corner, and end_column and end_row specify the bottom-right corner.
-
-## Syntax
-
+Syntax
 table.clear(table_id, start_column, start_row, end_column, end_row) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`start_column`** (series int) The index of the column of the first cell to delete. Numbering starts at 0.
-
-- **`start_row`** (series int) The index of the row of the first cell to delete. Numbering starts at 0.
-
-- **`end_column`** (series int) The index of the column of the last cell to delete. Optional. The default is the argument used for start_column. Numbering starts at 0.
-
-- **`end_row`** (series int) The index of the row of the last cell to delete. Optional. The default is the argument used for start_row. Numbering starts at 0.
+Arguments
+table_id (series table) A table object.
+start_column (series int) The index of the column of the first cell to delete. Numbering starts at 0.
+start_row (series int) The index of the row of the first cell to delete. Numbering starts at 0.
+end_column (series int) The index of the column of the last cell to delete. Optional. The default is the argument used for start_column. Numbering starts at 0.
+end_row (series int) The index of the row of the last cell to delete. Optional. The default is the argument used for start_row. Numbering starts at 0.
+```
 
 ### Example
 
@@ -16378,18 +16256,15 @@ if barstate.islast
         for r = 0 to rowNum - 1
             table.cell(donutTable, c, r, text=padding, bgcolor=#face6e, text_color=color.new(color.black, 100))
     table.clear(donutTable, 2, 2, 5, 5)
+See also
+table.delete()
+table.new()
+table.delete()
 ```
 
-## table.delete()
-
-## The function deletes a table.
+The function deletes a table.
 
 ## Syntax
-
-## table.delete(table_id) → void
-
-## Arguments
-
 - **`table_id`** (series table) A table object.
 
 ### Example
@@ -16403,27 +16278,20 @@ if barstate.islast
     table.cell(table_id = testTable, column = 1, row = 0, text = "Close is " + str.tostring(close), bgcolor=color.teal)
 if barstate.isrealtime
     table.delete(testTable)
-```
-
-## table.merge_cells()
-
+See also
+table.new()
+table.clear()
+table.merge_cells()
 The function merges a sequence of cells in the table into one cell. The cells are merged in a rectangle shape where the start_column and start_row specify the top-left corner, and end_column and end_row specify the bottom-right corner.
-
-## Syntax
-
+Syntax
 table.merge_cells(table_id, start_column, start_row, end_column, end_row) → void
-
-## Arguments
-
-- **`table_id`** (series table) A table object.
-
-- **`start_column`** (series int) The index of the column of the first cell to merge. Numbering starts at 0.
-
-- **`start_row`** (series int) The index of the row of the first cell to merge. Numbering starts at 0.
-
-- **`end_column`** (series int) The index of the column of the last cell to merge. Numbering starts at 0.
-
-- **`end_row`** (series int) The index of the row of the last cell to merge. Numbering starts at 0.
+Arguments
+table_id (series table) A table object.
+start_column (series int) The index of the column of the first cell to merge. Numbering starts at 0.
+start_row (series int) The index of the row of the first cell to merge. Numbering starts at 0.
+end_column (series int) The index of the column of the last cell to merge. Numbering starts at 0.
+end_row (series int) The index of the row of the last cell to merge. Numbering starts at 0.
+```
 
 ### Example
 
@@ -16458,8 +16326,7 @@ To modify the merged cell with any of the table.cell_set_* functions, target the
 
 An attempt to merge a cell that has already been merged will result in an error.
 
-## table.new()
-
+## table.delete()
 The function creates a new table.
 
 ## Syntax
@@ -16507,102 +16374,60 @@ This function creates the table object itself, but the table will not be display
 
 One table.new() call can only display one table (the last one drawn), but the function itself will be recalculated on each bar it is used on. For performance reasons, it is wise to use table.new() in conjunction with either the var keyword (so the table object is only created on the first bar) or in an if barstate.islast block (so the table object is only created on the last bar).
 
-## table.set_bgcolor()
-
+## table.cell()
 The function sets the background color of a table.
 
 ## Syntax
-
-## table.set_bgcolor(table_id, bgcolor) → void
-
-## Arguments
-
 - **`table_id`** (series table) A table object.
 
 - **`bgcolor`** (series color) The background color of the table. Optional. The default is no color.
 
-## table.set_border_color()
-
+## table.clear()
 The function sets the color of the borders (excluding the outer frame) of the table's cells.
 
 ## Syntax
-
-## table.set_border_color(table_id, border_color) → void
-
-## Arguments
-
 - **`table_id`** (series table) A table object.
 
 - **`border_color`** (series color) The color of the borders. Optional. The default is no color.
 
-## table.set_border_width()
-
+## table.clear()
 The function sets the width of the borders (excluding the outer frame) of the table's cells.
 
 ## Syntax
-
-## table.set_border_width(table_id, border_width) → void
-
-## Arguments
-
 - **`table_id`** (series table) A table object.
 
 - **`border_width`** (series int) The width of the borders. Optional. The default is 0.
 
-## table.set_frame_color()
-
+## table.clear()
 The function sets the color of the outer frame of a table.
 
 ## Syntax
-
-## table.set_frame_color(table_id, frame_color) → void
-
-## Arguments
-
 - **`table_id`** (series table) A table object.
 
 - **`frame_color`** (series color) The color of the frame of the table. Optional. The default is no color.
 
-## table.set_frame_width()
-
+## table.clear()
 The function set the width of the outer frame of a table.
 
 ## Syntax
-
-## table.set_frame_width(table_id, frame_width) → void
-
-## Arguments
-
 - **`table_id`** (series table) A table object.
 
 - **`frame_width`** (series int) The width of the outer frame of the table. Optional. The default is 0.
 
-## table.set_position()
-
+## table.clear()
 The function sets the position of a table.
 
 ## Syntax
-
-## table.set_position(table_id, position) → void
-
-## Arguments
-
 - **`table_id`** (series table) A table object.
 
 - **`position`** (series string) Position of the table. Possible values are: position.top_left, position.top_center, position.top_right, position.middle_left, position.middle_center, position.middle_right, position.bottom_left, position.bottom_center, position.bottom_right.
 
-## ticker.heikinashi()2 overloads
-
+## table.clear()
 Creates a ticker identifier for requesting Heikin Ashi bar values.
 
 Syntax & Overloads
 
 ## ticker.heikinashi(symbol) → simple string
-
-## ticker.heikinashi(symbol) → series string
-
-## Arguments
-
 - **`symbol`** (simple string) Symbol ticker identifier.
 
 ### Example
@@ -16614,27 +16439,16 @@ heikinashi_close = request.security(ticker.heikinashi(syminfo.tickerid), timefra
 ```
 
 ## heikinashi_aapl_60_close = request.security(ticker.heikinashi("AAPL"), "60", close)
-
-## plot(heikinashi_close)
-
-## plot(heikinashi_aapl_60_close)
-
 ### Returns
 
 String value of ticker id, that can be supplied to request.security() function.
 
-## ticker.inherit()2 overloads
-
+## syminfo.tickerid
 Constructs a ticker ID for the specified symbol with additional parameters inherited from the ticker ID passed into the function call, allowing the script to request a symbol's data using the same modifiers that the from_tickerid has, including extended session, dividend adjustment, currency conversion, non-standard chart types, back-adjustment, settlement-as-close, etc.
 
 Syntax & Overloads
 
 ## ticker.inherit(from_tickerid, symbol) → simple string
-
-## ticker.inherit(from_tickerid, symbol) → series string
-
-## Arguments
-
 - **`from_tickerid`** (simple string) The ticker ID to inherit modifiers from.
 
 - **`symbol`** (simple string) The symbol to construct the new ticker ID for.
@@ -16666,18 +16480,46 @@ compareData = request.security(testSymbol, "60", close, ignore_invalid_symbol = 
 
 - **`If the constructed ticker ID inherits a modifier that doesn't apply to the symbol`** (e.g., if the from_tickerid has Extended Hours enabled, but no such option is available for the symbol), the script will ignore the modifier when requesting data using the ID.
 
-## ticker.linebreak()2 overloads
+## ticker.kagi()4 overloads
 
+Creates a ticker identifier for requesting Kagi values.
+
+Syntax & Overloads
+
+## ticker.kagi(symbol, reversal) → simple string
+
+## ticker.kagi(symbol, reversal) → series string
+
+ticker.kagi(symbol, param, style) → simple string
+
+ticker.kagi(symbol, param, style) → series string
+
+## Arguments
+
+- **`symbol`** (simple string) Symbol ticker identifier.
+
+- **`reversal`** (simple int/float) Reversal amount (absolute price value).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ticker.kagi", overlay=true)
+kagi_tickerid = ticker.kagi(syminfo.tickerid, 3)
+kagi_close = request.security(kagi_tickerid, timeframe.period, close)
+plot(kagi_close)
+```
+
+### Returns
+
+String value of ticker id, that can be supplied to request.security() function.
+
+## syminfo.tickerid
 Creates a ticker identifier for requesting Line Break values.
 
 Syntax & Overloads
 
 ## ticker.linebreak(symbol, number_of_lines) → simple string
-
-## ticker.linebreak(symbol, number_of_lines) → series string
-
-## Arguments
-
 - **`symbol`** (simple string) Symbol ticker identifier.
 
 - **`number_of_lines`** (simple int) Number of line.
@@ -16696,8 +16538,7 @@ plot(linebreak_close)
 
 String value of ticker id, that can be supplied to request.security() function.
 
-## ticker.modify()2 overloads
-
+## syminfo.tickerid
 Creates a ticker identifier for requesting additional data for the script.
 
 Syntax & Overloads
@@ -16735,8 +16576,7 @@ plot(c2)
 
 String value of ticker id, that can be supplied to request.security() function.
 
-## ticker.new()2 overloads
-
+## syminfo.tickerid
 Creates a ticker identifier for requesting additional data for the script.
 
 Syntax & Overloads
@@ -16778,8 +16618,7 @@ String value of ticker id, that can be supplied to request.security() function.
 
 You may use return value of ticker.new() function as input argument for ticker.heikinashi(), ticker.renko(), ticker.linebreak(), ticker.kagi(), ticker.pointfigure() functions.
 
-## ticker.pointfigure()2 overloads
-
+## syminfo.tickerid
 Creates a ticker identifier for requesting Point & Figure values.
 
 Syntax & Overloads
@@ -16814,18 +16653,57 @@ plot(pnf_close)
 
 String value of ticker id, that can be supplied to request.security() function.
 
-## ticker.standard()2 overloads
+## syminfo.tickerid
+Creates a ticker identifier for requesting Renko values.
 
+Syntax & Overloads
+
+ticker.renko(symbol, style, param, request_wicks, source) → simple string
+
+ticker.renko(symbol, style, param, request_wicks, source) → series string
+
+## Arguments
+
+- **`symbol`** (simple string) Symbol ticker identifier.
+
+- **`style`** (simple string) Specifies the ticker's box size assignment method. Possible values: "ATR" for Average True Range sizing, "Traditional" to use a fixed size, or "PercentageLTP" to use a percentage of the last trading price.
+
+- **`param`** (simple int/float) Represents the ticker's "ATR length" value if the style value is "ATR", "Box size" value if the style is "Traditional", or "Percentage" value if the style is "PercentageLTP".
+
+- **`request_wicks`** (simple bool) Specifies if wick values are returned for Renko bricks. When true, high and low values requested from a symbol using the ticker formed by this function will include wick values when they are present. When false, high and low will always be equal to either open or close. Optional. The default is false. A detailed explanation of how Renko wicks are calculated can be found in our Help Center.
+
+- **`source`** (simple string) The source used to calculate bricks. Optional. Possible values: "Close", "OHLC". The default is "Close".
+
+### Example
+
+```pinescript
+//@version=6
+indicator("ticker.renko", overlay=true)
+renko_tickerid = ticker.renko(syminfo.tickerid, "ATR", 10)
+renko_close = request.security(renko_tickerid, timeframe.period, close)
+plot(renko_close)
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Renko candles", overlay=false)
+renko_tickerid = ticker.renko(syminfo.tickerid, "ATR", 10)
+[renko_open, renko_high, renko_low, renko_close] = request.security(renko_tickerid, timeframe.period, [open, high, low, close])
+plotcandle(renko_open, renko_high, renko_low, renko_close, color = renko_close > renko_open ? color.green : color.red)
+```
+
+### Returns
+
+String value of ticker id, that can be supplied to request.security() function.
+
+## syminfo.tickerid
 Creates a ticker to request data from a standard chart that is unaffected by modifiers like extended session, dividend adjustment, currency conversion, and the calculations of non-standard chart types: Heikin Ashi, Renko, etc. Among other things, this makes it possible to retrieve standard chart values when the script is running on a non-standard chart.
 
 Syntax & Overloads
 
 ## ticker.standard(symbol) → simple string
-
-## ticker.standard(symbol) → series string
-
-## Arguments
-
 - **`symbol`** (simple string) A ticker ID to be converted into its standard form. Optional. The default is syminfo.tickerid.
 
 ### Example
@@ -16849,8 +16727,6 @@ standardChartValue2 = request.security(ticker.standard(syminfo.ticker), "1D", cl
 ### Returns
 
 A string representing the ticker of a standard chart in the "prefix:ticker" format. If the symbol argument does not contain the prefix and ticker information, the function returns the supplied argument as is.
-
-See also
 
 ## request.security()
 
@@ -16911,13 +16787,15 @@ bgcolor(not na(t1) ? color.new(color.blue, 90) : na)
 
 ### Returns
 
-## UNIX time.
+UNIX time.
 
 ### Remarks
 
 UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
 If the function call includes bars_back and timeframe_bars_back arguments, it evaluates the bars_back offset before the timeframe_bars_back offset. For example, consider the call time(timeframe = "1M", bars_back = 15, timeframe_bars_back = 10) on a "1D" chart. This function call references the bar from 15 bars back on the "1D" timeframe, determines the "1M" bar that the bar belongs to, and then retrieves the timestamp from 10 "1M" bars back relative to that "1M" bar.
+
+## time
 
 ## time_close()2 overloads
 
@@ -16950,7 +16828,7 @@ bgcolor(not na(t1) ? color.new(color.blue, 90) : na)
 
 ### Returns
 
-## UNIX time.
+UNIX time.
 
 ### Remarks
 
@@ -16958,16 +16836,13 @@ UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 
 
 If the function call includes bars_back and timeframe_bars_back arguments, it evaluates the bars_back offset before the timeframe_bars_back offset. For example, consider the call time(timeframe = "1M", bars_back = 15, timeframe_bars_back = 10) on a "1D" chart. This function call references the bar from 15 bars back on the "1D" timeframe, determines the "1M" bar that the bar belongs to, and then retrieves the timestamp from 10 "1M" bars back relative to that "1M" bar.
 
+## time_close
+
 ## timeframe.change()
 
 Detects changes in the specified timeframe.
 
 ## Syntax
-
-## timeframe.change(timeframe) → series bool
-
-## Arguments
-
 - **`timeframe`** (series string) String formatted according to the User manual's timeframe string specifications.
 
 ### Example
@@ -16992,11 +16867,6 @@ Converts a number of seconds into a valid timeframe string.
 Syntax & Overloads
 
 ## timeframe.from_seconds(seconds) → simple string
-
-## timeframe.from_seconds(seconds) → series string
-
-## Arguments
-
 - **`seconds`** (simple int) The number of seconds in the timeframe.
 
 ### Example
@@ -17022,18 +16892,12 @@ If the seconds exactly represent two or more valid timeframes, the one with the 
 
 All values above 31,622,400 (366 days) return "12M".
 
-## timeframe.in_seconds()2 overloads
-
+## timeframe.in_seconds()
 Converts a timeframe string into seconds.
 
 Syntax & Overloads
 
 ## timeframe.in_seconds(timeframe) → simple int
-
-## timeframe.in_seconds(timeframe) → series int
-
-## Arguments
-
 - **`timeframe`** (simple string) Timeframe string in timeframe string specifications format. Optional. The default is timeframe.period.
 
 ### Example
@@ -17057,8 +16921,7 @@ The "int" representation of the number of seconds in the timeframe string.
 
 When the timeframe is "1M" or more, calculations use 2628003 as the number of seconds in one month, which represents 30.4167 (365/12) days.
 
-## timestamp()6 overloads
-
+## input.timeframe()
 Function timestamp returns UNIX time of specified date and time.
 
 Syntax & Overloads
@@ -17097,22 +16960,16 @@ plot(timestamp("04 Dec 1995 00:12:00 GMT+5"))
 
 ### Returns
 
-## UNIX time.
+UNIX time.
 
 ### Remarks
 
 UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 January 1970.
 
-## weekofyear()
-
+## time()
 Calculates the week number of the year, in a specified time zone, from a UNIX timestamp.
 
 ## Syntax
-
-## weekofyear(time, timezone) → series int
-
-## Arguments
-
 - **`time`** (series int) A UNIX timestamp in milliseconds.
 
 - **`timezone`** (series string) Optional. Specifies the time zone of the returned week number. The value can be a time zone string in UTC/GMT offset notation (e.g., "UTC-5") or IANA time zone database notation (e.g., "America/New_York"). The default is syminfo.timezone.
@@ -17125,14 +16982,7 @@ The calculated week number, expressed in the specified time zone.
 
 A UNIX timestamp represents the number of milliseconds elapsed since 00:00 UTC on 1970-01-01. The meaning of a UNIX timestamp does not change relative to any time zone.
 
-## year()
-
-## Syntax
-
-## year(time, timezone) → series int
-
-## Arguments
-
+## weekofyear
 - **`time`** (series int) UNIX time in milliseconds.
 
 - **`timezone`** (series string) Allows adjusting the returned value to a time zone specified in either UTC/GMT notation (e.g., "UTC-5", "GMT+0530") or as an IANA time zone database name (e.g., "America/New_York"). Optional. The default is syminfo.timezone.
@@ -17147,10 +16997,484 @@ UNIX time is the number of milliseconds that have elapsed since 00:00:00 UTC, 1 
 
 Note that this function returns the year based on the time of the bar's open. For overnight sessions (e.g. EURUSD, where Monday session starts on Sunday, 17:00 UTC-4) this value can be lower by 1 than the year of the trading day.
 
-# KEYWORDS
+## year
+Logical AND. Applicable to boolean expressions.
 
-## method
+## Syntax
 
+expr1 and expr2
+
+### Returns
+
+Boolean value, or series of boolean values.
+
+### Remarks
+
+If expr1 evaluates to false, the and operator returns false without evaluating expr2.
+
+## enum
+
+This keyword allows the creation of an enumeration, enum for short. Enums are unique constructs that hold groups of predefined constants.
+
+Each field in an enum has a const string title. Scripts can access the fields in an enum using dot notation, similar to accessing the fields of a user-defined type.
+
+Each field represents a value of the enumName enum. Scripts can declare each field in an enum with an optional const string title. If a field's title is not specified, its title is the string representation of its name. Use str.tostring() on an enum field to retrieve its title.
+
+## Syntax
+
+[export ]enum <enumName>
+
+<field_1> [= <title_1>]
+
+<field_2> [= <title_2>]
+
+...
+
+<field_N> [= <title_N>]
+
+One can use an enum to quickly create a dropdown input with the help of the input.enum() function. The options that appear in the dropdown represent the titles of the enum fields.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Session highlight", overlay = true)
+//@enum       Contains fields with popular timezones as titles.
+//@field exch Has an empty string as the title to represent the chart timezone.
+enum tz
+    utc  = "UTC"
+    exch = ""
+    ny   = "America/New_York"
+    chi  = "America/Chicago"
+    lon  = "Europe/London"
+    tok  = "Asia/Tokyo"
+//@variable The session string.
+selectedSession = input.session("1200-1500", "Session")
+//@variable The selected timezone. The input's dropdown contains the fields in the `tz` enum.
+selectedTimezone = input.enum(tz.utc, "Session Timezone")
+//@variable Is `true` if the current bar's time is in the specified session.
+bool inSession = false
+if not na(time("", selectedSession, str.tostring(selectedTimezone)))
+    inSession := true
+// Highlight the background when `inSession` is `true`.
+bgcolor(inSession ? color.new(color.green, 90) : na, title = "Active session highlight")
+Additionally, one can use an enum in a collection's type template to restrict the values it will allow as elements. When used inside a type template, the collection will only accept fields that belong to the specified enum.
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Map with enum keys")
+//@enum        Contains fields with titles representing ticker IDs.
+//@field aapl  Has an Apple ticker ID as its title.
+//@field tsla  Has a Tesla ticker ID as its title.
+//@field amzn  Has an Amazon ticker ID as its title.
+enum symbols
+    aapl = "NASDAQ:AAPL"
+    tsla = "NASDAQ:TSLA"
+    amzn = "NASDAQ:AMZN"
+//@variable A map that accepts fields from the `symbols` enum as keys and "float" values.
+map<symbols, float> data = map.new<symbols, float>()
+// Put key-value pairs into the `data` map.
+data.put(symbols.aapl, request.security(str.tostring(symbols.aapl), timeframe.period, close))
+data.put(symbols.tsla, request.security(str.tostring(symbols.tsla), timeframe.period, close))
+data.put(symbols.amzn, request.security(str.tostring(symbols.amzn), timeframe.period, close))
+// Plot the value from the `data` map accessed by the `symbols.aapl` key.
+plot(data.get(symbols.aapl))
+export
+Used in libraries to prefix the declaration of functions or user-defined type definitions that will be available from other scripts importing the library.
+```
+
+### Example
+
+```pinescript
+//@version=6
+//@description Library of debugging functions.
+library("Debugging_library", overlay = true)
+//@function Displays a string as a table cell for debugging purposes.
+//@param txt String to display.
+//@returns Void.
+export print(string txt) =>
+    var table t = table.new(position.middle_right, 1, 1)
+    table.cell(t, 0, 0, txt, bgcolor = color.yellow)
+// Using the function from inside the library to show an example on the published chart.
+// This has no impact on scripts using the library.
+print("Library Test")
+```
+
+### Remarks
+
+Each library must have at least one exported function or user-defined type (UDT).
+
+Exported functions cannot use variables from the global scope if they are arrays, mutable variables (reassigned with :=), or variables of 'input' form.
+
+Exported functions cannot use request.*() functions.
+
+Exported functions must explicitly declare each parameter's type and all parameters must be used in the function's body. By default, all arguments passed to exported functions are of the series form, unless they are explicitly specified as simple in the function's signature.
+
+The @description, @function, @param, @type, @field, and @returns compiler annotations are used to automatically generate the library's description and release notes, and in the Pine Script® Editor's tooltips.
+
+## library()
+Creates a count-controlled loop, which uses a counter variable to manage the iterative executions of its local code block. The loop continues new iterations until the counter reaches a specified final value.
+
+## Syntax
+
+[variables =|:=] for counter = from_num to to_num [by step_num]
+
+    statements | continue | break
+
+##     return_expression
+
+- **`variables`** (return_expression type) Optional. A variable or tuple to hold the values or references from the last evaluation of return_expression after the loop terminates. The script can assign the loop's returned results to variables only if the results are not of the "void" type. If the loop's conditions prevent iteration, or if no iterations evaluate return_expression, the variables' assigned values or references are na, or false if the return type is "bool".
+
+- **`counter`** (series int/float) The counter variable. The loop increments the variable's value from the initial value (from_num) to the final value (to_num) by a fixed amount (step_num) after each iteration. The last possible iteration occurs when the variable's value reaches the to_num value.
+
+- **`from_num`** (series int/float) The value of the counter variable on the loop's first iteration.
+
+- **`to_num`** (series int/float) The final counter value for which the loop's header allows a new iteration. The loop increments the counter value by the step_num until it reaches or passes this value. If the script modifies this value during a loop iteration, the loop header uses the new value to control the allowed subsequent iterations.
+
+- **`step_num`** (series int/float) Optional. A positive value specifying the amount by which the counter value increases or decreases until it reaches or passes the to_num value. If the from_num value is greater than the initial to_num value, the loop subtracts this amount from the counter value after each iteration. Otherwise, the loop adds this amount after each iteration. The default is 1.
+
+statements The code statements and expressions within the loop's body, i.e., the indented block of code beneath the loop header.
+
+return_expression (any type) The last expression or statement within the loop's body. The loop returns the results from this code after the final iteration. If the loop stops prematurely due to a continue or break statement, the returned values or references are those of the latest iteration that evaluated this code. To use the loop's returned results, assign them to a variable or tuple.
+
+continue A loop-specific keyword that instructs the script to skip the remainder of the current loop iteration and continue to the next iteration.
+
+break A loop-specific keyword that prompts the script to stop the current iteration and exit the loop entirely.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("Basic `for` loop")
+//@function Calculates the number of bars in the last `length` bars that have their `close` above the current `close`.
+//@param length The number of bars used in the calculation.
+greaterCloseCount(length) =>
+    int result = 0
+    for i = 1 to length
+        if close[i] > close
+            result += 1
+    result
+```
+
+## plot(greaterCloseCount(14))
+
+### Example
+
+```pinescript
+//@version=6
+indicator("`for` loop with a step")
+a = array.from(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
+sum = 0.0
+for i = 0 to 9 by 5
+    // Because the step is set to 5, we are adding only the first (0) and the sixth (5) value from the array `a`.
+    sum += array.get(a, i)
+```
+
+## plot(sum)
+
+### Remarks
+
+Modifying a loop's to_num value during an iteration does not change the direction of the loop's counter. For a loop that counts upward, setting the to_num to a value less than the from_num value on an iteration stops the loop immediately after that iteration ends. Likewise, a loop that counts downward stops after an iteration where the to_num value becomes greater than the from_num value.
+
+If a script initializes a variable declared with var or varip using a loop's result, the loop stops after the first iteration, even if the header's criteria allow more iterations. Instead of initializing the variable with the result of this structure directly, declare the variable first and use := to update it with the result. Alternatively, move the loop into a Declaring functions and initialize the variable using a call to that function.
+
+See the Loops page of our User Manual to learn more about loops and how they work.
+
+## for...in
+Creates a collection-controlled loop, which iterates over the elements of an array, the rows of a matrix, or the key-value pairs of a map in order. The loop's local code block executes once for each element, row, or pair in the specified collection.
+
+## Syntax
+
+[variables = | :=] for item in collection_id
+
+    statements | continue | break
+
+##     return_expression
+
+[variables = | :=] for [index, item] in collection_id
+
+    statements | continue | break
+
+##     return_expression
+
+- **`variables`** (return_expression type) - Optional. A variable or tuple to hold the values or references from the last evaluation of return_expression after the loop terminates. The script can assign the loop's returned results to variables only if the results are not of the "void" type. If the loop's conditions prevent iteration, or if no iterations evaluate return_expression, the variables' assigned values or references are na, or false if the return type is "bool".
+
+index - A variable to track the array element index, matrix row index, or map key of the current iteration. The loop cannot modify this variable using reassignment or compound assignment operators. This variable is valid only in the second form of the loop structure.
+
+item - A variable to track the array element, matrix row, or map value element of the current iteration. The loop cannot modify this variable using reassignment or compound assignment operators.
+
+collection_id (array/matrix/map) - The ID of the array, matrix, or map whose items the loop iterates over.
+
+statements - The code statements and expressions within the loop's body, i.e., the indented block of code beneath the loop header.
+
+return_expression (any type) - The last expression or statement within the loop's body. The loop returns the results from this code after the final iteration. If the loop stops prematurely due to a continue or break statement, the returned values or references are those of the latest iteration that evaluated this code. To use the loop's returned results, assign them to a variable or tuple.
+
+continue - A loop-specific keyword that instructs the script to skip the remainder of the current loop iteration and continue to the next iteration.
+
+break - A loop-specific keyword that prompts the script to stop the current iteration and exit the loop entirely.
+
+The following example uses the first form of the for...in loop to count the number of array element values that are greater than a specified value:
+
+### Example
+
+```pinescript
+//@version=6
+indicator("'for...in' array (first form) demo")
+//@function Counts the number of 'id' array elements that are greater than the specified value.
+numGreaterThan(array<float> id, float value) =>
+    int result = 0
+    for element in id
+        if element > value
+            result += 1
+    result
+//@variable References an array containing the current bar's OHLC values.
+array<float> ohlcValues = array.from(open, high, low, close)
+// Plot the number of 'ohlcValues' elements that are greater than the 20-bar SMA of 'close'.
+plot(numGreaterThan(ohlcValues, ta.sma(close, 20)))
+The example below uses the second form of the loop structure to perform element-wise addition between two arrays:
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("`for...in` array (second form) demo")
+//@function Creates a new array whose elements are the sums of corresponding elements in the `id1` and `id2` arrays.
+elementWiseAdd(array<float> id1, array<float> id2) =>
+    array<float> result = array.new<float>()
+    // Loop through the `id1` array while tracking each element's index *and* value.
+    for [index, element1] in id1
+        // Use `index` to retrieve the corresponding element in the `id2` array, then push the sum into the new array.
+        float element2 = id2.get(index)
+        result.push(element1 + element2)
+    result
+```
+
+## if barstate.isfirst
+
+    // Create two arrays for which to perform element-wise addition.
+
+    array<float> array1 = array.from(1.0, 2.0, 3.0, 4.0)
+
+    array<float> array2 = array.from(2.0, 3.0, 4.0, 5.0)
+
+    //@variable References the resulting array of element-wise sums.
+
+##     array<float> sums = elementWiseAdd(array1, array2)
+
+    // Log a string representation of the `sums` array's contents in the Pine Logs pane.
+
+##     log.info(str.tostring(sums))
+
+This example uses the first form of the loop structure to iterate over the rows of a matrix and create an array containing each one's sum. The header's loop variable, rowArrayID, references an array containing the current row's values:
+
+### Example
+
+```pinescript
+//@version=6
+indicator("`for...in` matrix (first form) demo")
+//@function Creates a matrix that organizes the contents of the `arrayID` array into a specified shape.
+matrixFromArray(array<float> arrayID, int rows, int columns) =>
+    matrix<float> result = matrix.new<float>()
+    result.add_row(0, arrayID)
+    result.reshape(rows, columns)
+    result
+//@function Creates an array containing the sum of elements in each row of the `matrixID` matrix.
+calcRowSums(matrix<float> matrixID) =>
+    array<float> result = array.new<float>()
+    // Iterate over the matrix rows, where `rowArrayID` references an *array* containing the current row's values.
+    for rowArrayID in matrixID
+        // Push the sum of `rowArrayID` elements into the `result` array.
+        result.push(rowArrayID.sum())
+    result
+```
+
+## if barstate.isfirst
+
+    // Create a 2x2 matrix of pseudorandom values.
+
+    array<float>  randArray = array.from(math.random(), math.random(), math.random(), math.random())
+
+    matrix<float> randMat   = matrixFromArray(randArray, 2, 2)
+
+    // Log string representation of the `randMat` matrix and the calculated array of row sums in the Pine Logs pane.
+
+##     log.info("\n" + str.tostring(randMat))
+
+##     log.info(str.tostring(calcRowSums(randMat)))
+
+The following example uses a for...in loop to iterate over a map's key-value pairs and construct a custom string representation of its contents:
+
+### Example
+
+```pinescript
+//@version=6
+indicator("`for...in` map demo")
+//@function Creates a custom string representation of a map containing "string" keys and "float" values.
+toString(map<string, float> id) =>
+    string result = "{"
+    // Iterate through the key-value pairs of the `id` map, in insertion order.
+    for [key, value] in id
+        result += str.format("''{0}'': {1}, ", key, value)
+    result += "}"
+    result := str.replace(result, ", }", "}")
+```
+
+## if barstate.islastconfirmedhistory
+
+    //@variable References a map to store "float" OHLC values with corresponding "string" keys.
+
+    map<string, float> ohlcMap = map.new<string, float>()
+
+    // Put key-value pairs into the map.
+
+##     ohlcMap.put("Open",  open)
+    // Log the `toString()` result for the map referenced by `ohlcMap`.
+
+##     log.info(toString(ohlcMap))
+
+### Remarks
+
+Only the second form of the for...in loop is compatible with maps. The loop iterates over the key-value pairs of a map in the insertion order of its keys.
+
+Scripts can modify the sizes of arrays and matrices while iterating over their contents with a for...in loop. However, they cannot modify the sizes of maps while looping over them directly with this structure. To modify a map while using a for...in loop, use the loop on a copy of the map or on the map's map.keys() array.
+
+If a script initializes a variable declared with var or varip using a loop's result, the loop stops after the first iteration, even if the header's criteria allow more iterations. Instead of initializing the variable with the result of this structure directly, declare the variable first and use := to update it with the result. Alternatively, move the loop into a Declaring functions and initialize the variable using a call to that function.
+
+See the Loops page of our User Manual to learn more about loops and how they work.
+
+## for
+If statement defines what block of statements must be executed when conditions of the expression are satisfied.
+
+To have access to and use the if statement, one should specify the version >= 2 of Pine Script® language in the very first line of code, for example: //@version=6
+
+The 4th version of Pine Script® Language allows you to use “else if” syntax.
+
+General code form:
+
+## Syntax
+
+var_declarationX = if condition
+
+##     var_decl_then0
+else if [optional block]
+
+##     var_decl_else0
+var_declarationX — this variable gets the value of the if statement
+
+condition — if the condition is true, the logic from the block 'then' (var_decl_then0, var_decl_then1, etc.) is used.
+
+If the condition is false, the logic from the block 'else' (var_decl_else0, var_decl_else1, etc.) is used.
+
+return_expression_then, return_expression_else — the last expression from the block then or from the block else will return the final value of the statement. If declaration of the variable is in the end, its value will be the result.
+
+- **`The type of returning value of the if statement depends on return_expression_then and return_expression_else type`** (their types must match: it is not possible to return an integer value from then, while you have a string value in else block).
+
+### Example
+
+```pinescript
+//@version=6
+indicator("if")
+// This code compiles
+x = if close > open
+    close
+else
+    open
+// This code doesn’t compile
+// y = if close > open
+//     close
+// else
+//     "open"
+plot(x)
+It is possible to omit the else block. In this case if the condition is false, an “empty” value (na, false, or “”) will be assigned to the var_declarationX variable:
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("if")
+x = if close > open
+    close
+// If current close > current open, then x = close.
+// Otherwise the x = na.
+plot(x)
+It is possible to use either multiple “else if” blocks or none at all. The blocks “then”, “else if”, “else” are shifted by four spaces:
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("if")
+x = if open > close
+    5
+else if high > low
+    close
+else
+    open
+plot(x)
+It is possible to ignore the resulting value of an if statement (“var_declarationX=“ can be omitted). It may be useful if you need the side effect of the expression, for example in strategy trading:
+```
+
+### Example
+
+```pinescript
+//@version=6
+strategy("if")
+if (ta.crossover(high, low))
+    strategy.entry("BBandLE", strategy.long, stop=low, oca_name="BollingerBands", oca_type=strategy.oca.cancel, comment="BBandLE")
+else
+    strategy.cancel(id="BBandLE")
+If statements can include each other:
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("if")
+float x = na
+if close > open
+    if close > close[1]
+        x := close
+    else
+        x := close[1]
+else
+    x := open
+plot(x)
+import
+Used to load an external library() into a script and bind its functions to a namespace. The importing script can be an indicator, a strategy, or another library. A library must be published (privately or publicly) before it can be imported.
+Syntax
+import {username}/{libraryName}/{libraryVersion} as {alias}
+Arguments
+username (literal string) User name of the library's author.
+libraryName (literal string) Name of the imported library, which corresponds to the title argument used by the author in his library script.
+libraryVersion (literal int) Version number of the imported library.
+alias (literal string) A non-numeric identifier used as a namespace to refer to the library's functions. Optional. The default is the libraryName string.
+```
+
+### Example
+
+```pinescript
+//@version=6
+indicator("num_methods import")
+// Import the first version of the username’s "num_methods" library and assign it to the "m" namespace",
+import username/num_methods/1 as m
+// Call the “sinh()” function from the imported library
+y = m.sinh(3.14)
+// Plot value returned by the "sinh()" function",
+plot(y)
+```
+
+### Remarks
+
+Using an alias that replaces a built-in namespace such as math.* or strategy.* is allowed, but if the library contains function names that shadow Pine Script®'s built-in functions, the built-ins will become unavailable. The same version of a library can only be imported once. Aliases must be distinct for each imported library. When calling library functions, casting their arguments to types other than their declared type is not allowed. An import statement cannot use 'as' or 'import' as username, libraryName, or alias identifiers.
+
+## library()
 This keyword is used to prefix a function declaration, indicating it can then be invoked using dot notation by appending its name to a variable of the type of its first parameter and omitting that first parameter. Alternatively, functions declared as methods can also be invoked like normal user-defined functions. In that case, an argument must be supplied for its first parameter.
 
 The first parameter of a method declaration must be explicitly typified.
@@ -17175,13 +17499,6 @@ indicator("")
 method maintainArray(array<float> id, maxSize, value) =>
 
 ##     id.push(value)
-
-##     if id.size() > maxSize
-
-##         id.shift()
-
-## prices.maintainArray(50, close)
-
 // The method can also be called like a function, without using dot notation.
 
 // In this case an argument must be supplied for its first parameter.
@@ -17282,11 +17599,6 @@ bool shortCondition = ta.crossunder(ta.sma(close, 14), ta.sma(close, 28))
 ```
 
 ## switch
-
-##     longCondition  => strategy.entry("Long ID", strategy.long)
-
-##     shortCondition => strategy.entry("Short ID", strategy.short)
-
 ### Returns
 
 The value of the last expression in the local block of statements that is executed.
@@ -17295,8 +17607,7 @@ The value of the last expression in the local block of statements that is execut
 
 Only one of the local_block instances or the default_local_block can be executed. The default_local_block is introduced with the => token alone and is only executed when none of the preceding blocks are executed. If the result of the switch statement is assigned to a variable and a default_local_block is not specified, the statement returns na if no local_block is executed. When assigning the result of the switch statement to a variable, all local_block instances must return the same type of value.
 
-## type
-
+## if
 This keyword allows the declaration of user-defined types (UDT) from which scripts can instantiate objects. UDTs are composite types that contain an arbitrary number of fields of any built-in or user-defined type, including the defined UDT itself. The syntax to define a UDT is:
 
 ## Syntax
@@ -17347,19 +17658,6 @@ type bar
     color boxColor = b.c >= b.o ? color.green : color.red
 
 ##     box.set_border_color(boxId, boxColor)
-
-##     box.set_bgcolor(boxId, color.new(boxColor, 90))
-
-##     box.set_top(boxId, b.h)
-
-##     box.set_bottom(boxId, b.l)
-
-##     box.set_right(boxId, time)
-
-## secBar = request.security(syminfo.tickerid, timeframeInput, bar.new())
-
-## if not na(secBar)
-
     // To avoid a runtime error, only process data when an object exists.
 
 ##     if not barstate.islast
@@ -17424,29 +17722,18 @@ plot(c)
 The variable 'a' keeps the closing price of the first bar for each bar in the series.
 The variable 'b' keeps the closing price of the first "green" bar in the series.
 The variable 'c' keeps the closing price of the tenth "green" bar in the series.
-```
-
-## varip
-
-- **`varip`** (var intrabar persist) is the keyword used for the assignment and one-time initialization of a variable or a field of a user-defined type. It’s similar to the var keyword, but variables and fields declared with varip retain their values between executions of the script on the same bar.
-
-## Syntax
-
+varip
+varip (var intrabar persist) is the keyword used for the assignment and one-time initialization of a variable or a field of a user-defined type. It’s similar to the var keyword, but variables and fields declared with varip retain their values between executions of the script on the same bar.
+Syntax
 varip [<variable_type> ]<variable_name> = <expression>
-
 [export ]type <UDT_identifier>
-
     varip <field_type> <field_name> [= <value>]
-
-## where:
-
-- **`variable_type - An optional fundamental type`** (int, float, bool, color, string) or a user-defined type, or an array or matrix of one of those types. Special types are not compatible with this keyword.
-
+where:
+variable_type - An optional fundamental type (int, float, bool, color, string) or a user-defined type, or an array or matrix of one of those types. Special types are not compatible with this keyword.
 variable_name - A valid identifier. The variable can also be an object created from a UDT.
-
 expression - Any arithmetic expression, just as when defining a regular variable. The expression will be calculated and assigned to the variable only once, on the first bar.
-
 UDT_identifier, field_type, field_name, value - Constructs related to user-defined types as described in the type section.
+```
 
 ### Example
 
@@ -17470,11 +17757,6 @@ type barData
 ```
 
 ## var currBar = barData.new()
-
-## currBar.index += 1
-
-## currBar.ticks += 1
-
 // Will be equal to bar_index on all bars
 
 ## plot(currBar.index)
@@ -17549,10 +17831,224 @@ If a script initializes a variable declared with var or varip using a loop's res
 
 See the Loops page of our User Manual to learn more about loops and how they work.
 
-# TYPES
+Types
 
-## linefill
+## array
 
+Keyword used to explicitly declare the "array" type of a variable or a parameter. Array objects (or IDs) can be created with the array.new<type>(), array.from() function.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("array", overlay=true)
+array<float> a = na
+a := array.new<float>(1, close)
+plot(array.get(a, 0))
+```
+
+### Remarks
+
+Array objects are always of "series" form.
+
+## var
+- **`Keyword used to explicitly declare the "bool"`** (boolean) type of a variable or a parameter. "Bool" variables can have values true or false.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("bool")
+bool b = true    // Same as `b = true`
+plot(b ? open : close)
+```
+
+### Remarks
+
+Explicitly mentioning the type in a variable declaration is optional. Learn more about Pine Script® types in the User Manual page on the Type System.
+
+## var
+Keyword used to explicitly declare the "box" type of a variable or a parameter. Box objects (or IDs) can be created with the box.new() function.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("box")
+// Empty `box1` box ID.
+var box box1 = na
+// `box` type is unnecessary because `box.new()` returns a "box" type.
+var box2 = box.new(na, na, na, na)
+box3 = box.new(time, open, time + 60 * 60 * 24, close, xloc=xloc.bar_time)
+```
+
+### Remarks
+
+Box objects are always of "series" form.
+
+## var
+Keyword to explicitly declare the type of a variable or parameter as chart.point. Scripts can produce chart.point instances using the chart.point.from_time(), chart.point.from_index(), chart.point.now(), and chart.point.new() functions.
+
+## Fields
+
+- **`index`** (series int) The x-coordinate of the point, expressed as a bar index value.
+
+- **`time`** (series int) The x-coordinate of the point, expressed as a UNIX time value, in milliseconds.
+
+- **`price`** (series float) The y-coordinate of the point.
+
+## polyline
+
+## color
+
+Keyword used to explicitly declare the "color" type of a variable or a parameter.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("color", overlay = true)
+```
+
+## color textColor = color.green
+
+color labelColor = #FF000080 // Red color (FF0000) with 50% transparency (80 which is half of FF).
+
+## if barstate.islastconfirmedhistory
+
+    label.new(bar_index, high, text = "Label", color = labelColor, textcolor = textColor)
+
+- **`// When declaring variables with color literals, built-in constants(color.green) or functions`** (color.new(), color.rgb()), the "color" keyword for the type can be omitted.
+
+## c = color.rgb(0,255,0,0)
+
+## plot(close, color = c)
+
+### Remarks
+
+Color literals have the following format: #RRGGBB or #RRGGBBAA. The letter pairs represent 00 to FF hexadecimal values (0 to 255 in decimal) where RR, GG and BB pairs are the values for the color's red, green and blue components. AA is an optional value for the color's transparency (or alpha component) where 00 is invisible and FF opaque. When no AA pair is supplied, FF is used. The hexadecimal letters can be upper or lower case.
+
+Explicitly mentioning the type in a variable declaration is optional, except when it is initialized with na. Learn more about Pine Script® types in the User Manual page on the Type System.
+
+## var
+The const keyword explicitly assigns the "const" type qualifier to variables and the parameters of non-exported functions. Variables and parameters with the "const" qualifier reference values established at compile time that never change in the script's execution.
+
+In variable declarations, the compiler can usually infer the qualified type automatically based on the values assigned to a variable, and it can automatically change a variable's qualifier to a stronger one when necessary. The type qualifier hierarchy is "const" < "input" < "simple" < "series", where "const" is the weakest.
+
+- **`Explicitly declaring a variable with the const keyword restricts the type qualifier to "const", meaning the variable cannot accept a value with a stronger qualifier`** (e.g., "input"), nor can the value assigned to the variable change at any point in the script's execution.
+
+When using this keyword to specify the type qualifier, one must also use a type keyword to declare the allowed type.
+
+## Syntax
+
+[method ]<functionName>([const <paramType> ]<paramName>[ = <defaultValue>])
+
+[var/varip ]const <variableType> <variableName> = <variableValue>
+
+### Example
+
+```pinescript
+//@version=6
+indicator("custom plot title")
+//@function Concatenates two "const string" values.
+concatStrings(const string x, const string y) =>
+    const string result = x + y
+//@variable The title of the plot.
+const string myTitle = concatStrings("My ", "Plot")
+```
+
+## plot(close, myTitle)
+
+### Example
+
+```pinescript
+//@version=6
+indicator("can't assign input to const")
+//@variable A variable declared as "const float" that attempts to assign the result of `input.float()` as its value.
+//          This declaration causes an error. The "input float" qualified type is stronger than "const float".
+const float myVar = input.float(2.0)
+```
+
+## plot(myVar)
+
+### Remarks
+
+To learn more, see our User Manual's section on type qualifiers.
+
+## simple
+- **`Keyword used to explicitly declare the "float"`** (floating point) type of a variable or a parameter.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("float")
+float f = 3.14    // Same as `f = 3.14`
+f := na
+plot(f)
+```
+
+### Remarks
+
+Explicitly mentioning the type in a variable declaration is optional, except when it is initialized with na. Learn more about Pine Script® types in the User Manual page on the Type System.
+
+## var
+- **`Keyword used to explicitly declare the "int"`** (integer) type of a variable or a parameter.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("int")
+int i = 14    // Same as `i = 14`
+i := na
+plot(i)
+```
+
+### Remarks
+
+Explicitly mentioning the type in a variable declaration is optional, except when it is initialized with na. Learn more about Pine Script® types in the User Manual page on the Type System.
+
+## var
+Keyword used to explicitly declare the "label" type of a variable or a parameter. Label objects (or IDs) can be created with the label.new() function.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("label")
+// Empty `label1` label ID.
+var label label1 = na
+// `label` type is unnecessary because `label.new()` returns "label" type.
+var label2 = label.new(na, na, na)
+if barstate.islastconfirmedhistory
+    label3 = label.new(bar_index, high, text = "label3 text")
+```
+
+### Remarks
+
+Label objects are always of "series" form.
+
+## var
+Keyword used to explicitly declare the "line" type of a variable or a parameter. Line objects (or IDs) can be created with the line.new() function.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("line")
+// Empty `line1` line ID.
+var line line1 = na
+// `line` type is unnecessary because `line.new()` returns "line" type.
+var line2 = line.new(na, na, na, na)
+line3 = line.new(bar_index - 1, high, bar_index, high, extend = extend.right)
+```
+
+### Remarks
+
+Line objects are always of "series" form.
+
+## var
 Keyword used to explicitly declare the "linefill" type of a variable or a parameter. Linefill objects (or IDs) can be created with the linefill.new() function.
 
 ### Example
@@ -17578,8 +18074,7 @@ var linefill2 = linefill.new(na, na, na)
 
 Linefill objects are always of "series" form.
 
-## map
-
+## var
 Keyword used to explicitly declare the "map" type of a variable or a parameter. Map objects (or IDs) can be created with the map.new<type,type>() function.
 
 ### Example
@@ -17596,6 +18091,8 @@ label.new(bar_index, a.get(bar_index), "Current close")
 ### Remarks
 
 Map objects are always of series form.
+
+## map.new<type,type>()
 
 ## matrix
 
@@ -17619,9 +18116,10 @@ if barstate.islastconfirmedhistory
 
 Matrix objects are always of "series" form.
 
-## polyline
-
+## var
 Keyword to explicitly declare the type of a variable or parameter as polyline. Scripts can produce polyline instances using the polyline.new() function.
+
+## chart.point
 
 ## series
 
@@ -17687,7 +18185,6 @@ plot(close, style = plot.style_histogram, histbase = myVar)
 To learn more, see our User Manual's section on type qualifiers.
 
 ## simple
-
 The simple keyword explicitly assigns the "simple" type qualifier to variables and function parameters. Variables and parameters that use the "simple" qualifier can reference values established at the beginning of a script's execution that do not change later.
 
 To restrict the parameters in a library's exported functions to only allow values with a "simple" or weaker type qualifier, using the simple keyword when declaring parameters is often necessary, as libraries automatically qualify all parameters as "series" wherever possible by default. Explicitly restricting functions to accept "simple" arguments also allows them to return "simple" values in some cases, depending on the operations they execute, making them usable with the parameters of built-in functions that do not allow "series" arguments.
@@ -17749,8 +18246,7 @@ myVar := close
 
 To learn more, see our User Manual's section on type qualifiers.
 
-## string
-
+## series
 Keyword used to explicitly declare the "string" type of a variable or a parameter.
 
 ### Example
@@ -17767,8 +18263,7 @@ plot(na, title=s)
 
 Explicitly mentioning the type in a variable declaration is optional, except when it is initialized with na. Learn more about Pine Script® types in the User Manual page on the Type System.
 
-## table
-
+## var
 Keyword used to explicitly declare the "table" type of a variable or a parameter. Table objects (or IDs) can be created with the table.new() function.
 
 ### Example
@@ -17792,7 +18287,433 @@ var table2 = table.new(position.top_left, na, na)
 
 Table objects are always of "series" form.
 
-# ANNOTATIONS
+## var
+Subtraction or unary minus. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 - expr2
+
+### Returns
+
+Returns integer or float value, or series of values:
+
+Binary - returns expr1 minus expr2.
+
+Unary - returns the negation of expr.
+
+### Remarks
+
+You may use arithmetic operators with numbers as well as with series variables. In case of usage with series the operators are applied elementwise.
+
+## -=
+
+Subtraction assignment. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 -= expr2
+
+### Example
+
+```pinescript
+//@version=6
+indicator("-=")
+// Equals to expr1 = expr1 - expr2.
+a = 2
+b = 3
+a -= b
+// Result: a = -1.
+plot(a)
+```
+
+### Returns
+
+Integer or float value, or series of values.
+
+## :=
+
+Reassignment operator. It is used to assign a new value to a previously declared variable.
+
+## Syntax
+
+<var_name> := <new_value>
+
+### Example
+
+```pinescript
+//@version=6
+indicator("My script")
+myVar = 10
+if close > open
+    // Modifies the existing global scope `myVar` variable by changing its value from 10 to 20.
+    myVar := 20
+    // Creates a new `myVar` variable local to the `if` condition and unreachable from the global scope.
+    // Does not affect the `myVar` declared in global scope.
+    myVar = 30
+```
+
+## plot(myVar)
+
+## !=
+
+Inequality operator. Returns true if the operands are considered not equal, and false otherwise. This operator is compatible with all value types, including "int", "float", "bool", "color", and "string". The operator can also compare two line or label IDs.
+
+## Syntax
+
+expr1 != expr2
+
+### Returns
+
+Boolean value, or series of boolean values.
+
+### Remarks
+
+This operator rounds "float" operands to nine fractional digits.
+
+## ?:
+
+Ternary conditional operator.
+
+## Syntax
+
+expr1 ? expr2 : expr3
+
+### Example
+
+```pinescript
+//@version=6
+indicator("?:")
+// Draw circles at the bars where open crosses close
+s2 = ta.cross(open, close) ? math.avg(open,close) : na
+plot(s2, style=plot.style_circles, linewidth=2, color=color.red)
+// Combination of ?: operators for 'switch'-like logic
+c = timeframe.isintraday ? color.red : timeframe.isdaily ? color.green : timeframe.isweekly ? color.blue : color.gray
+plot(hl2, color=c)
+```
+
+### Returns
+
+expr2 if expr1 is evaluated to true, expr3 otherwise. Zero value (0 and also NaN, +Infinity, -Infinity) is considered to be false, any other value is true.
+
+### Remarks
+
+Use na for 'else' branch if you do not need it.
+
+You can combine two or more ?: operators to achieve the equivalent of a 'switch'-like statement (see examples above).
+
+You may use arithmetic operators with numbers as well as with series variables. In case of usage with series the operators are applied elementwise.
+
+## na
+
+## []
+
+Series subscript. Provides access to previous values of series expr1. expr2 is the number of bars back, and must be numerical. Floats will be rounded down.
+
+## Syntax
+
+## expr1[expr2]
+
+### Example
+
+```pinescript
+//@version=6
+indicator("[]")
+// [] can be used to "save" variable value between bars
+a = 0.0 // declare `a`
+a := a[1] // immediately set current value to the same as previous. `na` in the beginning of history
+if high == low // if some condition - change `a` value to another
+    a := low
+plot(a)
+```
+
+### Returns
+
+A series of values.
+
+## math.floor()
+
+## *
+
+Multiplication. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 * expr2
+
+### Returns
+
+Integer or float value, or series of values.
+
+## *=
+
+Multiplication assignment. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 *= expr2
+
+### Example
+
+```pinescript
+//@version=6
+indicator("*=")
+// Equals to expr1 = expr1 * expr2.
+a = 2
+b = 3
+a *= b
+// Result: a = 6.
+plot(a)
+```
+
+### Returns
+
+Integer or float value, or series of values.
+
+## /
+
+Division. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 / expr2
+
+### Returns
+
+Integer or float value, or series of values.
+
+## /=
+
+Division assignment. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 /= expr2
+
+### Example
+
+```pinescript
+//@version=6
+indicator("/=")
+// Equals to expr1 = expr1 / expr2.
+float a = 3.0
+b = 3
+a /= b
+// Result: a = 1.
+plot(a)
+```
+
+### Returns
+
+Integer or float value, or series of values.
+
+## %
+
+- **`Modulo`** (integer remainder). Applicable to numerical expressions.
+
+## Syntax
+
+expr1 % expr2
+
+### Returns
+
+Integer or float value, or series of values.
+
+### Remarks
+
+In Pine Script®, when the integer remainder is calculated, the quotient is truncated, i.e. rounded towards the lowest absolute value. The resulting value will have the same sign as the dividend.
+
+Example: -1 % 9 = -1 - 9 * int(-1/9) = -1 - 9 * int(-0.111) = -1 - 9 * 0 = -1.
+
+## %=
+
+Modulo assignment. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 %= expr2
+
+### Example
+
+```pinescript
+//@version=6
+indicator("%=")
+// Equals to expr1 = expr1 % expr2.
+a = 3
+b = 3
+a %= b
+// Result: a = 0.
+plot(a)
+```
+
+### Returns
+
+Integer or float value, or series of values.
+
+## +
+
+Addition or unary plus. Applicable to numerical expressions or strings.
+
+## Syntax
+
+expr1 + expr2
+
+### Returns
+
+Binary + for strings returns concatenation of expr1 and expr2
+
+For numbers returns integer or float value, or series of values:
+
+Binary + returns expr1 plus expr2.
+
+Unary + returns expr (does nothing added just for the symmetry with the unary - operator).
+
+### Remarks
+
+You may use arithmetic operators with numbers as well as with series variables. In case of usage with series the operators are applied elementwise.
+
+## +=
+
+Addition assignment. Applicable to numerical expressions or strings.
+
+## Syntax
+
+expr1 += expr2
+
+### Example
+
+```pinescript
+//@version=6
+indicator("+=")
+// Equals to expr1 = expr1 + expr2.
+a = 2
+b = 3
+a += b
+// Result: a = 5.
+plot(a)
+```
+
+### Returns
+
+For strings returns concatenation of expr1 and expr2. For numbers returns integer or float value, or series of values.
+
+### Remarks
+
+You may use arithmetic operators with numbers as well as with series variables. In case of usage with series the operators are applied elementwise.
+
+## <
+
+Less than. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 < expr2
+
+### Returns
+
+Boolean value, or series of boolean values.
+
+## <=
+
+Less than or equal to. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 <= expr2
+
+### Returns
+
+Boolean value, or series of boolean values.
+
+## =
+
+Assignment operator. Assigns an initial value or reference to a declared variable. It means this is a new variable, and it starts with this value.
+
+## Syntax
+
+<var_name> := <initial_value>
+
+### Example
+
+```pinescript
+//@version=6
+indicator("`=` showcase")
+// The following are all valid variable declarations.
+i = 1
+MS_IN_ONE_MINUTE = 1000 * 60
+showPlotInput = input.bool(true, "Show plots")
+pHi = ta.pivothigh(5, 5)
+plotColor = color.green
+plot(pHi, color = plotColor, display = showPlotInput ? display.all : display.none, precision = i)
+==
+Equality operator. Returns true if the operands are considered equal, and false otherwise. This operator is compatible with all value types, including "int", "float", "bool", "color", and "string". The operator can also compare two line or label IDs.
+Syntax
+expr1 == expr2
+```
+
+### Returns
+
+Boolean value, or series of boolean values.
+
+### Remarks
+
+This operator rounds "float" operands to nine fractional digits.
+
+## =>
+
+The '=>' operator is used in user-defined function declarations and in switch statements.
+
+The function declaration syntax is:
+
+## Syntax
+A <local_block> is zero or more Pine Script® statements.
+
+The <function_result> is a variable, an expression, or a tuple.
+
+### Example
+
+```pinescript
+//@version=6
+indicator("=>")
+// single-line function
+f1(x, y) => x + y
+// multi-line function
+f2(x, y) =>
+    sum = x + y
+    sumChange = ta.change(sum, 10)
+    // Function automatically returns the last expression used in it
+plot(f1(30, 8) + f2(1, 3))
+```
+
+### Remarks
+
+You can learn more about user-defined functions in the User Manual's pages on Declaring functions and Libraries.
+
+## >
+
+Greater than. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 > expr2
+
+### Returns
+
+Boolean value, or series of boolean values.
+
+## >=
+
+Greater than or equal to. Applicable to numerical expressions.
+
+## Syntax
+
+expr1 >= expr2
+
+### Returns
+
+Boolean value, or series of boolean values.
+
+## Annotations
 
 ## @description
 
@@ -17809,11 +18730,9 @@ library("MyLibrary")
 // @returns Drawn label.
 export drawLabel(string labelText) =>
     label.new(bar_index, high, text = labelText)
-```
-
-## @enum
-
+@enum
 If placed above an enum declaration, it adds a custom description for the enum. The Pine Editor's autosuggest uses this description and displays it when a user hovers over the enum name. When used in library scripts, the descriptions of all enums using the export keyword will pre-fill the "Description" field in the publication dialogue.
+```
 
 ### Example
 
@@ -17839,13 +18758,10 @@ if not na(time("", selectedSession, str.tostring(selectedTimezone)))
     inSession := true
 // Highlight the background when `inSession` is `true`.
 bgcolor(inSession ? color.new(color.green, 90) : na, title = "Active session highlight")
-```
-
-## @field
-
+@field
 If placed above a type or enum declaration, it adds a custom description for a field of the type/enum. After the annotation, users should specify the field name, followed by its description.
-
 The Pine Editor's autosuggest uses this description and displays it when a user hovers over the type/enum or field name. When used in library() scripts, the descriptions of all types/enums using the export keyword will pre-fill the "Description" field in the publication dialogue.
+```
 
 ### Example
 
@@ -17863,13 +18779,6 @@ Point highest = na
 ```
 
 ## if ta.highestbars(high, 20) == 0
-
-##     highest := Point.new(bar_index, high)
-
-##     label.new(highest.index, highest.price, str.tostring(highest.price))
-
-## @function
-
 If placed above a function declaration, it adds a custom description for the function.
 
 The Pine Editor's autosuggest uses this description and displays it when a user hovers over the function name. When used in library() scripts, the descriptions of all functions using the export keyword will pre-fill the "Description" field in the publication dialogue.
@@ -17885,13 +18794,10 @@ library("MyLibrary")
 // @returns Drawn label.
 export drawLabel(string labelText) =>
     label.new(bar_index, high, text = labelText)
-```
-
-## @param
-
+@param
 If placed above a function declaration, it adds a custom description for a function parameter. After the annotation, users should specify the parameter name, then its description.
-
 The Pine Editor's autosuggest uses this description and displays it when a user hovers over the function name. When used in library() scripts, the descriptions of all functions using the export keyword will pre-fill the "Description" field in the publication dialogue.
+```
 
 ### Example
 
@@ -17904,13 +18810,10 @@ library("MyLibrary")
 // @returns Drawn label.
 export drawLabel(string labelText) =>
     label.new(bar_index, high, text = labelText)
-```
-
-## @returns
-
+@returns
 If placed above a function declaration, it adds a custom description for what that function returns.
-
 The Pine Editor's autosuggest uses this description and displays it when a user hovers over the function name. When used in library() scripts, the descriptions of all functions using the export keyword will pre-fill the "Description" field in the publication dialogue.
+```
 
 ### Example
 
@@ -17923,11 +18826,9 @@ library("MyLibrary")
 // @returns Drawn label.
 export drawLabel(string labelText) =>
     label.new(bar_index, high, text = labelText)
-```
-
-## @strategy_alert_message
-
+@strategy_alert_message
 If used within a strategy() script, it provides a default message to pre-fill the "Message" field in the alert creation dialogue.
+```
 
 ### Example
 
@@ -17939,13 +18840,10 @@ longCondition = ta.crossover(ta.sma(close, 14), ta.sma(close, 28))
 if (longCondition)
     strategy.entry("My Long Entry Id", strategy.long)
 strategy.exit("Exit", "My Long Entry Id", profit = 10 / syminfo.mintick, loss = 10 / syminfo.mintick)
-```
-
-## @type
-
+@type
 If placed above a type declaration, it adds a custom description for the type.
-
 The Pine Editor's autosuggest uses this description and displays it when a user hovers over the type name. When used in library() scripts, the descriptions of all types using the export keyword will pre-fill the "Description" field in the publication dialogue.
+```
 
 ### Example
 
@@ -17963,13 +18861,6 @@ Point highest = na
 ```
 
 ## if ta.highestbars(high, 20) == 0
-
-##     highest := Point.new(bar_index, high)
-
-##     label.new(highest.index, highest.price, str.tostring(highest.price))
-
-## @variable
-
 If placed above a variable declaration, it adds a custom description for the variable.
 
 The Pine Editor's autosuggest uses this description and displays it when a user hovers over the variable name.
@@ -17990,13 +18881,6 @@ Point highest = na
 ```
 
 ## if ta.highestbars(high, 20) == 0
-
-##     highest := Point.new(bar_index, high)
-
-##     label.new(highest.index, highest.price, str.tostring(highest.price))
-
-## @version=
-
 Specifies the Pine Script® version that the script will use. The number in this annotation should not be confused with the script's version number, which updates on every saved change to the code.
 
 ### Example
