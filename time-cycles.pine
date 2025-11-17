@@ -2,117 +2,117 @@
 indicator("Time Cycles v1.0", shorttitle="Time-Cycles [StoneFace]", overlay=true, max_boxes_count=500)
 
 // Timeframe validation
-tf_minutes = timeframe.in_seconds() / 60
-is_valid_tf = tf_minutes <= 240 // Only show on timeframes 4H and below
-show_warning = tf_minutes > 240
+tf_minutes                  = timeframe.in_seconds() / 60
+is_valid_tf                 = tf_minutes <= 240 // Only show on timeframes 4H and below
+show_warning                = tf_minutes > 240
 
 // Input groups for enabling/disabling cycle types
-show_90min = input.bool(true,  "90-min Cycles", group="Cycle Groups")
-show_30min = input.bool(true,  "30-min Cycles", group="Cycle Groups") 
-show_10min = input.bool(false, "10-min Cycles", group="Cycle Groups")
+show_90min                  = input.bool(true,  "90-min Cycles", group="Cycle Groups")
+show_30min                  = input.bool(true,  "30-min Cycles", group="Cycle Groups") 
+show_10min                  = input.bool(false, "10-min Cycles", group="Cycle Groups")
 
 // Pivot lines for 90min cycles
-show_90min_pivots = input.bool(true, "90min Pivot Lines", group="90min Pivots", tooltip="Draw pivot lines from 90min cycle highs/lows that extend until price crosses them")
-pivot_line_style = input.string("Solid", "Pivot Line Style", options=["Solid", "Dashed", "Dotted"], group="90min Pivots")
-pivot_line_width = input.int(1, "Pivot Line Width", minval=1, maxval=3, group="90min Pivots")
+show_90min_pivots           = input.bool(true, "90min Pivot Lines", group="90min Pivots")
+pivot_line_style            = input.string("Solid", "Pivot Line Style", options=["Solid", "Dashed", "Dotted"], group="90min Pivots")
+pivot_line_width            = input.int(1, "Pivot Line Width", minval=1, maxval=3, group="90min Pivots")
 
 // Auto-adjust cycle display based on timeframe
-auto_adjust_cycles = input.bool(true, "Auto-adjust for Timeframe", group="Display Settings")
-actual_show_90min = auto_adjust_cycles ? (tf_minutes <= 240 and show_90min) : show_90min
-actual_show_30min = auto_adjust_cycles ? (tf_minutes <= 60 and show_30min) : show_30min  
-actual_show_10min = auto_adjust_cycles ? (tf_minutes <= 30 and show_10min) : show_10min
+auto_adjust_cycles          = input.bool(true, "Auto-adjust for Timeframe", group="Display Settings")
+actual_show_90min           = auto_adjust_cycles ? (tf_minutes <= 240 and show_90min) : show_90min
+actual_show_30min           = auto_adjust_cycles ? (tf_minutes <= 60 and show_30min) : show_30min  
+actual_show_10min           = auto_adjust_cycles ? (tf_minutes <= 30 and show_10min) : show_10min
 
 // Color settings
-color_90min_a = input.color(color.red, "90-min A", group="Colors", inline="90")
-color_90min_m = input.color(color.blue, "M", group="Colors", inline="90")
-color_90min_d = input.color(color.green, "D", group="Colors", inline="90")
-color_30min = input.color(color.gray, "30-min Cycles", group="Colors")
-color_10min = input.color(color.new(color.gray, 80), "10-min Cycles", group="Colors")
-color_london_open = input.color(color.orange, "London Opening", group="Colors")
-color_asia = input.color(color.purple, "Asia Session", group="Colors")
+color_90min_a               = input.color(color.red, "90-min A", group="Colors", inline="90")
+color_90min_m               = input.color(color.blue, "M", group="Colors", inline="90")
+color_90min_d               = input.color(color.green, "D", group="Colors", inline="90")
+color_30min                 = input.color(color.gray, "30-min Cycles", group="Colors")
+color_10min                 = input.color(color.gray, "10-min Cycles", group="Colors")
+color_london_open           = input.color(color.orange, "London Opening Range", group="Colors")
+color_asia                  = input.color(color.purple, "Asia Session", group="Colors")
 
 // Day separation settings
-show_day_separators = input.bool(true, "Day Separators", group="Day Separators")
-day_separator_color = input.color(color.gray, "Color", group="Day Separators", inline="day_sep")
-day_separator_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Day Separators", inline="day_sep")
-day_separator_width = input.int(1, "Width", minval=1, maxval=3, group="Day Separators", inline="day_sep")
-show_day_labels = input.bool(true, "Day Labels", group="Day Separators")
+show_day_separators         = input.bool(true, "Day Separator", group="Day Separators")
+day_separator_color         = input.color(color.gray, "Color", group="Day Separators", inline="day_sep")
+day_separator_style         = input.string(line.style_dotted, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Day Separators", inline="day_sep")
+day_separator_width         = input.int(1, "Width", minval=1, maxval=3, group="Day Separators", inline="day_sep")
+show_day_labels             = input.bool(true, "Day Labels", group="Day Separators")
 
 // Opening price line settings
-show_midnight = input.bool(false, "Midnight (00:00)", group="Opening Lines")
-midnight_color = input.color(color.black, "Color", group="Opening Lines", inline="midnight_style")
-midnight_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Opening Lines", inline="midnight_style")
+show_midnight               = input.bool(false, "Midnight (00:00)", group="Opening Lines")
+midnight_color              = input.color(color.black, "Color", group="Opening Lines", inline="midnight_style")
+midnight_style              = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Opening Lines", inline="midnight_style")
 
-show_830 = input.bool(false, "8:30 Opening", group="Opening Lines")
-color_830 = input.color(color.black, "Color", group="Opening Lines", inline="830_style")
-style_830 = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Opening Lines", inline="830_style")
+show_830                    = input.bool(false, "8:30 Opening", group="Opening Lines")
+color_830                   = input.color(color.black, "Color", group="Opening Lines", inline="830_style")
+style_830                   = input.string(line.style_dotted, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Opening Lines", inline="830_style")
 
-show_930 = input.bool(false, "9:30 Opening", group="Opening Lines")
-color_930 = input.color(color.black, "Color", group="Opening Lines", inline="930_style")
-style_930 = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Opening Lines", inline="930_style")
+show_930                    = input.bool(false, "9:30 Opening", group="Opening Lines")
+color_930                   = input.color(color.black, "Color", group="Opening Lines", inline="930_style")
+style_930                   = input.string(line.style_dotted, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Opening Lines", inline="930_style")
 
 
 // Asia session line settings
-show_asia_labels = input.bool(true, "Labels", group="Asia Session")
-asia_line_style = input.string(line.style_solid, "Line Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Asia Session")
+show_asia_labels            = input.bool(true, "Labels", group="Asia Session")
+asia_line_style             = input.string(line.style_dotted, "Line Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Asia Session")
 
 // Previous period High/Low line settings
-show_prev_day = input.bool(false, "Previous Day H/L", group="Previous Day")
-prev_day_color = input.color(color.gray, "Color", group="Previous Day", inline="prevday_style")
-prev_day_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Previous Day", inline="prevday_style")
-show_prev_day_labels = input.bool(true, "Labels", group="Previous Day")
+show_prev_day               = input.bool(false, "Previous Day H/L", group="Previous Day")
+prev_day_color              = input.color(color.gray, "Color", group="Previous Day", inline="prevday_style")
+prev_day_style              = input.string(line.style_dashed, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Previous Day", inline="prevday_style")
+show_prev_day_labels        = input.bool(true, "Labels", group="Previous Day")
 
-show_prev_week = input.bool(false, "Previous Week H/L", group="Previous Week")
-prev_week_color = input.color(color.blue, "Color", group="Previous Week", inline="prevweek_style")
-prev_week_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Previous Week", inline="prevweek_style")
-show_prev_week_labels = input.bool(true, "Labels", group="Previous Week")
+show_prev_week              = input.bool(false, "Previous Week H/L", group="Previous Week")
+prev_week_color             = input.color(color.blue, "Color", group="Previous Week", inline="prevweek_style")
+prev_week_style             = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Previous Week", inline="prevweek_style")
+show_prev_week_labels       = input.bool(true, "Labels", group="Previous Week")
 
-show_prev_month = input.bool(false, "Previous Month H/L", group="Previous Month")
-prev_month_color = input.color(color.orange, "Color", group="Previous Month", inline="prevmonth_style")
-prev_month_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Previous Month", inline="prevmonth_style")
-show_prev_month_labels = input.bool(true, "Labels", group="Previous Month")
+show_prev_month             = input.bool(false, "Previous Month H/L", group="Previous Month")
+prev_month_color            = input.color(color.orange, "Color", group="Previous Month", inline="prevmonth_style")
+prev_month_style            = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Previous Month", inline="prevmonth_style")
+show_prev_month_labels      = input.bool(true, "Labels", group="Previous Month")
 
 // Box transparency
-box_transp = input.int(93, "Box Transparency", minval=0, maxval=100, group="Display Settings")
+box_transp                  = input.int(88, "Box Transparency", minval=0, maxval=100, group="Display Settings")
 
 // === ASSET TYPE DETECTION ===
-is_crypto = syminfo.type == "crypto"
-is_forex = syminfo.type == "forex"
-is_futures = str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or 
-             str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY") or
-             str.contains(syminfo.root, "MNQ") or str.contains(syminfo.root, "MES") or
-             syminfo.type == "futures"
+is_crypto                   = syminfo.type == "crypto"
+is_forex                    = syminfo.type == "forex"
+is_futures                  = str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or 
+                              str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY") or
+                              str.contains(syminfo.root, "MNQ") or str.contains(syminfo.root, "MES") or
+                              syminfo.type == "futures"
 
 // === OPEN PRICE LINES ===
 // Daily Open
-show_daily_open = input.bool(false, "Daily Open", group="Daily Open")
-daily_open_color = input.color(color.yellow, "Color", group="Daily Open", inline="daily_style")
-daily_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Daily Open", inline="daily_style")
-show_daily_open_label = input.bool(true, "Label", group="Daily Open")
+show_daily_open             = input.bool(false, "Daily Open", group="Daily Open")
+daily_open_color            = input.color(color.yellow, "Color", group="Daily Open", inline="daily_style")
+daily_open_style            = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Daily Open", inline="daily_style")
+show_daily_open_label       = input.bool(true, "Label", group="Daily Open")
 
 // Weekly Open
-show_weekly_open = input.bool(false, "Weekly Open", group="Weekly Open")
-weekly_open_color = input.color(color.aqua, "Color", group="Weekly Open", inline="weekly_style")
-weekly_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Weekly Open", inline="weekly_style")
-show_weekly_open_label = input.bool(true, "Label", group="Weekly Open")
+show_weekly_open            = input.bool(false, "Weekly Open", group="Weekly Open")
+weekly_open_color           = input.color(color.blue, "Color", group="Weekly Open", inline="weekly_style")
+weekly_open_style           = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Weekly Open", inline="weekly_style")
+show_weekly_open_label      = input.bool(true, "Label", group="Weekly Open")
 
 // Monthly Open
-show_monthly_open = input.bool(false, "Monthly Open", group="Monthly Open")
-monthly_open_color = input.color(color.fuchsia, "Color", group="Monthly Open", inline="monthly_style")
-monthly_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Monthly Open", inline="monthly_style")
-show_monthly_open_label = input.bool(true, "Label", group="Monthly Open")
+show_monthly_open           = input.bool(false, "Monthly Open", group="Monthly Open")
+monthly_open_color          = input.color(color.fuchsia, "Color", group="Monthly Open", inline="monthly_style")
+monthly_open_style          = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Monthly Open", inline="monthly_style")
+show_monthly_open_label     = input.bool(true, "Label", group="Monthly Open")
 
 // Yearly Open
-show_yearly_open = input.bool(false, "Yearly Open", group="Yearly Open")
-yearly_open_color = input.color(color.maroon, "Color", group="Yearly Open", inline="yearly_style")
-yearly_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Yearly Open", inline="yearly_style")
-show_yearly_open_label = input.bool(true, "Label", group="Yearly Open")
+show_yearly_open            = input.bool(false, "Yearly Open", group="Yearly Open")
+yearly_open_color           = input.color(color.maroon, "Color", group="Yearly Open", inline="yearly_style")
+yearly_open_style           = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Yearly Open", inline="yearly_style")
+show_yearly_open_label      = input.bool(true, "Label", group="Yearly Open")
 
 // Helper function to convert time string to timestamp in NY timezone
 time_to_timestamp(h, m) =>
-    ny_year = year(time, "America/New_York")
-    ny_month = month(time, "America/New_York") 
-    ny_day = dayofmonth(time, "America/New_York")
+    ny_year                 = year(time, "America/New_York")
+    ny_month                = month(time, "America/New_York") 
+    ny_day                  = dayofmonth(time, "America/New_York")
     timestamp("America/New_York", ny_year, ny_month, ny_day, h, m, 0)
 
 // === 90MIN PIVOT LINES TRACKING ===
@@ -126,9 +126,9 @@ update_pivot_lines() =>
         // Update high pivot lines - only if array has elements
         if array.size(active_high_lines) > 0
             for i = array.size(active_high_lines) - 1 to 0
-                pivot_line = array.get(active_high_lines, i)
+                pivot_line      = array.get(active_high_lines, i)
                 if not na(pivot_line)
-                    line_price = line.get_y2(pivot_line)
+                    line_price  = line.get_y2(pivot_line)
                     // If price crosses above the high pivot, stop the line here
                     if high >= line_price
                         line.set_x2(pivot_line, bar_index)
@@ -141,9 +141,9 @@ update_pivot_lines() =>
         // Update low pivot lines - only if array has elements
         if array.size(active_low_lines) > 0
             for i = array.size(active_low_lines) - 1 to 0
-                pivot_line = array.get(active_low_lines, i)
+                pivot_line      = array.get(active_low_lines, i)
                 if not na(pivot_line)
-                    line_price = line.get_y2(pivot_line)
+                    line_price  = line.get_y2(pivot_line)
                     // If price crosses below the low pivot, stop the line here
                     if low <= line_price
                         line.set_x2(pivot_line, bar_index)
@@ -157,56 +157,56 @@ update_pivot_lines() =>
 add_90min_pivot_lines(cycle_high, cycle_low, cycle_end_bar, line_color) =>
     if show_90min_pivots
         // More robust current date check using full timestamp comparison
-        current_ny_year = year(time, "America/New_York")
-        current_ny_month = month(time, "America/New_York")
-        current_ny_day = dayofmonth(time, "America/New_York")
+        current_ny_year     = year(time, "America/New_York")
+        current_ny_month    = month(time, "America/New_York")
+        current_ny_day      = dayofmonth(time, "America/New_York")
         
-        cycle_ny_year = year(time[bar_index - cycle_end_bar], "America/New_York")
-        cycle_ny_month = month(time[bar_index - cycle_end_bar], "America/New_York")
-        cycle_ny_day = dayofmonth(time[bar_index - cycle_end_bar], "America/New_York")
+        cycle_ny_year       = year(time[bar_index - cycle_end_bar], "America/New_York")
+        cycle_ny_month      = month(time[bar_index - cycle_end_bar], "America/New_York")
+        cycle_ny_day        = dayofmonth(time[bar_index - cycle_end_bar], "America/New_York")
         
         // Check if cycle completed today (same year, month, and day)
-        is_current_date = current_ny_year == cycle_ny_year and current_ny_month == cycle_ny_month and current_ny_day == cycle_ny_day
+        is_current_date     = current_ny_year == cycle_ny_year and current_ny_month == cycle_ny_month and current_ny_day == cycle_ny_day
         
         if is_current_date
             // Get line style
-            line_style = switch pivot_line_style
+            line_style          = switch pivot_line_style
                 "Solid" => line.style_solid
                 "Dashed" => line.style_dashed  
                 "Dotted" => line.style_dotted
                 => line.style_solid
             
             // Create high pivot line
-            high_line = line.new(x1=cycle_end_bar, y1=cycle_high, x2=cycle_end_bar + 1, y2=cycle_high, extend=extend.none, color=color.new(line_color, 0), style=line_style, width=pivot_line_width)
+            high_line           = line.new(x1=cycle_end_bar, y1=cycle_high, x2=cycle_end_bar + 1, y2=cycle_high, extend=extend.none, color=color.new(line_color, 0), style=line_style, width=pivot_line_width)
             array.push(active_high_lines, high_line)
             
             // Create low pivot line
-            low_line = line.new(x1=cycle_end_bar, y1=cycle_low, x2=cycle_end_bar + 1, y2=cycle_low, extend=extend.none, color=color.new(line_color, 0), style=line_style, width=pivot_line_width)
+            low_line            = line.new(x1=cycle_end_bar, y1=cycle_low, x2=cycle_end_bar + 1, y2=cycle_low, extend=extend.none, color=color.new(line_color, 0), style=line_style, width=pivot_line_width)
             array.push(active_low_lines, low_line)
             
             // Limit number of active lines (keep last 10 of each type for performance)
             if array.size(active_high_lines) > 10
-                old_line = array.shift(active_high_lines)
+                old_line        = array.shift(active_high_lines)
                 if not na(old_line)
                     line.delete(old_line)
                     
             if array.size(active_low_lines) > 10
-                old_line = array.shift(active_low_lines)
+                old_line        = array.shift(active_low_lines)
                 if not na(old_line)
                     line.delete(old_line)
 
 // Function for Asia session using NY timezone (to keep consistency)
 time_to_timestamp_simple(h, m) =>
-    ny_year = year(time, "America/New_York")
-    ny_month = month(time, "America/New_York") 
-    ny_day = dayofmonth(time, "America/New_York")
+    ny_year                 = year(time, "America/New_York")
+    ny_month                = month(time, "America/New_York") 
+    ny_day                  = dayofmonth(time, "America/New_York")
     timestamp("America/New_York", ny_year, ny_month, ny_day, h, m, 0)
 
 // Function to create Open price lines for different asset types
 create_open_period_lines(show_lines, show_labels, line_color, line_style, period_type) =>
     if show_lines and is_valid_tf
-        var line open_line = na
-        var label open_label = na
+        var line open_line      = na
+        var label open_label    = na
         
         // Track open prices for each period
         var float daily_open_val = na
@@ -215,65 +215,65 @@ create_open_period_lines(show_lines, show_labels, line_color, line_style, period
         var float yearly_open_val = na
         
         // Determine timezone and times based on asset type
-        use_timezone = is_crypto ? "UTC" : "America/New_York"
+        use_timezone            = is_crypto ? "UTC" : "America/New_York"
         
         // Get time components in appropriate timezone
-        tz_hour = hour(time, use_timezone)
-        tz_minute = minute(time, use_timezone)
-        tz_dayofweek = dayofweek(time, use_timezone)
-        tz_dayofmonth = dayofmonth(time, use_timezone)
-        tz_month = month(time, use_timezone)
+        tz_hour                 = hour(time, use_timezone)
+        tz_minute               = minute(time, use_timezone)
+        tz_dayofweek            = dayofweek(time, use_timezone)
+        tz_dayofmonth           = dayofmonth(time, use_timezone)
+        tz_month                = month(time, use_timezone)
         
         // Define open times based on asset type
         // Crypto: 00:00 UTC
         // Forex: 17:00 EST (Sunday-Thursday)
         // Futures: 18:00 EST (Sunday-Thursday)
-        daily_open_hour = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
-        daily_open_minute = 0
+        daily_open_hour         = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
+        daily_open_minute       = 0
         
         // Detect period boundaries
-        is_daily_open = false
-        is_weekly_open = false
-        is_monthly_open = false
-        is_yearly_open = false
+        is_daily_open           = false
+        is_weekly_open          = false
+        is_monthly_open         = false
+        is_yearly_open          = false
         
         if is_crypto
             // Crypto: Standard UTC boundaries
-            is_daily_open := tz_hour == 0 and tz_minute == 0
-            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.monday
-            is_monthly_open := is_daily_open and tz_dayofmonth == 1
-            is_yearly_open := is_monthly_open and tz_month == 1
+            is_daily_open       := tz_hour == 0 and tz_minute == 0
+            is_weekly_open      := is_daily_open and tz_dayofweek == dayofweek.monday
+            is_monthly_open     := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open      := is_monthly_open and tz_month == 1
         else if is_forex
             // Forex: Sunday 17:00 EST starts week, then daily at 17:00 EST
-            is_daily_open := tz_hour == 17 and tz_minute == 0
-            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.sunday
-            is_monthly_open := is_daily_open and tz_dayofmonth == 1
-            is_yearly_open := is_monthly_open and tz_month == 1
+            is_daily_open       := tz_hour == 17 and tz_minute == 0
+            is_weekly_open      := is_daily_open and tz_dayofweek == dayofweek.sunday
+            is_monthly_open     := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open      := is_monthly_open and tz_month == 1
         else if is_futures
             // Futures: Sunday 18:00 EST starts week, then daily at 18:00 EST
-            is_daily_open := tz_hour == 18 and tz_minute == 0
-            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.sunday
-            is_monthly_open := is_daily_open and tz_dayofmonth == 1
-            is_yearly_open := is_monthly_open and tz_month == 1
+            is_daily_open       := tz_hour == 18 and tz_minute == 0
+            is_weekly_open      := is_daily_open and tz_dayofweek == dayofweek.sunday
+            is_monthly_open     := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open      := is_monthly_open and tz_month == 1
         else
             // Default to NY timezone midnight for other instruments
-            is_daily_open := tz_hour == 0 and tz_minute == 0
-            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.monday
-            is_monthly_open := is_daily_open and tz_dayofmonth == 1
-            is_yearly_open := is_monthly_open and tz_month == 1
+            is_daily_open       := tz_hour == 0 and tz_minute == 0
+            is_weekly_open      := is_daily_open and tz_dayofweek == dayofweek.monday
+            is_monthly_open     := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open      := is_monthly_open and tz_month == 1
         
         // Capture open prices at period start
         if is_daily_open
-            daily_open_val := open
+            daily_open_val      := open
         if is_weekly_open
-            weekly_open_val := open
+            weekly_open_val     := open
         if is_monthly_open
-            monthly_open_val := open
+            monthly_open_val    := open
         if is_yearly_open
-            yearly_open_val := open
+            yearly_open_val     := open
         
         // Get value based on period type
-        open_price = switch period_type
+        open_price              = switch period_type
             "day" => daily_open_val
             "week" => weekly_open_val
             "month" => monthly_open_val
@@ -281,7 +281,7 @@ create_open_period_lines(show_lines, show_labels, line_color, line_style, period
             => na
         
         // Check if new period started
-        is_new_period = switch period_type
+        is_new_period           = switch period_type
             "day" => is_daily_open
             "week" => is_weekly_open
             "month" => is_monthly_open
@@ -297,21 +297,21 @@ create_open_period_lines(show_lines, show_labels, line_color, line_style, period
                 label.delete(open_label)
             
             // Create new line starting from current bar
-            open_line := line.new(x1=bar_index, y1=open_price, x2=bar_index, y2=open_price, color=line_color, style=line_style, width=1, extend=extend.none)
+            open_line           := line.new(x1=bar_index, y1=open_price, x2=bar_index, y2=open_price, color=line_color, style=line_style, width=1, extend=extend.none)
             
             // Create label with appropriate text
             if show_labels
-                label_text = period_type == "day" ? "DO" : period_type == "week" ? "WO" : period_type == "month" ? "MO" : "YO"
+                label_text      = period_type == "day" ? "DO" : period_type == "week" ? "WO" : period_type == "month" ? "MO" : "YO"
                 // Use time-based positioning with offset
-                label_time = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
-                open_label := label.new(x=label_time, y=open_price, text=label_text, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small, xloc=xloc.bar_time)
+                label_time      = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
+                open_label      := label.new(x=label_time, y=open_price, text=label_text, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small, xloc=xloc.bar_time)
         
         // Update existing line to extend to current bar
         if not na(open_line) and not na(open_price)
             line.set_x2(open_line, bar_index)
             // Update label position using time-based positioning
             if show_labels and not na(open_label)
-                label_time = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
+                label_time      = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
                 label.set_xloc(open_label, label_time, xloc.bar_time)
                 label.set_y(open_label, open_price)
 
@@ -319,67 +319,67 @@ create_open_period_lines(show_lines, show_labels, line_color, line_style, period
 create_prev_period_lines(show_lines, show_labels, line_color, line_style, period_type) =>
     if show_lines and is_valid_tf
         var line prev_high_line = na
-        var line prev_low_line = na
+        var line prev_low_line  = na
         var label prev_high_label = na
         var label prev_low_label = na
         
         // Track previous period high/low manually using NY timezone boundaries
         var float prev_day_high_val = na
-        var float prev_day_low_val = na
+        var float prev_day_low_val  = na
         var float prev_week_high_val = na
         var float prev_week_low_val = na
         var float prev_month_high_val = na
         var float prev_month_low_val = na
         var float current_day_high = na
-        var float current_day_low = na
+        var float current_day_low   = na
         var float current_week_high = na
-        var float current_week_low = na
+        var float current_week_low  = na
         var float current_month_high = na
         var float current_month_low = na
         
         // NY timezone time components
-        ny_hour = hour(time, "America/New_York")
-        ny_minute = minute(time, "America/New_York")
-        ny_dayofweek = dayofweek(time, "America/New_York")
-        ny_dayofmonth = dayofmonth(time, "America/New_York")
+        ny_hour                 = hour(time, "America/New_York")
+        ny_minute               = minute(time, "America/New_York")
+        ny_dayofweek            = dayofweek(time, "America/New_York")
+        ny_dayofmonth           = dayofmonth(time, "America/New_York")
         
         // Detect NY timezone boundaries
-        is_new_ny_day = ny_hour == 0 and ny_minute == 0
-        is_new_ny_week = is_new_ny_day and ny_dayofweek == dayofweek.monday
-        is_new_ny_month = is_new_ny_day and ny_dayofmonth == 1
+        is_new_ny_day           = ny_hour == 0 and ny_minute == 0
+        is_new_ny_week          = is_new_ny_day and ny_dayofweek == dayofweek.monday
+        is_new_ny_month         = is_new_ny_day and ny_dayofmonth == 1
         
         // Initialize or update current period tracking
         if na(current_day_high) or is_new_ny_day
-            current_day_high := high
-            current_day_low := low
+            current_day_high    := high
+            current_day_low     := low
         else
-            current_day_high := math.max(current_day_high, high)
-            current_day_low := math.min(current_day_low, low)
+            current_day_high    := math.max(current_day_high, high)
+            current_day_low     := math.min(current_day_low, low)
             
         if na(current_week_high) or is_new_ny_week
-            current_week_high := high
-            current_week_low := low
+            current_week_high   := high
+            current_week_low    := low
         else
-            current_week_high := math.max(current_week_high, high)
-            current_week_low := math.min(current_week_low, low)
+            current_week_high   := math.max(current_week_high, high)
+            current_week_low    := math.min(current_week_low, low)
             
         if na(current_month_high) or is_new_ny_month
-            current_month_high := high
-            current_month_low := low
+            current_month_high  := high
+            current_month_low   := low
         else
-            current_month_high := math.max(current_month_high, high)
-            current_month_low := math.min(current_month_low, low)
+            current_month_high  := math.max(current_month_high, high)
+            current_month_low   := math.min(current_month_low, low)
         
         // Save previous period values when new period starts
         if is_new_ny_day
-            prev_day_high_val := current_day_high[1]
-            prev_day_low_val := current_day_low[1]
+            prev_day_high_val   := current_day_high[1]
+            prev_day_low_val    := current_day_low[1]
         if is_new_ny_week
-            prev_week_high_val := current_week_high[1]
-            prev_week_low_val := current_week_low[1]
+            prev_week_high_val  := current_week_high[1]
+            prev_week_low_val   := current_week_low[1]
         if is_new_ny_month
             prev_month_high_val := current_month_high[1]
-            prev_month_low_val := current_month_low[1]
+            prev_month_low_val  := current_month_low[1]
         
         // Get values based on period type
         [prev_high, prev_low] = switch period_type
@@ -389,7 +389,7 @@ create_prev_period_lines(show_lines, show_labels, line_color, line_style, period
             => [na, na]
         
         // Create or update lines on new period using NY timezone
-        is_new_period = switch period_type
+        is_new_period           = switch period_type
             "day" => is_new_ny_day
             "week" => is_new_ny_week
             "month" => is_new_ny_month
@@ -405,17 +405,17 @@ create_prev_period_lines(show_lines, show_labels, line_color, line_style, period
                 label.delete(prev_low_label)
             
             // Create new extending lines to current bar
-            prev_high_line := line.new(x1=bar_index, y1=prev_high, x2=bar_index, y2=prev_high, color=line_color, style=line_style, width=1, extend=extend.none)
-            prev_low_line := line.new(x1=bar_index, y1=prev_low, x2=bar_index, y2=prev_low, color=line_color, style=line_style, width=1, extend=extend.none)
+            prev_high_line  := line.new(x1=bar_index, y1=prev_high, x2=bar_index, y2=prev_high, color=line_color, style=line_style, width=1, extend=extend.none)
+            prev_low_line   := line.new(x1=bar_index, y1=prev_low, x2=bar_index, y2=prev_low, color=line_color, style=line_style, width=1, extend=extend.none)
             
             // Create labels with fixed time position (won't move with zoom)
             if show_labels
                 label_text_high = period_type == "day" ? "PDH" : period_type == "week" ? "PWH" : "PMH"
-                label_text_low = period_type == "day" ? "PDL" : period_type == "week" ? "PWL" : "PML"
+                label_text_low  = period_type == "day" ? "PDL" : period_type == "week" ? "PWL" : "PML"
                 // Use time-based positioning with slight offset to position at line end
-                label_time = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
+                label_time      = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
                 prev_high_label := label.new(x=label_time, y=prev_high, text=label_text_high, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small, xloc=xloc.bar_time)
-                prev_low_label := label.new(x=label_time, y=prev_low, text=label_text_low, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small, xloc=xloc.bar_time)
+                prev_low_label  := label.new(x=label_time, y=prev_low, text=label_text_low, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small, xloc=xloc.bar_time)
         
         // Update existing lines to extend to current bar
         if not na(prev_high_line) and not na(prev_low_line)
@@ -423,7 +423,7 @@ create_prev_period_lines(show_lines, show_labels, line_color, line_style, period
             line.set_x2(prev_low_line, bar_index)
             // Update label positions using time-based positioning (fixed, won't move with zoom)
             if show_labels and not na(prev_high_label) and not na(prev_low_label)
-                label_time = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
+                label_time      = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
                 label.set_xloc(prev_high_label, label_time, xloc.bar_time)
                 label.set_xloc(prev_low_label, label_time, xloc.bar_time)
 
@@ -432,20 +432,20 @@ create_opening_line(open_h, open_m, line_color, line_style, time_label) =>
     if not is_valid_tf
         false
     else
-        open_time = time_to_timestamp(open_h, open_m)
-        end_time = time_to_timestamp(16, 0)
+        open_time               = time_to_timestamp(open_h, open_m)
+        end_time                = time_to_timestamp(16, 0)
         
         var float opening_price = na
-        var line current_line = na
+        var line current_line   = na
         var label time_label_obj = na
-        var bool line_active = false
+        var bool line_active    = false
         
         // Capture opening price
         if time == open_time and not line_active
-            opening_price := open
-            line_active := true
-            current_line := line.new(x1=bar_index, y1=opening_price, x2=bar_index, y2=opening_price, color=line_color, style=line_style, width=1, extend=extend.none)
-            time_label_obj := label.new(x=bar_index, y=opening_price, text=time_label, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small)
+            opening_price   := open
+            line_active     := true
+            current_line    := line.new(x1=bar_index, y1=opening_price, x2=bar_index, y2=opening_price, color=line_color, style=line_style, width=1, extend=extend.none)
+            time_label_obj  := label.new(x=bar_index, y=opening_price, text=time_label, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small)
         
         // Extend line and update label position during trading hours
         if line_active and time < end_time and not na(current_line)
@@ -455,17 +455,17 @@ create_opening_line(open_h, open_m, line_color, line_style, time_label) =>
         
         // Deactivate line after 16:00
         if line_active and time >= end_time
-            line_active := false
+            line_active     := false
         
         true
 
 // === 9:30 OPENING RANGE GAP ===
 // Variables to track gap box and mid line
-var box current_gap_box = na
+var box current_gap_box     = na
 var line current_gap_midline = na
-var float yesterday_close = na
-var float today_open = na
-var bool gap_box_active = false
+var float yesterday_close   = na
+var float today_open        = na
+var bool gap_box_active     = false
 
 // SMT detection functions removed
 
@@ -500,19 +500,19 @@ create_cycle_box(start_h, start_m, end_h, end_m, box_color, cycle_name) =>
         
         // Session start
         if in_session and not session_active
-            session_high := high
-            session_low := low
+            session_high    := high
+            session_low     := low
             session_start_bar := bar_index
-            session_active := true
+            session_active  := true
             // Create initial box
-            current_box := box.new(left=session_start_bar, top=session_high, right=bar_index, bottom=session_low, bgcolor=color.new(box_color, box_transp), border_width=0, extend=extend.none)
+            current_box     := box.new(left=session_start_bar, top=session_high, right=bar_index, bottom=session_low, bgcolor=color.new(box_color, box_transp), border_width=0, extend=extend.none)
             if barstate.isconfirmed
                 log.info("Started " + cycle_name + " at " + str.tostring(time, "yyyy-MM-dd HH:mm") + " Start: " + str.tostring(start_time) + " End: " + str.tostring(end_time))
         
         // Update box during session
         if session_active and in_session and not na(current_box)
-            session_high := math.max(session_high, high)
-            session_low := math.min(session_low, low)
+            session_high    := math.max(session_high, high)
+            session_low     := math.min(session_low, low)
             // Update box dimensions and extend to current bar
             box.set_top(current_box, session_high)
             box.set_bottom(current_box, session_low)
@@ -541,45 +541,45 @@ create_90min_cycle_box_with_pivots(start_h, start_m, end_h, end_m, box_color, cy
         false
     else
         // Declare variables first
-        start_time = 0
-        end_time = 0
+        start_time              = 0
+        end_time                = 0
         
         // All calculations use NY timezone
-        start_time := time_to_timestamp(start_h, start_m)
-        end_time := time_to_timestamp(end_h, end_m)
+        start_time              := time_to_timestamp(start_h, start_m)
+        end_time                := time_to_timestamp(end_h, end_m)
         
         // Handle overnight sessions (Asia) - spans to next NY day
         if end_h < start_h
             // For overnight sessions, end time is next NY day
-            ny_year = year(time, "America/New_York")
-            ny_month = month(time, "America/New_York") 
-            ny_day = dayofmonth(time, "America/New_York")
-            end_time := timestamp("America/New_York", ny_year, ny_month, ny_day + 1, end_h, end_m, 0)
+            ny_year             = year(time, "America/New_York")
+            ny_month            = month(time, "America/New_York") 
+            ny_day              = dayofmonth(time, "America/New_York")
+            end_time            := timestamp("America/New_York", ny_year, ny_month, ny_day + 1, end_h, end_m, 0)
         
-        var float session_high = na
-        var float session_low = na
+        var float session_high  = na
+        var float session_low   = na
         var int session_start_bar = na
         var bool session_active = false
-        var box current_box = na
+        var box current_box     = na
         
-        in_session = time >= start_time and time < end_time
+        in_session              = time >= start_time and time < end_time
         
         // Session start
         if in_session and not session_active
-            session_high := high
-            session_low := low
-            session_start_bar := bar_index
-            session_active := true
+            session_high        := high
+            session_low         := low
+            session_start_bar   := bar_index
+            session_active      := true
             
             // Create initial box
-            current_box := box.new(left=session_start_bar, top=session_high, right=bar_index, bottom=session_low, bgcolor=color.new(box_color, box_transp), border_width=0, extend=extend.none)
+            current_box         := box.new(left=session_start_bar, top=session_high, right=bar_index, bottom=session_low, bgcolor=color.new(box_color, box_transp), border_width=0, extend=extend.none)
             if barstate.isconfirmed
                 log.info("Started " + cycle_name + " at " + str.tostring(time, "yyyy-MM-dd HH:mm") + " Start: " + str.tostring(start_time) + " End: " + str.tostring(end_time))
         
         // Update box during session
         if session_active and in_session and not na(current_box)
-            session_high := math.max(session_high, high)
-            session_low := math.min(session_low, low)
+            session_high        := math.max(session_high, high)
+            session_low         := math.min(session_low, low)
             
             // Update box dimensions and extend to current bar
             box.set_top(current_box, session_high)
@@ -615,23 +615,23 @@ create_90min_cycle_box_with_pivots(start_h, start_m, end_h, end_m, box_color, cy
 // Clean up previous day's pivot lines and update current ones
 if is_valid_tf and show_90min_pivots
     // Get current NY date for comparison
-    current_ny_year = year(time, "America/New_York")
-    current_ny_month = month(time, "America/New_York")
-    current_ny_day = dayofmonth(time, "America/New_York")
-    ny_hour = hour(time, "America/New_York")
-    ny_minute = minute(time, "America/New_York")
+    current_ny_year         = year(time, "America/New_York")
+    current_ny_month        = month(time, "America/New_York")
+    current_ny_day          = dayofmonth(time, "America/New_York")
+    ny_hour                 = hour(time, "America/New_York")
+    ny_minute               = minute(time, "America/New_York")
     
     // Aggressive cleanup - remove any lines that aren't from today
     if array.size(active_high_lines) > 0 or array.size(active_low_lines) > 0
         // Check if we need to clean up old lines (not just at midnight)
-        should_cleanup = false
+        should_cleanup      = false
         
         // Check if it's a new day or we have any old lines
         if array.size(active_high_lines) > 0
             first_high_line = array.get(active_high_lines, 0)
             if not na(first_high_line)
-                line_bar = line.get_x1(first_high_line)
-                line_time = time[bar_index - line_bar]
+                line_bar    = line.get_x1(first_high_line)
+                line_time   = time[bar_index - line_bar]
                 line_ny_year = year(line_time, "America/New_York")
                 line_ny_month = month(line_time, "America/New_York") 
                 line_ny_day = dayofmonth(line_time, "America/New_York")
@@ -645,14 +645,14 @@ if is_valid_tf and show_90min_pivots
             // Delete all existing pivot lines
             if array.size(active_high_lines) > 0
                 for i = array.size(active_high_lines) - 1 to 0
-                    old_line = array.get(active_high_lines, i)
+                    old_line    = array.get(active_high_lines, i)
                     if not na(old_line)
                         line.delete(old_line)
                     array.remove(active_high_lines, i)
                     
             if array.size(active_low_lines) > 0
                 for i = array.size(active_low_lines) - 1 to 0
-                    old_line = array.get(active_low_lines, i)
+                    old_line    = array.get(active_low_lines, i)
                     if not na(old_line)
                         line.delete(old_line)
                     array.remove(active_low_lines, i)
@@ -668,48 +668,48 @@ if is_valid_tf
         create_cycle_box(1, 30, 2, 0, color_london_open, "London Opening")
 
     // Asia Session: High/Low lines with labels
-    var float asia_high = na
-    var float asia_low = na
+    var float asia_high     = na
+    var float asia_low      = na
     var line asia_high_line = na
-    var line asia_low_line = na
+    var line asia_low_line  = na
     var label asia_high_label = na
     var label asia_low_label = na
-    var bool asia_session = false
+    var bool asia_session   = false
     
     // Check if we're in Asia session time in NY timezone
     // Asia session: 20:00-00:00 NY time - spans across NY calendar days (overnight)
-    ny_hour = hour(time, "America/New_York")
-    ny_minute = minute(time, "America/New_York")
+    ny_hour                 = hour(time, "America/New_York")
+    ny_minute               = minute(time, "America/New_York")
     
     // Asia session detection - handle overnight properly (20:00 to 00:00 next day)
-    is_asia_start = ny_hour == 20 and ny_minute == 0
-    is_asia_end = ny_hour == 0 and ny_minute == 0
-    is_in_asia_session = (ny_hour >= 20 and ny_hour <= 23)
+    is_asia_start           = ny_hour == 20 and ny_minute == 0
+    is_asia_end             = ny_hour == 0 and ny_minute == 0
+    is_in_asia_session      = (ny_hour >= 20 and ny_hour <= 23)
     
     // Start Asia session
     if is_asia_start and not asia_session
-        asia_high := high
-        asia_low := low
-        asia_session := true
+        asia_high           := high
+        asia_low            := low
+        asia_session        := true
         // Create lines with user-defined style
-        asia_high_line := line.new(x1=bar_index, y1=asia_high, x2=bar_index, y2=asia_high, color=color_asia, style=asia_line_style, width=1, extend=extend.none)
-        asia_low_line := line.new(x1=bar_index,  y1=asia_low,  x2=bar_index, y2=asia_low, color=color_asia, style=asia_line_style,  width=1,  extend=extend.none)
+        asia_high_line      := line.new(x1=bar_index, y1=asia_high, x2=bar_index, y2=asia_high, color=color_asia, style=asia_line_style, width=1, extend=extend.none)
+        asia_low_line       := line.new(x1=bar_index,  y1=asia_low,  x2=bar_index, y2=asia_low, color=color_asia, style=asia_line_style,  width=1,  extend=extend.none)
         // Create text labels if enabled
         if show_asia_labels
             asia_high_label := label.new(x=bar_index, y=asia_high, text="Asia High", color=color.new(color.white, 100), textcolor=color_asia, style=label.style_label_down, size=size.small)
-            asia_low_label := label.new(x=bar_index,  y=asia_low,  text="Asia Low",  color=color.new(color.white, 100), textcolor=color_asia, style=label.style_label_up,   size=size.small)
+            asia_low_label  := label.new(x=bar_index,  y=asia_low,  text="Asia Low",  color=color.new(color.white, 100), textcolor=color_asia, style=label.style_label_up,   size=size.small)
     
     // Update during Asia session
     if asia_session and is_in_asia_session and not is_asia_end
         if high > asia_high
-            asia_high := high
+            asia_high       := high
             if not na(asia_high_line)
                 line.set_y1(asia_high_line, asia_high)
                 line.set_y2(asia_high_line, asia_high)
             if show_asia_labels and not na(asia_high_label)
                 label.set_y(asia_high_label, asia_high)
         if low < asia_low
-            asia_low := low
+            asia_low        := low
             if not na(asia_low_line)
                 line.set_y1(asia_low_line, asia_low)
                 line.set_y2(asia_low_line, asia_low)
@@ -720,7 +720,7 @@ if is_valid_tf
             line.set_x2(asia_high_line, bar_index)
             // Position label at center of line if labels are enabled
             if show_asia_labels
-                line_start = line.get_x1(asia_high_line)
+                line_start  = line.get_x1(asia_high_line)
                 line_center = math.round((line_start + bar_index) / 2)
                 if not na(asia_high_label)
                     label.set_x(asia_high_label, line_center)
@@ -728,14 +728,14 @@ if is_valid_tf
             line.set_x2(asia_low_line, bar_index)
             // Position label at center of line if labels are enabled
             if show_asia_labels
-                line_start = line.get_x1(asia_low_line)
+                line_start  = line.get_x1(asia_low_line)
                 line_center = math.round((line_start + bar_index) / 2)
                 if not na(asia_low_label)
                     label.set_x(asia_low_label, line_center)
     
     // End Asia session
     if is_asia_end and asia_session
-        asia_session := false
+        asia_session        := false
 
     // === LONDON SESSION CYCLES ===
     if actual_show_90min
@@ -917,13 +917,13 @@ if show_day_separators and is_valid_tf
 // Day labels using plotshape at bottom of visible chart
 // Plot day names at 12:00 (noon) each day, centered in the visible area
 invisible_color = color.new(color.white, 100)
-plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.monday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="MONDAY", size=size.normal)
-plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.tuesday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="TUESDAY", size=size.normal)
-plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.wednesday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="WEDNESDAY", size=size.normal)
-plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.thursday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="THURSDAY", size=size.normal)
-plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.friday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="FRIDAY", size=size.normal)
-plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.saturday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="SATURDAY", size=size.normal)
-plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.sunday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="SUNDAY", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.monday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="Monday", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.tuesday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="Tuesday", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.wednesday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="Wednesday", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.thursday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="Thursday", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.friday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="Friday", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.saturday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="Saturday", size=size.normal)
+plotshape(show_day_labels and is_valid_tf and hour(time, "America/New_York") == 12 and minute(time, "America/New_York") == 0 and dayofweek(time, "America/New_York") == dayofweek.sunday, "", color=invisible_color, textcolor=day_separator_color, location=location.bottom, text="Sunday", size=size.normal)
 
 // Opening price lines
 if show_midnight
