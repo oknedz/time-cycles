@@ -75,6 +75,39 @@ show_prev_month_labels = input.bool(true, "Labels", group="Previous Month")
 // Box transparency
 box_transp = input.int(93, "Box Transparency", minval=0, maxval=100, group="Display Settings")
 
+// === ASSET TYPE DETECTION ===
+is_crypto = syminfo.type == "crypto"
+is_forex = syminfo.type == "forex"
+is_futures = str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or 
+             str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY") or
+             str.contains(syminfo.root, "MNQ") or str.contains(syminfo.root, "MES") or
+             syminfo.type == "futures"
+
+// === OPEN PRICE LINES ===
+// Daily Open
+show_daily_open = input.bool(false, "Daily Open", group="Daily Open")
+daily_open_color = input.color(color.yellow, "Color", group="Daily Open", inline="daily_style")
+daily_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Daily Open", inline="daily_style")
+show_daily_open_label = input.bool(true, "Label", group="Daily Open")
+
+// Weekly Open
+show_weekly_open = input.bool(false, "Weekly Open", group="Weekly Open")
+weekly_open_color = input.color(color.aqua, "Color", group="Weekly Open", inline="weekly_style")
+weekly_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Weekly Open", inline="weekly_style")
+show_weekly_open_label = input.bool(true, "Label", group="Weekly Open")
+
+// Monthly Open
+show_monthly_open = input.bool(false, "Monthly Open", group="Monthly Open")
+monthly_open_color = input.color(color.fuchsia, "Color", group="Monthly Open", inline="monthly_style")
+monthly_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Monthly Open", inline="monthly_style")
+show_monthly_open_label = input.bool(true, "Label", group="Monthly Open")
+
+// Yearly Open
+show_yearly_open = input.bool(false, "Yearly Open", group="Yearly Open")
+yearly_open_color = input.color(color.maroon, "Color", group="Yearly Open", inline="yearly_style")
+yearly_open_style = input.string(line.style_solid, "Style", options=[line.style_solid, line.style_dashed, line.style_dotted], group="Yearly Open", inline="yearly_style")
+show_yearly_open_label = input.bool(true, "Label", group="Yearly Open")
+
 // Helper function to convert time string to timestamp in NY timezone
 time_to_timestamp(h, m) =>
     ny_year = year(time, "America/New_York")
@@ -168,6 +201,119 @@ time_to_timestamp_simple(h, m) =>
     ny_month = month(time, "America/New_York") 
     ny_day = dayofmonth(time, "America/New_York")
     timestamp("America/New_York", ny_year, ny_month, ny_day, h, m, 0)
+
+// Function to create Open price lines for different asset types
+create_open_period_lines(show_lines, show_labels, line_color, line_style, period_type) =>
+    if show_lines and is_valid_tf
+        var line open_line = na
+        var label open_label = na
+        
+        // Track open prices for each period
+        var float daily_open_val = na
+        var float weekly_open_val = na
+        var float monthly_open_val = na
+        var float yearly_open_val = na
+        
+        // Determine timezone and times based on asset type
+        use_timezone = is_crypto ? "UTC" : "America/New_York"
+        
+        // Get time components in appropriate timezone
+        tz_hour = hour(time, use_timezone)
+        tz_minute = minute(time, use_timezone)
+        tz_dayofweek = dayofweek(time, use_timezone)
+        tz_dayofmonth = dayofmonth(time, use_timezone)
+        tz_month = month(time, use_timezone)
+        
+        // Define open times based on asset type
+        // Crypto: 00:00 UTC
+        // Forex: 17:00 EST (Sunday-Thursday)
+        // Futures: 18:00 EST (Sunday-Thursday)
+        daily_open_hour = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
+        daily_open_minute = 0
+        
+        // Detect period boundaries
+        is_daily_open = false
+        is_weekly_open = false
+        is_monthly_open = false
+        is_yearly_open = false
+        
+        if is_crypto
+            // Crypto: Standard UTC boundaries
+            is_daily_open := tz_hour == 0 and tz_minute == 0
+            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.monday
+            is_monthly_open := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open := is_monthly_open and tz_month == 1
+        else if is_forex
+            // Forex: Sunday 17:00 EST starts week, then daily at 17:00 EST
+            is_daily_open := tz_hour == 17 and tz_minute == 0
+            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.sunday
+            is_monthly_open := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open := is_monthly_open and tz_month == 1
+        else if is_futures
+            // Futures: Sunday 18:00 EST starts week, then daily at 18:00 EST
+            is_daily_open := tz_hour == 18 and tz_minute == 0
+            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.sunday
+            is_monthly_open := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open := is_monthly_open and tz_month == 1
+        else
+            // Default to NY timezone midnight for other instruments
+            is_daily_open := tz_hour == 0 and tz_minute == 0
+            is_weekly_open := is_daily_open and tz_dayofweek == dayofweek.monday
+            is_monthly_open := is_daily_open and tz_dayofmonth == 1
+            is_yearly_open := is_monthly_open and tz_month == 1
+        
+        // Capture open prices at period start
+        if is_daily_open
+            daily_open_val := open
+        if is_weekly_open
+            weekly_open_val := open
+        if is_monthly_open
+            monthly_open_val := open
+        if is_yearly_open
+            yearly_open_val := open
+        
+        // Get value based on period type
+        open_price = switch period_type
+            "day" => daily_open_val
+            "week" => weekly_open_val
+            "month" => monthly_open_val
+            "year" => yearly_open_val
+            => na
+        
+        // Check if new period started
+        is_new_period = switch period_type
+            "day" => is_daily_open
+            "week" => is_weekly_open
+            "month" => is_monthly_open
+            "year" => is_yearly_open
+            => false
+        
+        // Create new line and label when period starts
+        if is_new_period and not na(open_price)
+            // Delete old line and label
+            if not na(open_line)
+                line.delete(open_line)
+            if show_labels and not na(open_label)
+                label.delete(open_label)
+            
+            // Create new line starting from current bar
+            open_line := line.new(x1=bar_index, y1=open_price, x2=bar_index, y2=open_price, color=line_color, style=line_style, width=1, extend=extend.none)
+            
+            // Create label with appropriate text
+            if show_labels
+                label_text = period_type == "day" ? "DO" : period_type == "week" ? "WO" : period_type == "month" ? "MO" : "YO"
+                // Use time-based positioning with offset
+                label_time = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
+                open_label := label.new(x=label_time, y=open_price, text=label_text, color=color.new(color.white, 100), textcolor=line_color, style=label.style_label_left, size=size.small, xloc=xloc.bar_time)
+        
+        // Update existing line to extend to current bar
+        if not na(open_line) and not na(open_price)
+            line.set_x2(open_line, bar_index)
+            // Update label position using time-based positioning
+            if show_labels and not na(open_label)
+                label_time = time + (timeframe.in_seconds() * 1000 * 5) // +5 bars worth of time
+                label.set_xloc(open_label, label_time, xloc.bar_time)
+                label.set_y(open_label, open_price)
 
 // Function to create previous period High/Low lines
 create_prev_period_lines(show_lines, show_labels, line_color, line_style, period_type) =>
@@ -791,6 +937,12 @@ if show_930
 create_prev_period_lines(show_prev_day,   show_prev_day_labels,   prev_day_color,   prev_day_style, "day")
 create_prev_period_lines(show_prev_week,  show_prev_week_labels,  prev_week_color,  prev_week_style, "week")
 create_prev_period_lines(show_prev_month, show_prev_month_labels, prev_month_color, prev_month_style, "month")
+
+// Open price lines
+create_open_period_lines(show_daily_open,   show_daily_open_label,   daily_open_color,   daily_open_style, "day")
+create_open_period_lines(show_weekly_open,  show_weekly_open_label,  weekly_open_color,  weekly_open_style, "week")
+create_open_period_lines(show_monthly_open, show_monthly_open_label, monthly_open_color, monthly_open_style, "month")
+create_open_period_lines(show_yearly_open,  show_yearly_open_label,  yearly_open_color,  yearly_open_style, "year")
 
 // Display warning only for invalid timeframes
 if barstate.islast and show_warning
