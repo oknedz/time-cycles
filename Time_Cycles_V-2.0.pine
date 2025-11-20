@@ -1,0 +1,328 @@
+//@version=6
+indicator("Time Cycles V2.0", overlay=true, max_boxes_count=500, max_lines_count=200, max_labels_count=100)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TIME CYCLES V2.0 - OPTIMIZED VERSION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Timeframe validation
+tf_min = timeframe.in_seconds() / 60
+is_valid_tf = tf_min <= 240
+
+// Cycle inputs
+show_90 = input.bool(true, "90min Cycles", group="Cycles")
+show_30 = input.bool(true, "30min Cycles", group="Cycles")
+show_10 = input.bool(false, "10min Cycles", group="Cycles")
+auto_adjust = input.bool(true, "Auto-adjust for Timeframe", group="Cycles")
+
+actual_90 = auto_adjust ? (tf_min <= 240 and show_90) : show_90
+actual_30 = auto_adjust ? (tf_min <= 60 and show_30) : show_30
+actual_10 = auto_adjust ? (tf_min <= 30 and show_10) : show_10
+
+// Opening lines - Midnight
+show_midnight = input.bool(false, "Midnight", group="Opening Lines", inline="midnight1")
+midnight_color = input.color(color.black, "", group="Opening Lines", inline="midnight1")
+midnight_width = input.int(1, "Width", 1, 3, group="Opening Lines", inline="midnight2")
+midnight_style = input.string("Solid", "Style", ["Solid", "Dashed", "Dotted"], group="Opening Lines", inline="midnight2")
+
+// Opening lines - 8:30
+show_830 = input.bool(false, "8:30 Open", group="Opening Lines", inline="8301")
+color_830 = input.color(color.blue, "", group="Opening Lines", inline="8301")
+width_830 = input.int(1, "Width", 1, 3, group="Opening Lines", inline="8302")
+style_830 = input.string("Solid", "Style", ["Solid", "Dashed", "Dotted"], group="Opening Lines", inline="8302")
+
+// Opening lines - 9:30
+show_930 = input.bool(false, "9:30 Open", group="Opening Lines", inline="9301")
+color_930 = input.color(color.green, "", group="Opening Lines", inline="9301")
+width_930 = input.int(1, "Width", 1, 3, group="Opening Lines", inline="9302")
+style_930 = input.string("Solid", "Style", ["Solid", "Dashed", "Dotted"], group="Opening Lines", inline="9302")
+
+// Colors
+c_90_a = input.color(color.red, "90min A", group="Colors", inline="90")
+c_90_m = input.color(color.blue, "M", group="Colors", inline="90")
+c_90_d = input.color(color.green, "D", group="Colors", inline="90")
+c_30 = input.color(color.gray, "30min", group="Colors")
+c_10 = input.color(color.gray, "10min", group="Colors")
+c_london_or = input.color(color.orange, "London OR", group="Colors")
+c_asia = input.color(color.purple, "Asia", group="Colors")
+
+// Day separator
+show_day_sep = input.bool(true, "Day Separator", group="Day")
+day_sep_color = input.color(color.gray, "Color", group="Day", inline="d")
+day_sep_style = input.string(line.style_dotted, "Style", [line.style_solid, line.style_dashed, line.style_dotted], group="Day", inline="d")
+show_day_labels = input.bool(true, "Labels", group="Day")
+
+// Period Opens
+show_daily = input.bool(false, "Daily Open", group="Period Opens", inline="do1")
+color_daily = input.color(color.yellow, "", group="Period Opens", inline="do1")
+width_daily = input.int(1, "Width", 1, 3, group="Period Opens", inline="do2")
+style_daily = input.string("Solid", "Style", ["Solid", "Dashed", "Dotted"], group="Period Opens", inline="do2")
+
+show_weekly = input.bool(false, "Weekly Open", group="Period Opens", inline="wo1")
+color_weekly = input.color(color.blue, "", group="Period Opens", inline="wo1")
+width_weekly = input.int(1, "Width", 1, 3, group="Period Opens", inline="wo2")
+style_weekly = input.string("Solid", "Style", ["Solid", "Dashed", "Dotted"], group="Period Opens", inline="wo2")
+
+
+// Previous period H/L
+show_prev_day = input.bool(false, "Prev Day H/L", group="Previous Levels", inline="pdhl1")
+color_prev_day = input.color(color.gray, "", group="Previous Levels", inline="pdhl1")
+width_prev_day = input.int(1, "Width", 1, 3, group="Previous Levels", inline="pdhl2")
+style_prev_day = input.string("Dashed", "Style", ["Solid", "Dashed", "Dotted"], group="Previous Levels", inline="pdhl2")
+
+show_prev_week = input.bool(false, "Prev Week H/L", group="Previous Levels", inline="pwhl1")
+color_prev_week = input.color(color.blue, "", group="Previous Levels", inline="pwhl1")
+width_prev_week = input.int(1, "Width", 1, 3, group="Previous Levels", inline="pwhl2")
+style_prev_week = input.string("Dashed", "Style", ["Solid", "Dashed", "Dotted"], group="Previous Levels", inline="pwhl2")
+
+// Display
+box_transp = input.int(88, "Box Transparency", 0, 100, group="Display")
+
+// Asset detection
+is_crypto = syminfo.type == "crypto"
+is_forex = syminfo.type == "forex"
+is_futures = str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or 
+             str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY") or
+             str.contains(syminfo.root, "MNQ") or str.contains(syminfo.root, "MES") or
+             syminfo.type == "futures"
+
+
+// NY timezone cached
+ny_h = hour(time, "America/New_York")
+ny_m = minute(time, "America/New_York")
+ny_y = year(time, "America/New_York")
+ny_mo = month(time, "America/New_York")
+ny_d = dayofmonth(time, "America/New_York")
+
+// Cycle function - optimized with pre-calculated timezone vars
+cycle(sh, sm, eh, em, col, pivots) =>
+    start_time = timestamp("America/New_York", ny_y, ny_mo, ny_d, sh, sm, 0)
+    end_time = timestamp("America/New_York", ny_y, ny_mo, ny_d + (eh < sh ? 1 : 0), eh, em, 0)
+    var float sess_h = na, var float sess_l = na, var int sess_sb = na, var bool sess_active = false, var box curr_box = na
+    in_sess = time >= start_time and time < end_time
+    if in_sess and not sess_active
+        sess_h := high, sess_l := low, sess_sb := bar_index, sess_active := true
+        curr_box := box.new(sess_sb, sess_h, bar_index, sess_l, bgcolor=color.new(col, box_transp), border_width=0)
+    if sess_active and in_sess and not na(curr_box)
+        sess_h := math.max(sess_h, high), sess_l := math.min(sess_l, low)
+        box.set_top(curr_box, sess_h), box.set_bottom(curr_box, sess_l), box.set_right(curr_box, bar_index)
+    if sess_active and not in_sess and not na(sess_sb)
+        if not na(curr_box)
+            box.set_right(curr_box, bar_index - 1)
+        sess_h := na, sess_l := na, sess_sb := na, sess_active := false, curr_box := na
+
+// Helper functions
+get_line_style(s) => s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
+
+// Midnight line
+var line midnight_ln = na, var label midnight_lbl = na
+if show_midnight and is_valid_tf and ny_h == 0 and ny_m == 0
+    if not na(midnight_ln)
+        line.delete(midnight_ln)
+    if not na(midnight_lbl)
+        label.delete(midnight_lbl)
+    midnight_ln := line.new(bar_index, open, bar_index, open, color=midnight_color, width=midnight_width, style=get_line_style(midnight_style))
+    midnight_lbl := label.new(bar_index, open, "00:00", color=color.new(color.white, 100), textcolor=midnight_color, style=label.style_label_left, size=size.small)
+if not na(midnight_ln)
+    line.set_x2(midnight_ln, bar_index)
+    if not na(midnight_lbl)
+        label.set_x(midnight_lbl, bar_index)
+        label.set_y(midnight_lbl, line.get_y1(midnight_ln))
+
+// Day separator
+if is_valid_tf and show_day_sep and ny_h == 0 and ny_m == 0
+    line.new(bar_index, low, bar_index, high, color=day_sep_color, style=day_sep_style, width=1, extend=extend.both)
+
+// Day labels - positioned at noon using plotshape
+dow = dayofweek(time, "America/New_York")
+label_hour = 12
+invisible = color.new(color.white, 100)
+show_day_label = show_day_labels and is_valid_tf and ny_h == label_hour and ny_m == 0
+
+plotshape(show_day_label and dow == dayofweek.sunday, "", color=invisible, textcolor=day_sep_color, location=location.bottom, text="Sunday", size=size.tiny)
+plotshape(show_day_label and dow == dayofweek.monday, "", color=invisible, textcolor=day_sep_color, location=location.bottom, text="Monday", size=size.tiny)
+plotshape(show_day_label and dow == dayofweek.tuesday, "", color=invisible, textcolor=day_sep_color, location=location.bottom, text="Tuesday", size=size.tiny)
+plotshape(show_day_label and dow == dayofweek.wednesday, "", color=invisible, textcolor=day_sep_color, location=location.bottom, text="Wednesday", size=size.tiny)
+plotshape(show_day_label and dow == dayofweek.thursday, "", color=invisible, textcolor=day_sep_color, location=location.bottom, text="Thursday", size=size.tiny)
+plotshape(show_day_label and dow == dayofweek.friday, "", color=invisible, textcolor=day_sep_color, location=location.bottom, text="Friday", size=size.tiny)
+plotshape(show_day_label and dow == dayofweek.saturday, "", color=invisible, textcolor=day_sep_color, location=location.bottom, text="Saturday", size=size.tiny)
+
+// Opening lines - separate storage for each period
+open_line(period, show_it, col, wid, st) =>
+    if show_it and is_valid_tf
+        var line ln = na, var label lbl = na
+        var float daily_val = na, var float weekly_val = na
+        tz = is_crypto ? "UTC" : "America/New_York"
+        h = hour(time, tz), m = minute(time, tz), day_of_week = dayofweek(time, tz)
+        open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
+        is_d = h == open_h and m == 0
+        is_w = is_d and (is_crypto or is_forex or is_futures ? day_of_week == dayofweek.sunday : day_of_week == dayofweek.monday)
+        
+        if is_d
+            daily_val := open
+        if is_w
+            weekly_val := open
+        
+        val = period == "day" ? daily_val : weekly_val
+        is_new = (period == "day" and is_d) or (period == "week" and is_w)
+        
+        if is_new and not na(val)
+            if not na(ln)
+                line.delete(ln)
+            if not na(lbl)
+                label.delete(lbl)
+            ln := line.new(bar_index, val, bar_index, val, color=col, width=1, style=get_line_style(st))
+            txt = period == "day" ? "D.O." : "W.O."
+            lbl := label.new(bar_index, val, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+        
+        if not na(ln) and not na(val)
+            line.set_x2(ln, bar_index)
+            if not na(lbl)
+                label.set_x(lbl, bar_index)
+                label.set_y(lbl, val)
+
+open_line("day", show_daily, color_daily, width_daily, style_daily)
+open_line("week", show_weekly, color_weekly, width_weekly, style_weekly)
+
+// 8:30 and 9:30 opening lines
+var line line_830 = na, var label lbl_830 = na, var line line_930 = na, var label lbl_930 = na, var bool stop_830 = false, var bool stop_930 = false
+if is_valid_tf and show_830 and ny_h == 8 and ny_m == 30
+    if not na(line_830)
+        line.delete(line_830)
+    if not na(lbl_830)
+        label.delete(lbl_830)
+    line_830 := line.new(bar_index, open, bar_index, open, color=color_830, width=width_830, style=get_line_style(style_830))
+    lbl_830 := label.new(bar_index, open, "8:30", color=color.new(color.white, 100), textcolor=color_830, style=label.style_label_left, size=size.small)
+    stop_830 := false
+if is_valid_tf and show_930 and ny_h == 9 and ny_m == 30
+    if not na(line_930)
+        line.delete(line_930)
+    if not na(lbl_930)
+        label.delete(lbl_930)
+    line_930 := line.new(bar_index, open, bar_index, open, color=color_930, width=width_930, style=get_line_style(style_930))
+    lbl_930 := label.new(bar_index, open, "9:30", color=color.new(color.white, 100), textcolor=color_930, style=label.style_label_left, size=size.small)
+    stop_930 := false
+if ny_h == 16 and ny_m == 0
+    stop_830 := true
+    stop_930 := true
+if not na(line_830) and not stop_830
+    line.set_x2(line_830, bar_index)
+    if not na(lbl_830)
+        label.set_x(lbl_830, bar_index)
+        label.set_y(lbl_830, line.get_y1(line_830))
+if not na(line_930) and not stop_930
+    line.set_x2(line_930, bar_index)
+    if not na(lbl_930)
+        label.set_x(lbl_930, bar_index)
+        label.set_y(lbl_930, line.get_y1(line_930))
+
+// Previous period H/L - Only Day and Week
+var line pdh_ln = na, var line pdl_ln = na, var label pdh_lbl = na, var label pdl_lbl = na
+var line pwh_ln = na, var line pwl_ln = na, var label pwh_lbl = na, var label pwl_lbl = na
+var float prev_day_h = na, var float prev_day_l = na, var float prev_week_h = na, var float prev_week_l = na
+var float curr_day_h = na, var float curr_day_l = na, var float curr_week_h = na, var float curr_week_l = na
+
+if is_valid_tf
+    is_new_d = ny_h == 0 and ny_m == 0
+    is_new_w = is_new_d and dayofweek(time, "America/New_York") == dayofweek.monday
+    
+    // Update current day H/L
+    if na(curr_day_h) or is_new_d
+        curr_day_h := high, curr_day_l := low
+    else
+        curr_day_h := math.max(curr_day_h, high), curr_day_l := math.min(curr_day_l, low)
+    
+    // Update current week H/L
+    if na(curr_week_h) or is_new_w
+        curr_week_h := high, curr_week_l := low
+    else
+        curr_week_h := math.max(curr_week_h, high), curr_week_l := math.min(curr_week_l, low)
+    
+    // Store previous values when new period starts
+    if is_new_d
+        prev_day_h := curr_day_h[1], prev_day_l := curr_day_l[1]
+    if is_new_w
+        prev_week_h := curr_week_h[1], prev_week_l := curr_week_l[1]
+    
+    // Draw Previous Day H/L
+    if show_prev_day and is_new_d and not na(prev_day_h) and not na(prev_day_l)
+        if not na(pdh_ln)
+            line.delete(pdh_ln)
+            line.delete(pdl_ln)
+        if not na(pdh_lbl)
+            label.delete(pdh_lbl)
+            label.delete(pdl_lbl)
+        pdh_ln := line.new(bar_index, prev_day_h, bar_index, prev_day_h, color=color_prev_day, style=get_line_style(style_prev_day), width=width_prev_day)
+        pdl_ln := line.new(bar_index, prev_day_l, bar_index, prev_day_l, color=color_prev_day, style=get_line_style(style_prev_day), width=width_prev_day)
+        pdh_lbl := label.new(bar_index, prev_day_h, "PDH", color=color.new(color.white, 100), textcolor=color_prev_day, style=label.style_label_left, size=size.small)
+        pdl_lbl := label.new(bar_index, prev_day_l, "PDL", color=color.new(color.white, 100), textcolor=color_prev_day, style=label.style_label_left, size=size.small)
+    if show_prev_day and not na(pdh_ln) and not na(pdl_ln)
+        line.set_x2(pdh_ln, bar_index)
+        line.set_x2(pdl_ln, bar_index)
+        if not na(pdh_lbl) and not na(pdl_lbl)
+            label.set_x(pdh_lbl, bar_index)
+            label.set_y(pdh_lbl, prev_day_h)
+            label.set_x(pdl_lbl, bar_index)
+            label.set_y(pdl_lbl, prev_day_l)
+    
+    // Draw Previous Week H/L
+    if show_prev_week and is_new_w and not na(prev_week_h) and not na(prev_week_l)
+        if not na(pwh_ln)
+            line.delete(pwh_ln)
+            line.delete(pwl_ln)
+        if not na(pwh_lbl)
+            label.delete(pwh_lbl)
+            label.delete(pwl_lbl)
+        pwh_ln := line.new(bar_index, prev_week_h, bar_index, prev_week_h, color=color_prev_week, style=get_line_style(style_prev_week), width=width_prev_week)
+        pwl_ln := line.new(bar_index, prev_week_l, bar_index, prev_week_l, color=color_prev_week, style=get_line_style(style_prev_week), width=width_prev_week)
+        pwh_lbl := label.new(bar_index, prev_week_h, "PWH", color=color.new(color.white, 100), textcolor=color_prev_week, style=label.style_label_left, size=size.small)
+        pwl_lbl := label.new(bar_index, prev_week_l, "PWL", color=color.new(color.white, 100), textcolor=color_prev_week, style=label.style_label_left, size=size.small)
+    if show_prev_week and not na(pwh_ln) and not na(pwl_ln)
+        line.set_x2(pwh_ln, bar_index)
+        line.set_x2(pwl_ln, bar_index)
+        if not na(pwh_lbl) and not na(pwl_lbl)
+            label.set_x(pwh_lbl, bar_index)
+            label.set_y(pwh_lbl, prev_week_h)
+            label.set_x(pwl_lbl, bar_index)
+            label.set_y(pwl_lbl, prev_week_l)
+
+// Asia session as box
+if is_valid_tf
+    cycle(20, 0, 0, 0, c_asia, false)
+
+// Execute cycles
+if is_valid_tf
+    if actual_30
+        cycle(1, 30, 2, 0, c_london_or, false)
+    if actual_90
+        cycle(2, 30, 4, 0, c_90_a, false), cycle(4, 0, 5, 30, c_90_m, false), cycle(5, 30, 7, 0, c_90_d, false)
+        cycle(7, 0, 8, 30, c_90_a, false), cycle(8, 30, 10, 0, c_90_m, false), cycle(10, 0, 11, 30, c_90_d, false)
+        cycle(11, 30, 13, 0, c_90_a, false), cycle(13, 0, 14, 30, c_90_m, false), cycle(14, 30, 16, 0, c_90_d, false)
+    if actual_30
+        cycle(2, 30, 3, 0, c_30, false), cycle(3, 0, 3, 30, c_30, false), cycle(3, 30, 4, 0, c_30, false), cycle(4, 0, 4, 30, c_30, false), cycle(4, 30, 5, 0, c_30, false), cycle(5, 0, 5, 30, c_30, false)
+        cycle(5, 30, 6, 0, c_30, false), cycle(6, 0, 6, 30, c_30, false), cycle(6, 30, 7, 0, c_30, false), cycle(7, 0, 7, 30, c_30, false), cycle(7, 30, 8, 0, c_30, false), cycle(8, 0, 8, 30, c_30, false)
+        cycle(8, 30, 9, 0, c_30, false), cycle(9, 0, 9, 30, c_30, false), cycle(9, 30, 10, 0, c_30, false), cycle(10, 0, 10, 30, c_30, false), cycle(10, 30, 11, 0, c_30, false), cycle(11, 0, 11, 30, c_30, false)
+        cycle(11, 30, 12, 0, c_30, false), cycle(12, 0, 12, 30, c_30, false), cycle(12, 30, 13, 0, c_30, false), cycle(13, 0, 13, 30, c_30, false), cycle(13, 30, 14, 0, c_30, false), cycle(14, 0, 14, 30, c_30, false)
+        cycle(14, 30, 15, 0, c_30, false), cycle(15, 0, 15, 30, c_30, false), cycle(15, 30, 16, 0, c_30, false)
+    if actual_10
+        cycle(1, 30, 1, 40, c_10, false), cycle(1, 40, 1, 50, c_10, false), cycle(1, 50, 2, 0, c_10, false), cycle(2, 30, 2, 40, c_10, false), cycle(2, 40, 2, 50, c_10, false), cycle(2, 50, 3, 0, c_10, false)
+        cycle(3, 0, 3, 10, c_10, false), cycle(3, 10, 3, 20, c_10, false), cycle(3, 20, 3, 30, c_10, false), cycle(3, 30, 3, 40, c_10, false), cycle(3, 40, 3, 50, c_10, false), cycle(3, 50, 4, 0, c_10, false)
+        cycle(4, 0, 4, 10, c_10, false), cycle(4, 10, 4, 20, c_10, false), cycle(4, 20, 4, 30, c_10, false), cycle(4, 30, 4, 40, c_10, false), cycle(4, 40, 4, 50, c_10, false), cycle(4, 50, 5, 0, c_10, false)
+        cycle(5, 0, 5, 10, c_10, false), cycle(5, 10, 5, 20, c_10, false), cycle(5, 20, 5, 30, c_10, false), cycle(5, 30, 5, 40, c_10, false), cycle(5, 40, 5, 50, c_10, false), cycle(5, 50, 6, 0, c_10, false)
+        cycle(6, 0, 6, 10, c_10, false), cycle(6, 10, 6, 20, c_10, false), cycle(6, 20, 6, 30, c_10, false), cycle(6, 30, 6, 40, c_10, false), cycle(6, 40, 6, 50, c_10, false), cycle(6, 50, 7, 0, c_10, false)
+        cycle(7, 0, 7, 10, c_10, false), cycle(7, 10, 7, 20, c_10, false), cycle(7, 20, 7, 30, c_10, false), cycle(7, 30, 7, 40, c_10, false), cycle(7, 40, 7, 50, c_10, false), cycle(7, 50, 8, 0, c_10, false)
+        cycle(8, 0, 8, 10, c_10, false), cycle(8, 10, 8, 20, c_10, false), cycle(8, 20, 8, 30, c_10, false), cycle(8, 30, 8, 40, c_10, false), cycle(8, 40, 8, 50, c_10, false), cycle(8, 50, 9, 0, c_10, false)
+        cycle(9, 0, 9, 10, c_10, false), cycle(9, 10, 9, 20, c_10, false), cycle(9, 20, 9, 30, c_10, false), cycle(9, 30, 9, 40, c_10, false), cycle(9, 40, 9, 50, c_10, false), cycle(9, 50, 10, 0, c_10, false)
+        cycle(10, 0, 10, 10, c_10, false), cycle(10, 10, 10, 20, c_10, false), cycle(10, 20, 10, 30, c_10, false), cycle(10, 30, 10, 40, c_10, false), cycle(10, 40, 10, 50, c_10, false), cycle(10, 50, 11, 0, c_10, false)
+        cycle(11, 0, 11, 10, c_10, false), cycle(11, 10, 11, 20, c_10, false), cycle(11, 20, 11, 30, c_10, false), cycle(11, 30, 11, 40, c_10, false), cycle(11, 40, 11, 50, c_10, false), cycle(11, 50, 12, 0, c_10, false)
+        cycle(12, 0, 12, 10, c_10, false), cycle(12, 10, 12, 20, c_10, false), cycle(12, 20, 12, 30, c_10, false), cycle(12, 30, 12, 40, c_10, false), cycle(12, 40, 12, 50, c_10, false), cycle(12, 50, 13, 0, c_10, false)
+        cycle(13, 0, 13, 10, c_10, false), cycle(13, 10, 13, 20, c_10, false), cycle(13, 20, 13, 30, c_10, false), cycle(13, 30, 13, 40, c_10, false), cycle(13, 40, 13, 50, c_10, false), cycle(13, 50, 14, 0, c_10, false)
+        cycle(14, 0, 14, 10, c_10, false), cycle(14, 10, 14, 20, c_10, false), cycle(14, 20, 14, 30, c_10, false), cycle(14, 30, 14, 40, c_10, false), cycle(14, 40, 14, 50, c_10, false), cycle(14, 50, 15, 0, c_10, false)
+        cycle(15, 0, 15, 10, c_10, false), cycle(15, 10, 15, 20, c_10, false), cycle(15, 20, 15, 30, c_10, false), cycle(15, 30, 15, 40, c_10, false), cycle(15, 40, 15, 50, c_10, false), cycle(15, 50, 16, 0, c_10, false)
+
+// Warning
+var label warning = na
+if tf_min > 240 and barstate.islast
+    if not na(warning)
+        label.delete(warning)
+    warning := label.new(bar_index + 5, close, "⚠️ Use 4H or lower", color=color.new(color.red, 30), textcolor=color.white, style=label.style_label_left, size=size.small)
