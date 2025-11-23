@@ -14,6 +14,7 @@ show_90 = input.bool(true, "90min Cycles", group="Cycles")
 show_30 = input.bool(true, "30min Cycles", group="Cycles")
 show_10 = input.bool(false, "10min Cycles", group="Cycles")
 auto_adjust = input.bool(true, "Auto-adjust for Timeframe", group="Cycles")
+show_macro = input.bool(false, "MACRO (xx:42-xx:15)", group="Cycles")
 
 actual_90 = auto_adjust ? (tf_min <= 240 and show_90) : show_90
 actual_30 = auto_adjust ? (tf_min <= 60 and show_30) : show_30
@@ -94,22 +95,67 @@ ny_y = year(time, "America/New_York")
 ny_mo = month(time, "America/New_York")
 ny_d = dayofmonth(time, "America/New_York")
 
-// Cycle function - optimized with pre-calculated timezone vars
-cycle(sh, sm, eh, em, col, pivots) =>
-    start_time = timestamp("America/New_York", ny_y, ny_mo, ny_d, sh, sm, 0)
-    end_time = timestamp("America/New_York", ny_y, ny_mo, ny_d + (eh < sh ? 1 : 0), eh, em, 0)
-    var float sess_h = na, var float sess_l = na, var int sess_sb = na, var bool sess_active = false, var box curr_box = na
-    in_sess = time >= start_time and time < end_time
-    if in_sess and not sess_active
-        sess_h := high, sess_l := low, sess_sb := bar_index, sess_active := true
-        curr_box := box.new(sess_sb, sess_h, bar_index, sess_l, bgcolor=color.new(col, box_transp), border_width=0)
-    if sess_active and in_sess and not na(curr_box)
-        sess_h := math.max(sess_h, high), sess_l := math.min(sess_l, low)
-        box.set_top(curr_box, sess_h), box.set_bottom(curr_box, sess_l), box.set_right(curr_box, bar_index)
-    if sess_active and not in_sess and not na(sess_sb)
-        if not na(curr_box)
-            box.set_right(curr_box, bar_index - 1)
-        sess_h := na, sess_l := na, sess_sb := na, sess_active := false, curr_box := na
+// Optimized Cycle Logic
+type CycleState
+    box active_box
+    int cycle_idx
+    float h
+    float l
+    bool is_active
+
+var CycleState s_90 = CycleState.new(na, -1, na, na, false)
+var CycleState s_30 = CycleState.new(na, -1, na, na, false)
+var CycleState s_10 = CycleState.new(na, -1, na, na, false)
+var CycleState s_asia = CycleState.new(na, -1, na, na, false)
+var CycleState s_london = CycleState.new(na, -1, na, na, false)
+
+// Pre-allocate color arrays
+var a_90_cols = array.from(c_90_a, c_90_m, c_90_d)
+var a_30_cols = array.from(c_30)
+var a_10_cols = array.from(c_10)
+
+get_ny_minutes() => ny_h * 60 + ny_m
+
+process_single_cycle(CycleState s, int start_m, int end_m, color col) =>
+    ny_mins = get_ny_minutes()
+    in_window = start_m > end_m ? (ny_mins >= start_m or ny_mins < end_m) : (ny_mins >= start_m and ny_mins < end_m)
+    
+    if in_window
+        if not s.is_active
+            s.is_active := true
+            s.h := high, s.l := low
+            s.active_box := box.new(bar_index, s.h, bar_index, s.l, bgcolor=color.new(col, box_transp), border_width=0)
+        else
+            s.h := math.max(s.h, high), s.l := math.min(s.l, low)
+            box.set_top(s.active_box, s.h), box.set_bottom(s.active_box, s.l), box.set_right(s.active_box, bar_index)
+    else
+        if s.is_active
+            s.is_active := false
+            if not na(s.active_box)
+                box.set_right(s.active_box, bar_index - 1)
+            s.active_box := na
+    int(na)
+
+process_dynamic_cycles(CycleState s, int start_m, int end_m, int period_m, array<color> cols) =>
+    ny_mins = get_ny_minutes()
+    if ny_mins >= start_m and ny_mins < end_m
+        curr_idx = math.floor((ny_mins - start_m) / period_m)
+        if curr_idx != s.cycle_idx
+            if not na(s.active_box)
+                box.set_right(s.active_box, bar_index - 1)
+            s.cycle_idx := curr_idx
+            s.h := high, s.l := low
+            col = cols.get(curr_idx % cols.size())
+            s.active_box := box.new(bar_index, s.h, bar_index, s.l, bgcolor=color.new(col, box_transp), border_width=0)
+        else
+            s.h := math.max(s.h, high), s.l := math.min(s.l, low)
+            box.set_top(s.active_box, s.h), box.set_bottom(s.active_box, s.l), box.set_right(s.active_box, bar_index)
+    else
+        if not na(s.active_box)
+            box.set_right(s.active_box, bar_index - 1)
+            s.active_box := na
+        s.cycle_idx := -1
+    int(na)
 
 // Helper functions
 get_line_style(s) => s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
@@ -288,41 +334,67 @@ if is_valid_tf
 
 // Asia session as box
 if is_valid_tf
-    cycle(20, 0, 0, 0, c_asia, false)
+    process_single_cycle(s_asia, 1200, 0, c_asia)
 
 // Execute cycles
 if is_valid_tf
     if actual_30
-        cycle(1, 30, 2, 0, c_london_or, false)
+        process_single_cycle(s_london, 90, 120, c_london_or)
+        process_dynamic_cycles(s_30, 150, 960, 30, a_30_cols)
+    
     if actual_90
-        cycle(2, 30, 4, 0, c_90_a, false), cycle(4, 0, 5, 30, c_90_m, false), cycle(5, 30, 7, 0, c_90_d, false)
-        cycle(7, 0, 8, 30, c_90_a, false), cycle(8, 30, 10, 0, c_90_m, false), cycle(10, 0, 11, 30, c_90_d, false)
-        cycle(11, 30, 13, 0, c_90_a, false), cycle(13, 0, 14, 30, c_90_m, false), cycle(14, 30, 16, 0, c_90_d, false)
-    if actual_30
-        cycle(2, 30, 3, 0, c_30, false), cycle(3, 0, 3, 30, c_30, false), cycle(3, 30, 4, 0, c_30, false), cycle(4, 0, 4, 30, c_30, false), cycle(4, 30, 5, 0, c_30, false), cycle(5, 0, 5, 30, c_30, false)
-        cycle(5, 30, 6, 0, c_30, false), cycle(6, 0, 6, 30, c_30, false), cycle(6, 30, 7, 0, c_30, false), cycle(7, 0, 7, 30, c_30, false), cycle(7, 30, 8, 0, c_30, false), cycle(8, 0, 8, 30, c_30, false)
-        cycle(8, 30, 9, 0, c_30, false), cycle(9, 0, 9, 30, c_30, false), cycle(9, 30, 10, 0, c_30, false), cycle(10, 0, 10, 30, c_30, false), cycle(10, 30, 11, 0, c_30, false), cycle(11, 0, 11, 30, c_30, false)
-        cycle(11, 30, 12, 0, c_30, false), cycle(12, 0, 12, 30, c_30, false), cycle(12, 30, 13, 0, c_30, false), cycle(13, 0, 13, 30, c_30, false), cycle(13, 30, 14, 0, c_30, false), cycle(14, 0, 14, 30, c_30, false)
-        cycle(14, 30, 15, 0, c_30, false), cycle(15, 0, 15, 30, c_30, false), cycle(15, 30, 16, 0, c_30, false)
-    if actual_10
-        cycle(1, 30, 1, 40, c_10, false), cycle(1, 40, 1, 50, c_10, false), cycle(1, 50, 2, 0, c_10, false), cycle(2, 30, 2, 40, c_10, false), cycle(2, 40, 2, 50, c_10, false), cycle(2, 50, 3, 0, c_10, false)
-        cycle(3, 0, 3, 10, c_10, false), cycle(3, 10, 3, 20, c_10, false), cycle(3, 20, 3, 30, c_10, false), cycle(3, 30, 3, 40, c_10, false), cycle(3, 40, 3, 50, c_10, false), cycle(3, 50, 4, 0, c_10, false)
-        cycle(4, 0, 4, 10, c_10, false), cycle(4, 10, 4, 20, c_10, false), cycle(4, 20, 4, 30, c_10, false), cycle(4, 30, 4, 40, c_10, false), cycle(4, 40, 4, 50, c_10, false), cycle(4, 50, 5, 0, c_10, false)
-        cycle(5, 0, 5, 10, c_10, false), cycle(5, 10, 5, 20, c_10, false), cycle(5, 20, 5, 30, c_10, false), cycle(5, 30, 5, 40, c_10, false), cycle(5, 40, 5, 50, c_10, false), cycle(5, 50, 6, 0, c_10, false)
-        cycle(6, 0, 6, 10, c_10, false), cycle(6, 10, 6, 20, c_10, false), cycle(6, 20, 6, 30, c_10, false), cycle(6, 30, 6, 40, c_10, false), cycle(6, 40, 6, 50, c_10, false), cycle(6, 50, 7, 0, c_10, false)
-        cycle(7, 0, 7, 10, c_10, false), cycle(7, 10, 7, 20, c_10, false), cycle(7, 20, 7, 30, c_10, false), cycle(7, 30, 7, 40, c_10, false), cycle(7, 40, 7, 50, c_10, false), cycle(7, 50, 8, 0, c_10, false)
-        cycle(8, 0, 8, 10, c_10, false), cycle(8, 10, 8, 20, c_10, false), cycle(8, 20, 8, 30, c_10, false), cycle(8, 30, 8, 40, c_10, false), cycle(8, 40, 8, 50, c_10, false), cycle(8, 50, 9, 0, c_10, false)
-        cycle(9, 0, 9, 10, c_10, false), cycle(9, 10, 9, 20, c_10, false), cycle(9, 20, 9, 30, c_10, false), cycle(9, 30, 9, 40, c_10, false), cycle(9, 40, 9, 50, c_10, false), cycle(9, 50, 10, 0, c_10, false)
-        cycle(10, 0, 10, 10, c_10, false), cycle(10, 10, 10, 20, c_10, false), cycle(10, 20, 10, 30, c_10, false), cycle(10, 30, 10, 40, c_10, false), cycle(10, 40, 10, 50, c_10, false), cycle(10, 50, 11, 0, c_10, false)
-        cycle(11, 0, 11, 10, c_10, false), cycle(11, 10, 11, 20, c_10, false), cycle(11, 20, 11, 30, c_10, false), cycle(11, 30, 11, 40, c_10, false), cycle(11, 40, 11, 50, c_10, false), cycle(11, 50, 12, 0, c_10, false)
-        cycle(12, 0, 12, 10, c_10, false), cycle(12, 10, 12, 20, c_10, false), cycle(12, 20, 12, 30, c_10, false), cycle(12, 30, 12, 40, c_10, false), cycle(12, 40, 12, 50, c_10, false), cycle(12, 50, 13, 0, c_10, false)
-        cycle(13, 0, 13, 10, c_10, false), cycle(13, 10, 13, 20, c_10, false), cycle(13, 20, 13, 30, c_10, false), cycle(13, 30, 13, 40, c_10, false), cycle(13, 40, 13, 50, c_10, false), cycle(13, 50, 14, 0, c_10, false)
-        cycle(14, 0, 14, 10, c_10, false), cycle(14, 10, 14, 20, c_10, false), cycle(14, 20, 14, 30, c_10, false), cycle(14, 30, 14, 40, c_10, false), cycle(14, 40, 14, 50, c_10, false), cycle(14, 50, 15, 0, c_10, false)
-        cycle(15, 0, 15, 10, c_10, false), cycle(15, 10, 15, 20, c_10, false), cycle(15, 20, 15, 30, c_10, false), cycle(15, 30, 15, 40, c_10, false), cycle(15, 40, 15, 50, c_10, false), cycle(15, 50, 16, 0, c_10, false)
+        process_dynamic_cycles(s_90, 150, 960, 90, a_90_cols)
 
-// Warning
-var label warning = na
-if tf_min > 240 and barstate.islast
-    if not na(warning)
-        label.delete(warning)
-    warning := label.new(bar_index + 5, close, "⚠️ Use 4H or lower", color=color.new(color.red, 30), textcolor=color.white, style=label.style_label_left, size=size.small)
+    if actual_10
+        process_dynamic_cycles(s_10, 90, 960, 10, a_10_cols)
+
+// 90min Cycle Alerts - First 6 cycles (trigger once when time changes)
+var bool alerted_c1 = false, var bool alerted_c2 = false, var bool alerted_c3 = false
+var bool alerted_c4 = false, var bool alerted_c5 = false, var bool alerted_c6 = false
+
+if actual_90 and is_valid_tf
+    if ny_h == 2 and ny_m == 30 and not alerted_c1
+        alert("90min Cycle 1 Started (2:30 AM)", alert.freq_once_per_bar)
+        alerted_c1 := true
+    if ny_h == 4 and ny_m == 0 and not alerted_c2
+        alert("90min Cycle 2 Started (4:00 AM)", alert.freq_once_per_bar)
+        alerted_c2 := true
+    if ny_h == 5 and ny_m == 30 and not alerted_c3
+        alert("90min Cycle 3 Started (5:30 AM)", alert.freq_once_per_bar)
+        alerted_c3 := true
+    if ny_h == 7 and ny_m == 0 and not alerted_c4
+        alert("90min Cycle 4 Started (7:00 AM)", alert.freq_once_per_bar)
+        alerted_c4 := true
+    if ny_h == 8 and ny_m == 30 and not alerted_c5
+        alert("90min Cycle 5 Started (8:30 AM)", alert.freq_once_per_bar)
+        alerted_c5 := true
+    if ny_h == 10 and ny_m == 0 and not alerted_c6
+        alert("90min Cycle 6 Started (10:00 AM)", alert.freq_once_per_bar)
+        alerted_c6 := true
+    
+    // Reset flags daily at midnight
+    if ny_h == 0 and ny_m == 0
+        alerted_c1 := false, alerted_c2 := false, alerted_c3 := false
+        alerted_c4 := false, alerted_c5 := false, alerted_c6 := false
+
+// MACRO - xx:42 to xx:15 (next hour)
+var float macro_high = na, var int macro_start_h = na, var line macro_ln = na, var label macro_lbl = na
+if show_macro and is_valid_tf
+    pip_offset = syminfo.mintick * 10
+    label_offset = syminfo.mintick * 12
+    in_macro = (ny_m >= 42) or (ny_m <= 15)
+    if in_macro
+        start_h = ny_m >= 42 ? ny_h : ny_h - 1
+        if na(macro_high) or start_h != macro_start_h
+            macro_high := high, macro_start_h := start_h
+            line_start = bar_index
+            macro_ln := line.new(line_start, macro_high + pip_offset, line_start, macro_high + pip_offset, color=color.black, width=2)
+            end_h = start_h + 1
+            macro_lbl := label.new(line_start, macro_high + pip_offset + label_offset, "MACRO " + str.tostring(start_h) + ":42 - " + str.tostring(end_h) + ":15", color=color.new(color.white, 100), textcolor=color.black, style=label.style_label_lower_left, size=size.small)
+        else
+            macro_high := math.max(macro_high, high)
+            line.set_y1(macro_ln, macro_high + pip_offset), line.set_y2(macro_ln, macro_high + pip_offset), line.set_x2(macro_ln, bar_index)
+            label.set_y(macro_lbl, macro_high + pip_offset + label_offset)
+    else
+        macro_high := na, macro_start_h := na, macro_ln := na, macro_lbl := na
+
