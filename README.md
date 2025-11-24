@@ -7,12 +7,6 @@ Pine Script v6 indicator for drawing session-based time cycles:
 - Configurable colors, transparency, and timeframe limits
 
 Main file: `time-cycles.pine`
-Documentation: `pine-docs.md`
+Documentation: `pine-documentation-llm.md`
 
-## Quick Start
-1. Copy `time-cycles.pine` into TradingView Pine Editor.
-2. Save and add to chart.
-3. Adjust inputs as desired.
 
-## License
-Choose a license if you plan to publish (e.g., MIT).
