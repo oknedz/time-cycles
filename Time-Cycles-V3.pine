@@ -22,6 +22,11 @@ c_mid = input.color(color.black, "", group=grp_ol, inline="mid")
 w_mid = input.int(1, "", 1, 3, group=grp_ol, inline="mid")
 s_mid = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="mid")
 
+show_90_open = input.bool(false, "90min Cycle Opens", group=grp_ol, inline="90open")
+c_90_open = input.color(color.orange, "", group=grp_ol, inline="90open")
+w_90_open = input.int(1, "", 1, 3, group=grp_ol, inline="90open")
+s_90_open = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="90open")
+
 show_830 = input.bool(false, "8:30", group=grp_ol, inline="830")
 c_830 = input.color(color.blue, "", group=grp_ol, inline="830")
 w_830 = input.int(1, "", 1, 3, group=grp_ol, inline="830")
@@ -38,7 +43,7 @@ c_90_m = input.color(color.blue, "M", group=grp_col, inline="90")
 c_90_d = input.color(color.green, "D", group=grp_col, inline="90")
 c_30 = input.color(color.gray, "30min", group=grp_col)
 c_10 = input.color(color.gray, "10min", group=grp_col)
-c_lon = input.color(color.orange, "London OR", group=grp_col)
+
 c_asia = input.color(color.purple, "Asia", group=grp_col)
 fill_transp = input.int(88, "Fill Transparency", 0, 100, group="Display")
 
@@ -60,6 +65,7 @@ c_pd = input.color(color.gray, "", group=grp_prev, inline="pd")
 show_pw = input.bool(false, "Prev Week H/L", group=grp_prev, inline="pw")
 c_pw = input.color(color.blue, "", group=grp_prev, inline="pw")
 
+
 // ─── Logic ───
 tf_min = timeframe.in_seconds() / 60
 valid_tf = tf_min <= 240
@@ -68,9 +74,20 @@ act_30 = auto_adj ? (tf_min <= 60 and show_30) : show_30
 act_10 = auto_adj ? (tf_min <= 30 and show_10) : show_10
 
 // Time
-ny_m_total = hour(time, "America/New_York") * 60 + minute(time, "America/New_York")
+calc_tz = syminfo.type == "crypto" ? "UTC" : "America/New_York"
+ny_m_total = hour(time, "America/New_York") * 60 + minute(time, "America/New_York") // Keep NY for cycles
+tz_h = hour(time, calc_tz), tz_m = minute(time, calc_tz)
 ny_h = hour(time, "America/New_York"), ny_m = minute(time, "America/New_York")
-is_new_d = dayofweek(time, "America/New_York") != dayofweek(time[1], "America/New_York")
+
+// Day Change Logic
+raw_new_d = dayofweek(time, calc_tz) != dayofweek(time[1], calc_tz)
+is_crypto = syminfo.type == "crypto"
+// Check for Sunday -> Monday transition
+is_sun_to_mon = dayofweek(time, calc_tz) == dayofweek.monday and dayofweek(time[1], calc_tz) == dayofweek.sunday
+
+// For non-crypto, treat Sunday & Monday as same trading day (merge them)
+// So we suppress the new day trigger if it's Sun -> Mon
+is_new_d = raw_new_d and (is_crypto or not is_sun_to_mon)
 
 // UDT for Cycles
 type Cycle
@@ -86,12 +103,17 @@ var Cycle cyc_90 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_30 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_10 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_asia = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle cyc_lon = Cycle.new(na, na, na, -1, na, na, false)
+
+var Cycle cyc_3 = Cycle.new(na, na, na, -1, na, na, false)
 
 var cols_90 = array.from(c_90_a, c_90_m, c_90_d)
 var cols_30 = array.from(c_30)
 var cols_10 = array.from(c_10)
+var cols_3 = array.from(color.gray)
 
+
+
+// Optimized Cycle Function
 // Optimized Cycle Function
 run_cycle(Cycle c, int start, int end, int per, array<color> cols, bool is_single) =>
     in_win = start > end ? (ny_m_total >= start or ny_m_total < end) : (ny_m_total >= start and ny_m_total < end)
@@ -137,10 +159,8 @@ if valid_tf
     if act_10
         run_cycle(cyc_10, 90, 960, 10, cols_10, false)
     
-    // Asia (1200=20:00 to 0=00:00) & London (90=1:30 to 120=2:00)
-    run_cycle(cyc_asia, 1200, 0, 0, array.from(c_asia), true)
-    if act_30
-        run_cycle(cyc_lon, 90, 120, 0, array.from(c_lon), true)
+    // Asia (1080=18:00 to 150=02:30)
+    run_cycle(cyc_asia, 1080, 150, 0, array.from(c_asia), true)
 
 // ─── Alerts ───
 var bool[] a_trig = array.new_bool(6, false)
@@ -164,12 +184,12 @@ if act_90 and valid_tf
 get_style(s) => s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
 
 // Day Sep
-if valid_tf and show_dsep and is_new_d and dayofweek(time, "America/New_York") != dayofweek.sunday
+if valid_tf and show_dsep and hour(time, calc_tz) == 0 and minute(time, calc_tz) == 0
     line.new(bar_index, low, bar_index, high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
 
 // Day Labels
 is_noon = ny_h == 12 and ny_m == 0
-dow = dayofweek(time, "America/New_York")
+dow = dayofweek(time, calc_tz)
 c_inv = color.new(color.white, 100)
 show_lbl = valid_tf and show_dlbl and is_noon
 
@@ -202,6 +222,114 @@ if valid_tf
     if show_930
         draw_open(9, 30, c_930, w_930, s_930, "9:30", 16)
 
+// 90min Cycle Opens Logic
+var line l90_1 = na, var bool stopped90_1 = false
+var line l90_2 = na, var bool stopped90_2 = false
+var line l90_3 = na, var bool stopped90_3 = false
+var line l90_4 = na, var bool stopped90_4 = false
+var line l90_5 = na, var bool stopped90_5 = false
+var line l90_6 = na, var bool stopped90_6 = false
+var line l90_7 = na, var bool stopped90_7 = false
+var line l90_8 = na, var bool stopped90_8 = false
+var line l90_9 = na, var bool stopped90_9 = false
+
+if valid_tf and show_90_open and act_90
+    // Clear all 90min cycle opens on new day
+    if is_new_d
+        line.delete(l90_1), l90_1 := na, stopped90_1 := false
+        line.delete(l90_2), l90_2 := na, stopped90_2 := false
+        line.delete(l90_3), l90_3 := na, stopped90_3 := false
+        line.delete(l90_4), l90_4 := na, stopped90_4 := false
+        line.delete(l90_5), l90_5 := na, stopped90_5 := false
+        line.delete(l90_6), l90_6 := na, stopped90_6 := false
+        line.delete(l90_7), l90_7 := na, stopped90_7 := false
+        line.delete(l90_8), l90_8 := na, stopped90_8 := false
+        line.delete(l90_9), l90_9 := na, stopped90_9 := false
+
+    // 90min cycle opens: 2:30, 4:00, 5:30, 7:00, 8:30, 10:00, 11:30, 13:00, 14:30
+    if ny_h == 2 and ny_m == 30
+        line.delete(l90_1)
+        l90_1 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_1 := false
+    if ny_h == 4 and ny_m == 0
+        line.delete(l90_2)
+        l90_2 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_2 := false
+    if ny_h == 5 and ny_m == 30
+        line.delete(l90_3)
+        l90_3 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_3 := false
+    if ny_h == 7 and ny_m == 0
+        line.delete(l90_4)
+        l90_4 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_4 := false
+    if ny_h == 8 and ny_m == 30
+        line.delete(l90_5)
+        l90_5 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_5 := false
+    if ny_h == 10 and ny_m == 0
+        line.delete(l90_6)
+        l90_6 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_6 := false
+    if ny_h == 11 and ny_m == 30
+        line.delete(l90_7)
+        l90_7 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_7 := false
+    if ny_h == 13 and ny_m == 0
+        line.delete(l90_8)
+        l90_8 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_8 := false
+    if ny_h == 14 and ny_m == 30
+        line.delete(l90_9)
+        l90_9 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
+        stopped90_9 := false
+    
+    // Stop each line at the end of its 90min cycle
+    if ny_h == 4 and ny_m == 0  // End of Cycle 1 (2:30-4:00)
+        stopped90_1 := true
+    if ny_h == 5 and ny_m == 30  // End of Cycle 2 (4:00-5:30)
+        stopped90_2 := true
+    if ny_h == 7 and ny_m == 0   // End of Cycle 3 (5:30-7:00)
+        stopped90_3 := true
+    if ny_h == 8 and ny_m == 30  // End of Cycle 4 (7:00-8:30)
+        stopped90_4 := true
+    if ny_h == 10 and ny_m == 0  // End of Cycle 5 (8:30-10:00)
+        stopped90_5 := true
+    if ny_h == 11 and ny_m == 30 // End of Cycle 6 (10:00-11:30)
+        stopped90_6 := true
+    if ny_h == 13 and ny_m == 0  // End of Cycle 7 (11:30-13:00)
+        stopped90_7 := true
+    if ny_h == 14 and ny_m == 30 // End of Cycle 8 (13:00-14:30)
+        stopped90_8 := true
+    if ny_h == 16 and ny_m == 0  // End of Cycle 9 (14:30-16:00)
+        stopped90_9 := true
+    
+    // Also stop all lines on new day
+    if is_new_d
+        stopped90_1 := true, stopped90_2 := true, stopped90_3 := true
+        stopped90_4 := true, stopped90_5 := true, stopped90_6 := true
+        stopped90_7 := true, stopped90_8 := true, stopped90_9 := true
+    
+    // Extend lines only for current day
+    if not na(l90_1) and not stopped90_1
+        line.set_x2(l90_1, bar_index)
+    if not na(l90_2) and not stopped90_2
+        line.set_x2(l90_2, bar_index)
+    if not na(l90_3) and not stopped90_3
+        line.set_x2(l90_3, bar_index)
+    if not na(l90_4) and not stopped90_4
+        line.set_x2(l90_4, bar_index)
+    if not na(l90_5) and not stopped90_5
+        line.set_x2(l90_5, bar_index)
+    if not na(l90_6) and not stopped90_6
+        line.set_x2(l90_6, bar_index)
+    if not na(l90_7) and not stopped90_7
+        line.set_x2(l90_7, bar_index)
+    if not na(l90_8) and not stopped90_8
+        line.set_x2(l90_8, bar_index)
+    if not na(l90_9) and not stopped90_9
+        line.set_x2(l90_9, bar_index)
+
 // Period Opens (Daily/Weekly)
 draw_per(is_new, val, col, txt) =>
     var line l = na, var label lb = na
@@ -213,7 +341,6 @@ draw_per(is_new, val, col, txt) =>
         line.set_x2(l, bar_index), label.set_x(lb, bar_index), label.set_y(lb, val)
 
 if valid_tf and (show_do or show_wo)
-    is_crypto = syminfo.type == "crypto"
     is_forex = syminfo.type == "forex"
     is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
     
@@ -221,7 +348,8 @@ if valid_tf and (show_do or show_wo)
     h_tz = hour(time, tz), m_tz = minute(time, tz), d_tz = dayofweek(time, tz)
     open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
     is_do = h_tz == open_h and m_tz == 0
-    is_wo = is_do and (d_tz == dayofweek.sunday or d_tz == dayofweek.monday)
+    target_dow = (is_forex or is_futures) ? dayofweek.sunday : dayofweek.monday
+    is_wo = is_do and d_tz == target_dow
     
     if show_do
         var float d_val = na
@@ -255,7 +383,7 @@ if valid_tf and (show_pd or show_pw)
     else
         cdh := math.max(cdh, high), cdl := math.min(cdl, low)
         
-    is_new_w = is_new_d and dayofweek(time, "America/New_York") == dayofweek.monday
+    is_new_w = is_new_d and dayofweek(time, calc_tz) == dayofweek.monday
     if is_new_w or na(cwh)
         cwh := high, cwl := low
     else
