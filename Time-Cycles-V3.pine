@@ -58,12 +58,20 @@ show_do = input.bool(false, "Daily Open", group=grp_per, inline="do")
 c_do = input.color(color.yellow, "", group=grp_per, inline="do")
 show_wo = input.bool(false, "Weekly Open", group=grp_per, inline="wo")
 c_wo = input.color(color.blue, "", group=grp_per, inline="wo")
+show_mo = input.bool(false, "Monthly Open", group=grp_per, inline="mo")
+c_mo = input.color(color.orange, "", group=grp_per, inline="mo")
+show_yo = input.bool(false, "Yearly Open", group=grp_per, inline="yo")
+c_yo = input.color(color.purple, "", group=grp_per, inline="yo")
 
 // Previous Levels
 show_pd = input.bool(false, "Prev Day H/L", group=grp_prev, inline="pd")
 c_pd = input.color(color.gray, "", group=grp_prev, inline="pd")
 show_pw = input.bool(false, "Prev Week H/L", group=grp_prev, inline="pw")
 c_pw = input.color(color.blue, "", group=grp_prev, inline="pw")
+show_pm = input.bool(false, "Prev Month H/L", group=grp_prev, inline="pm")
+c_pm = input.color(color.orange, "", group=grp_prev, inline="pm")
+show_py = input.bool(false, "Prev Year H/L", group=grp_prev, inline="py")
+c_py = input.color(color.purple, "", group=grp_prev, inline="py")
 
 
 // ─── Logic ───
@@ -340,7 +348,7 @@ draw_per(is_new, val, col, txt) =>
     if not na(l)
         line.set_x2(l, bar_index), label.set_x(lb, bar_index), label.set_y(lb, val)
 
-if valid_tf and (show_do or show_wo)
+if valid_tf and (show_do or show_wo or show_mo or show_yo)
     is_forex = syminfo.type == "forex"
     is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
     
@@ -350,6 +358,8 @@ if valid_tf and (show_do or show_wo)
     is_do = h_tz == open_h and m_tz == 0
     target_dow = (is_forex or is_futures) ? dayofweek.sunday : dayofweek.monday
     is_wo = is_do and d_tz == target_dow
+    is_mo = timeframe.change("M")
+    is_yo = timeframe.change("12M")
     
     if show_do
         var float d_val = na
@@ -362,43 +372,126 @@ if valid_tf and (show_do or show_wo)
         if is_wo
             w_val := open
         draw_per(is_wo, w_val, c_wo, "W.O.")
+    
+    if show_mo
+        var float m_val = na
+        if is_mo
+            m_val := open
+        draw_per(is_mo, m_val, c_mo, "M.O.")
+    
+    if show_yo
+        var float y_val = na
+        if is_yo
+            y_val := open
+        draw_per(is_yo, y_val, c_yo, "Y.O.")
 
 // Previous H/L
-draw_prev(show, val, txt, col) =>
-    var line l = na, var label lb = na
-    if show and is_new_d and not na(val) // Reset lines daily
-        line.delete(l), label.delete(lb)
-        l := line.new(bar_index, val, bar_index, val, color=col, style=line.style_dashed)
-        lb := label.new(bar_index, val, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
-    if not na(l)
-        line.set_x2(l, bar_index), label.set_x(lb, bar_index), label.set_y(lb, val)
+var line l_pdh = na, var label lb_pdh = na
+var line l_pdl = na, var label lb_pdl = na
+var line l_pwh = na, var label lb_pwh = na
+var line l_pwl = na, var label lb_pwl = na
+var line l_pmh = na, var label lb_pmh = na
+var line l_pml = na, var label lb_pml = na
+var line l_pyh = na, var label lb_pyh = na
+var line l_pyl = na, var label lb_pyl = na
 
-if valid_tf and (show_pd or show_pw)
-    var float pdh = na, var float pdl = na, var float pwh = na, var float pwl = na
-    var float cdh = na, var float cdl = na, var float cwh = na, var float cwl = na
+if valid_tf and (show_pd or show_pw or show_pm or show_py)
+    if show_pd
+        // Get previous day high/low from daily timeframe
+        [daily_h, daily_l] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+        
+        // Draw PDH (Previous Day High)
+        if is_new_d and not na(daily_h)
+            line.delete(l_pdh), label.delete(lb_pdh)
+            l_pdh := line.new(bar_index, daily_h, bar_index, daily_h, color=c_pd, style=line.style_dashed)
+            lb_pdh := label.new(bar_index, daily_h, "PDH", color=color.new(color.white, 100), textcolor=c_pd, style=label.style_label_left, size=size.small)
+        if not na(l_pdh)
+            line.set_x2(l_pdh, bar_index)
+            label.set_x(lb_pdh, bar_index)
+        
+        // Draw PDL (Previous Day Low)
+        if is_new_d and not na(daily_l)
+            line.delete(l_pdl), label.delete(lb_pdl)
+            l_pdl := line.new(bar_index, daily_l, bar_index, daily_l, color=c_pd, style=line.style_dashed)
+            lb_pdl := label.new(bar_index, daily_l, "PDL", color=color.new(color.white, 100), textcolor=c_pd, style=label.style_label_left, size=size.small)
+        if not na(l_pdl)
+            line.set_x2(l_pdl, bar_index)
+            label.set_x(lb_pdl, bar_index)
     
-    // Update Current
-    if is_new_d or na(cdh)
-        cdh := high, cdl := low
-    else
-        cdh := math.max(cdh, high), cdl := math.min(cdl, low)
+    if show_pw
+        // Get previous week high/low from weekly timeframe
+        [weekly_h, weekly_l] = request.security(syminfo.tickerid, "W", [high[1], low[1]], lookahead=barmerge.lookahead_on)
         
-    is_new_w = is_new_d and dayofweek(time, calc_tz) == dayofweek.monday
-    if is_new_w or na(cwh)
-        cwh := high, cwl := low
-    else
-        cwh := math.max(cwh, high), cwl := math.min(cwl, low)
+        // Detect new week using timeframe.change
+        is_new_w = timeframe.change("W")
         
-    // Store Previous
-    if is_new_d
-        pdh := cdh[1], pdl := cdl[1]
-    if is_new_w
-        pwh := cwh[1], pwl := cwl[1]
+        // Draw PWH (Previous Week High)
+        if is_new_w and not na(weekly_h)
+            line.delete(l_pwh), label.delete(lb_pwh)
+            l_pwh := line.new(bar_index, weekly_h, bar_index + 5, weekly_h, color=c_pw, style=line.style_dashed)
+            lb_pwh := label.new(bar_index, weekly_h, "PWH", color=color.new(color.white, 100), textcolor=c_pw, style=label.style_label_left, size=size.small)
+        if not na(l_pwh)
+            line.set_x2(l_pwh, bar_index + 5)
+            label.set_x(lb_pwh, bar_index + 5)
         
-    draw_prev(show_pd, pdh, "PDH", c_pd)
-    draw_prev(show_pd, pdl, "PDL", c_pd)
-    draw_prev(show_pw, pwh, "PWH", c_pw)
-    draw_prev(show_pw, pwl, "PWL", c_pw)
+        // Draw PWL (Previous Week Low)
+        if is_new_w and not na(weekly_l)
+            line.delete(l_pwl), label.delete(lb_pwl)
+            l_pwl := line.new(bar_index, weekly_l, bar_index + 5, weekly_l, color=c_pw, style=line.style_dashed)
+            lb_pwl := label.new(bar_index, weekly_l, "PWL", color=color.new(color.white, 100), textcolor=c_pw, style=label.style_label_left, size=size.small)
+        if not na(l_pwl)
+            line.set_x2(l_pwl, bar_index + 5)
+            label.set_x(lb_pwl, bar_index + 5)
+    
+    if show_pm
+        // Get previous month high/low from monthly timeframe
+        [monthly_h, monthly_l] = request.security(syminfo.tickerid, "M", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+        
+        // Detect new month using timeframe.change
+        is_new_m = timeframe.change("M")
+        
+        // Draw PMH (Previous Month High)
+        if is_new_m and not na(monthly_h)
+            line.delete(l_pmh), label.delete(lb_pmh)
+            l_pmh := line.new(bar_index, monthly_h, bar_index + 5, monthly_h, color=c_pm, style=line.style_dashed)
+            lb_pmh := label.new(bar_index, monthly_h, "PMH", color=color.new(color.white, 100), textcolor=c_pm, style=label.style_label_left, size=size.small)
+        if not na(l_pmh)
+            line.set_x2(l_pmh, bar_index + 5)
+            label.set_x(lb_pmh, bar_index + 5)
+        
+        // Draw PML (Previous Month Low)
+        if is_new_m and not na(monthly_l)
+            line.delete(l_pml), label.delete(lb_pml)
+            l_pml := line.new(bar_index, monthly_l, bar_index + 5, monthly_l, color=c_pm, style=line.style_dashed)
+            lb_pml := label.new(bar_index, monthly_l, "PML", color=color.new(color.white, 100), textcolor=c_pm, style=label.style_label_left, size=size.small)
+        if not na(l_pml)
+            line.set_x2(l_pml, bar_index + 5)
+            label.set_x(lb_pml, bar_index + 5)
+    
+    if show_py
+        // Get previous year high/low from yearly timeframe
+        [yearly_h, yearly_l] = request.security(syminfo.tickerid, "12M", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+        
+        // Detect new year using timeframe.change
+        is_new_y = timeframe.change("12M")
+        
+        // Draw PYH (Previous Year High)
+        if is_new_y and not na(yearly_h)
+            line.delete(l_pyh), label.delete(lb_pyh)
+            l_pyh := line.new(bar_index, yearly_h, bar_index + 5, yearly_h, color=c_py, style=line.style_dashed)
+            lb_pyh := label.new(bar_index, yearly_h, "PYH", color=color.new(color.white, 100), textcolor=c_py, style=label.style_label_left, size=size.small)
+        if not na(l_pyh)
+            line.set_x2(l_pyh, bar_index + 5)
+            label.set_x(lb_pyh, bar_index + 5)
+        
+        // Draw PYL (Previous Year Low)
+        if is_new_y and not na(yearly_l)
+            line.delete(l_pyl), label.delete(lb_pyl)
+            l_pyl := line.new(bar_index, yearly_l, bar_index + 5, yearly_l, color=c_py, style=line.style_dashed)
+            lb_pyl := label.new(bar_index, yearly_l, "PYL", color=color.new(color.white, 100), textcolor=c_py, style=label.style_label_left, size=size.small)
+        if not na(l_pyl)
+            line.set_x2(l_pyl, bar_index + 5)
+            label.set_x(lb_pyl, bar_index + 5)
 
 // MACRO
 if show_macro and valid_tf
