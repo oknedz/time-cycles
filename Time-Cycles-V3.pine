@@ -396,12 +396,21 @@ var line l_pyh = na, var label lb_pyh = na
 var line l_pyl = na, var label lb_pyl = na
 
 if valid_tf and (show_pd or show_pw or show_pm or show_py)
+    // Define true day open logic (same as Period Opens section)
+    is_forex = syminfo.type == "forex"
+    is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
+    
+    tz = is_crypto ? "UTC" : "America/New_York"
+    h_tz = hour(time, tz), m_tz = minute(time, tz)
+    open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
+    is_do = h_tz == open_h and m_tz == 0
+    
     if show_pd
         // Get previous day high/low from daily timeframe
         [daily_h, daily_l] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
         
         // Draw PDH (Previous Day High)
-        if is_new_d and not na(daily_h)
+        if is_do and not na(daily_h)
             line.delete(l_pdh), label.delete(lb_pdh)
             l_pdh := line.new(bar_index, daily_h, bar_index, daily_h, color=c_pd, style=line.style_dashed)
             lb_pdh := label.new(bar_index, daily_h, "PDH", color=color.new(color.white, 100), textcolor=c_pd, style=label.style_label_left, size=size.small)
@@ -410,7 +419,7 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
             label.set_x(lb_pdh, bar_index)
         
         // Draw PDL (Previous Day Low)
-        if is_new_d and not na(daily_l)
+        if is_do and not na(daily_l)
             line.delete(l_pdl), label.delete(lb_pdl)
             l_pdl := line.new(bar_index, daily_l, bar_index, daily_l, color=c_pd, style=line.style_dashed)
             lb_pdl := label.new(bar_index, daily_l, "PDL", color=color.new(color.white, 100), textcolor=c_pd, style=label.style_label_left, size=size.small)
