@@ -49,7 +49,7 @@ c_90_d = input.color(color.green, "D", group=grp_col, inline="90")
 c_30 = input.color(color.gray, "30min", group=grp_col)
 c_10 = input.color(color.gray, "10min", group=grp_col)
 
-c_asia = input.color(color.purple, "Asia", group=grp_col)
+c_asia = input.color(color.purple, "Asia H/L", group=grp_col)
 fill_transp = input.int(88, "Fill Transparency", 0, 100, group="Display")
 
 // Day Separator
@@ -86,10 +86,7 @@ act_90 = auto_adj ? (tf_min <= 240 and show_90) : show_90
 act_30 = auto_adj ? (tf_min <= 60 and show_30) : show_30
 act_10 = auto_adj ? (tf_min <= 30 and show_10) : show_10
 
-// Symbol detection for Asia cycles
-is_eurjpy = syminfo.ticker == "EURJPY" or syminfo.ticker == "FX:EURJPY" or syminfo.ticker == "OANDA:EURJPY"
-is_usdjpy = syminfo.ticker == "USDJPY" or syminfo.ticker == "FX:USDJPY" or syminfo.ticker == "OANDA:USDJPY"
-is_jpy_pair = is_eurjpy or is_usdjpy
+// Asia cycles now available for all symbols (filter removed)
 
 // Determine which visual mode to use
 use_boxes = cycle_visual == "Show Boxes"
@@ -124,9 +121,6 @@ type Cycle
 var Cycle cyc_90 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_30 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_10 = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle cyc_asia = Cycle.new(na, na, na, -1, na, na, false)
-
-var Cycle cyc_3 = Cycle.new(na, na, na, -1, na, na, false)
 
 // Asia session cycles for JPY pairs
 var Cycle cyc_asia_90 = Cycle.new(na, na, na, -1, na, na, false)
@@ -222,29 +216,24 @@ run_cycle_lines(CycleLine cl, int start, int end, int per, string style_type) =>
 // RUN CYCLES BASED ON VISUAL MODE
 // ═══════════════════════════════════════════════════════════════════════════════
 if valid_tf
-    // Asia session (1080=18:00 to 150=02:30)
+    // Asia session (1080=18:00 to 150=02:30) - Available for all symbols
     if use_boxes
-        if is_jpy_pair
-            // For JPY pairs: show cycles instead of default Asia session
-            if act_90
-                run_cycle(cyc_asia_90, 1080, 150, 90, cols_90, false)
-            if act_30
-                run_cycle(cyc_asia_30, 1080, 150, 30, cols_30, false)
-            if act_10
-                run_cycle(cyc_asia_10, 1080, 150, 10, cols_10, false)
-        else
-            // For other pairs: show default Asia session box
-            run_cycle(cyc_asia, 1080, 150, 0, array.from(c_asia), true)
+        // Show cycles for all symbols
+        if act_90
+            run_cycle(cyc_asia_90, 1080, 150, 90, cols_90, false)
+        if act_30
+            run_cycle(cyc_asia_30, 1080, 150, 30, cols_30, false)
+        if act_10
+            run_cycle(cyc_asia_10, 1080, 150, 10, cols_10, false)
     
     else if use_lines
-        // Asia session cycle lines for JPY pairs only
-        if is_jpy_pair
-            if act_90
-                run_cycle_lines(line_asia_90, 1080, 150, 90, "90")
-            if act_30
-                run_cycle_lines(line_asia_30, 1080, 150, 30, "30")
-            if act_10
-                run_cycle_lines(line_asia_10, 1080, 150, 10, "10")
+        // Asia session cycle lines for all symbols
+        if act_90
+            run_cycle_lines(line_asia_90, 1080, 150, 90, "90")
+        if act_30
+            run_cycle_lines(line_asia_30, 1080, 150, 30, "30")
+        if act_10
+            run_cycle_lines(line_asia_10, 1080, 150, 10, "10")
     
     // Main cycles only from 2:30 onwards
     if ny_m_total >= 150
@@ -465,15 +454,67 @@ if valid_tf and (show_do or show_wo or show_mo or show_yo)
             y_val := open
         draw_per(is_yo, y_val, c_yo, "Y.O.")
 
+// Asia H/L
+var line l_asia_h = na, var label lb_asia_h = na
+var line l_asia_l = na, var label lb_asia_l = na
+var float asia_high = na
+var float asia_low = na
+var bool in_asia_prev = false
+
 // Previous H/L
 var line l_pdh = na, var label lb_pdh = na
 var line l_pdl = na, var label lb_pdl = na
+var line l_pd50 = na, var label lb_pd50 = na
 var line l_pwh = na, var label lb_pwh = na
 var line l_pwl = na, var label lb_pwl = na
 var line l_pmh = na, var label lb_pmh = na
 var line l_pml = na, var label lb_pml = na
 var line l_pyh = na, var label lb_pyh = na
 var line l_pyl = na, var label lb_pyl = na
+
+// Track Asia session high/low (18:00 to 02:30) - Real-time drawing
+in_asia = (ny_m_total >= 1080) or (ny_m_total < 150)
+
+if valid_tf
+    just_entered_asia = not in_asia_prev and in_asia
+    
+    // Delete old lines when entering new Asia session
+    if just_entered_asia
+        line.delete(l_asia_h), label.delete(lb_asia_h)
+        line.delete(l_asia_l), label.delete(lb_asia_l)
+        l_asia_h := na, l_asia_l := na
+        asia_high := na, asia_low := na
+    
+    if in_asia
+        // Track Asia high/low during session
+        asia_high := na(asia_high) ? high : math.max(asia_high, high)
+        asia_low := na(asia_low) ? low : math.min(asia_low, low)
+        
+        // Draw/update lines in real-time during Asia session
+        if na(l_asia_h)
+            // Create lines on first bar of Asia session
+            l_asia_h := line.new(bar_index, asia_high, bar_index, asia_high, color=c_asia, width=1, style=line.style_solid)
+            lb_asia_h := label.new(bar_index, asia_high, "Asia High", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_lower_right, size=size.small)
+            
+            l_asia_l := line.new(bar_index, asia_low, bar_index, asia_low, color=c_asia, width=1, style=line.style_solid)
+            lb_asia_l := label.new(bar_index, asia_low, "Asia Low", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
+        else
+            // Update lines as high/low change
+            line.set_y1(l_asia_h, asia_high), line.set_y2(l_asia_h, asia_high), line.set_x2(l_asia_h, bar_index)
+            label.set_y(lb_asia_h, asia_high), label.set_x(lb_asia_h, bar_index)
+            
+            line.set_y1(l_asia_l, asia_low), line.set_y2(l_asia_l, asia_low), line.set_x2(l_asia_l, bar_index)
+            label.set_y(lb_asia_l, asia_low), label.set_x(lb_asia_l, bar_index)
+    else
+        // Extend lines outside Asia session
+        if not na(l_asia_h)
+            line.set_x2(l_asia_h, bar_index)
+            label.set_x(lb_asia_h, bar_index)
+            line.set_x2(l_asia_l, bar_index)
+            label.set_x(lb_asia_l, bar_index)
+    
+    // Update previous state
+    in_asia_prev := in_asia
 
 if valid_tf and (show_pd or show_pw or show_pm or show_py)
     // Define true day open logic (same as Period Opens section)
@@ -488,6 +529,7 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
     if show_pd
         // Get previous day high/low from daily timeframe
         [daily_h, daily_l] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
+        pd50 = (daily_h + daily_l) / 2
         
         // Draw PDH (Previous Day High)
         if is_do and not na(daily_h)
@@ -506,6 +548,15 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
         if not na(l_pdl)
             line.set_x2(l_pdl, bar_index)
             label.set_x(lb_pdl, bar_index)
+        
+        // Draw PD 50% (Mid-point)
+        if is_do and not na(pd50)
+            line.delete(l_pd50), label.delete(lb_pd50)
+            l_pd50 := line.new(bar_index, pd50, bar_index, pd50, color=c_pd, style=line.style_dotted)
+            lb_pd50 := label.new(bar_index, pd50, "C.E.", color=color.new(color.white, 100), textcolor=c_pd, style=label.style_label_left, size=size.small)
+        if not na(l_pd50)
+            line.set_x2(l_pd50, bar_index)
+            label.set_x(lb_pd50, bar_index)
     
     if show_pw
         // Get previous week high/low from weekly timeframe
