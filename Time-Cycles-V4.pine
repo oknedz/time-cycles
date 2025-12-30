@@ -457,9 +457,11 @@ if valid_tf and (show_do or show_wo or show_mo or show_yo)
 // Asia H/L
 var line l_asia_h = na, var label lb_asia_h = na
 var line l_asia_l = na, var label lb_asia_l = na
+var line l_asia_ce = na, var label lb_asia_ce = na
 var float asia_high = na
 var float asia_low = na
 var bool in_asia_prev = false
+var bool asia_lines_locked = false
 
 // Previous H/L
 var line l_pdh = na, var label lb_pdh = na
@@ -477,18 +479,24 @@ in_asia = (ny_m_total >= 1080) or (ny_m_total < 150)
 
 if valid_tf
     just_entered_asia = not in_asia_prev and in_asia
+    just_exited_asia = in_asia_prev and not in_asia
     
     // Delete old lines when entering new Asia session
     if just_entered_asia
         line.delete(l_asia_h), label.delete(lb_asia_h)
         line.delete(l_asia_l), label.delete(lb_asia_l)
-        l_asia_h := na, l_asia_l := na
+        line.delete(l_asia_ce), label.delete(lb_asia_ce)
+        l_asia_h := na, l_asia_l := na, l_asia_ce := na
         asia_high := na, asia_low := na
+        asia_lines_locked := false
     
     if in_asia
         // Track Asia high/low during session
         asia_high := na(asia_high) ? high : math.max(asia_high, high)
         asia_low := na(asia_low) ? low : math.min(asia_low, low)
+        
+        // Calculate Asia C.E. (50% of range)
+        asia_ce = (asia_high + asia_low) / 2
         
         // Draw/update lines in real-time during Asia session
         if na(l_asia_h)
@@ -498,6 +506,9 @@ if valid_tf
             
             l_asia_l := line.new(bar_index, asia_low, bar_index, asia_low, color=c_asia, width=1, style=line.style_solid)
             lb_asia_l := label.new(bar_index, asia_low, "Asia Low", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
+            
+            l_asia_ce := line.new(bar_index, asia_ce, bar_index, asia_ce, color=c_asia, width=1, style=line.style_dashed)
+            lb_asia_ce := label.new(bar_index, asia_ce, "Asia C.E.", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_center, size=size.small)
         else
             // Update lines as high/low change
             line.set_y1(l_asia_h, asia_high), line.set_y2(l_asia_h, asia_high), line.set_x2(l_asia_h, bar_index)
@@ -505,13 +516,15 @@ if valid_tf
             
             line.set_y1(l_asia_l, asia_low), line.set_y2(l_asia_l, asia_low), line.set_x2(l_asia_l, bar_index)
             label.set_y(lb_asia_l, asia_low), label.set_x(lb_asia_l, bar_index)
+            
+            line.set_y1(l_asia_ce, asia_ce), line.set_y2(l_asia_ce, asia_ce), line.set_x2(l_asia_ce, bar_index)
+            label.set_y(lb_asia_ce, asia_ce), label.set_x(lb_asia_ce, bar_index)
     else
-        // Extend lines outside Asia session
-        if not na(l_asia_h)
-            line.set_x2(l_asia_h, bar_index)
-            label.set_x(lb_asia_h, bar_index)
-            line.set_x2(l_asia_l, bar_index)
-            label.set_x(lb_asia_l, bar_index)
+        // Lock lines when exiting Asia session (at 2:30)
+        if just_exited_asia and not na(l_asia_h)
+            asia_lines_locked := true
+        
+        // Do NOT extend lines after Asia session ends - they stay locked at 2:30
     
     // Update previous state
     in_asia_prev := in_asia
