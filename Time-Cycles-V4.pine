@@ -46,7 +46,9 @@ s_930 = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, i
 c_90_a = input.color(color.red, "90min A", group=grp_col, inline="90")
 c_90_m = input.color(color.blue, "M", group=grp_col, inline="90")
 c_90_d = input.color(color.green, "D", group=grp_col, inline="90")
-c_30 = input.color(color.gray, "30min", group=grp_col)
+c_30_a = input.color(color.red, "30min A", group=grp_col, inline="30")
+c_30_m = input.color(color.blue, "M", group=grp_col, inline="30")
+c_30_d = input.color(color.green, "D", group=grp_col, inline="30")
 c_10 = input.color(color.gray, "10min", group=grp_col)
 
 c_asia = input.color(color.purple, "Asia H/L", group=grp_col)
@@ -128,7 +130,7 @@ var Cycle cyc_asia_30 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_asia_10 = Cycle.new(na, na, na, -1, na, na, false)
 
 var cols_90 = array.from(c_90_a, c_90_m, c_90_d)
-var cols_30 = array.from(c_30)
+var cols_30 = array.from(c_30_a, c_30_m, c_30_d)
 var cols_10 = array.from(c_10)
 var cols_3 = array.from(color.gray)
 
@@ -508,7 +510,7 @@ if valid_tf
             lb_asia_l := label.new(bar_index, asia_low, "Asia Low", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
             
             l_asia_ce := line.new(bar_index, asia_ce, bar_index, asia_ce, color=c_asia, width=1, style=line.style_dashed)
-            lb_asia_ce := label.new(bar_index, asia_ce, "Asia C.E.", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_center, size=size.small)
+            lb_asia_ce := label.new(bar_index, asia_ce, "Asia C.E.", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_left, size=size.small)
         else
             // Update lines as high/low change
             line.set_y1(l_asia_h, asia_high), line.set_y2(l_asia_h, asia_high), line.set_x2(l_asia_h, bar_index)
@@ -520,11 +522,19 @@ if valid_tf
             line.set_y1(l_asia_ce, asia_ce), line.set_y2(l_asia_ce, asia_ce), line.set_x2(l_asia_ce, bar_index)
             label.set_y(lb_asia_ce, asia_ce), label.set_x(lb_asia_ce, bar_index)
     else
-        // Lock lines when exiting Asia session (at 2:30)
-        if just_exited_asia and not na(l_asia_h)
-            asia_lines_locked := true
-        
-        // Do NOT extend lines after Asia session ends - they stay locked at 2:30
+        // Extend all lines until price breaks high or low
+        if not na(l_asia_h) and not asia_lines_locked
+            // Check if price broke the high or low
+            if high >= asia_high or low <= asia_low
+                asia_lines_locked := true
+            else
+                // Extend all lines
+                line.set_x2(l_asia_h, bar_index)
+                line.set_x2(l_asia_l, bar_index)
+                line.set_x2(l_asia_ce, bar_index)
+                label.set_x(lb_asia_h, bar_index)
+                label.set_x(lb_asia_l, bar_index)
+                label.set_x(lb_asia_ce, bar_index)
     
     // Update previous state
     in_asia_prev := in_asia
