@@ -17,9 +17,10 @@ c_lines = input.color(color.white, "Lines Color", group=grp_cyc, inline="vis")
 show_90 = input.bool(true, "90min", group=grp_cyc, inline="c1")
 show_30 = input.bool(true, "30min", group=grp_cyc, inline="c1")
 show_10 = input.bool(false, "10min", group=grp_cyc, inline="c1")
-auto_adj = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c2")
-show_macro = input.bool(false, "MACRO Times", group=grp_cyc, inline="c2")
-c_macro = input.color(color.black, "", group=grp_cyc, inline="c2")
+show_midnight_2_30 = input.bool(false, "Midnight to 2:30", group=grp_cyc, inline="c2")
+auto_adj = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
+show_macro = input.bool(false, "MACRO Times", group=grp_cyc, inline="c3")
+c_macro = input.color(color.black, "", group=grp_cyc, inline="c3")
 
 // Opening Lines
 show_mid = input.bool(false, "Midnight", group=grp_ol, inline="mid")
@@ -96,9 +97,9 @@ use_lines = cycle_visual == "Show Lines"
 
 // Time
 calc_tz = syminfo.type == "crypto" ? "UTC" : "America/New_York"
-ny_m_total = hour(time, "America/New_York") * 60 + minute(time, "America/New_York") // Keep NY for cycles
 tz_h = hour(time, calc_tz), tz_m = minute(time, calc_tz)
 ny_h = hour(time, "America/New_York"), ny_m = minute(time, "America/New_York")
+ny_m_total = ny_h * 60 + ny_m
 
 // Day Change Logic
 raw_new_d = dayofweek(time, calc_tz) != dayofweek(time[1], calc_tz)
@@ -129,10 +130,14 @@ var Cycle cyc_asia_90 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_asia_30 = Cycle.new(na, na, na, -1, na, na, false)
 var Cycle cyc_asia_10 = Cycle.new(na, na, na, -1, na, na, false)
 
+// Midnight to 2:30 cycles
+var Cycle cyc_mid_90 = Cycle.new(na, na, na, -1, na, na, false)
+var Cycle cyc_mid_30 = Cycle.new(na, na, na, -1, na, na, false)
+var Cycle cyc_mid_10 = Cycle.new(na, na, na, -1, na, na, false)
+
 var cols_90 = array.from(c_90_a, c_90_m, c_90_d)
 var cols_30 = array.from(c_30_a, c_30_m, c_30_d)
 var cols_10 = array.from(c_10)
-var cols_3 = array.from(color.gray)
 
 // UDT for Cycle Lines (Lines mode)
 type CycleLine
@@ -148,6 +153,11 @@ var CycleLine line_10 = CycleLine.new(na, -1, false)
 var CycleLine line_asia_90 = CycleLine.new(na, -1, false)
 var CycleLine line_asia_30 = CycleLine.new(na, -1, false)
 var CycleLine line_asia_10 = CycleLine.new(na, -1, false)
+
+// Midnight to 2:30 cycle lines
+var CycleLine line_mid_90 = CycleLine.new(na, -1, false)
+var CycleLine line_mid_30 = CycleLine.new(na, -1, false)
+var CycleLine line_mid_10 = CycleLine.new(na, -1, false)
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -218,24 +228,42 @@ run_cycle_lines(CycleLine cl, int start, int end, int per, string style_type) =>
 // RUN CYCLES BASED ON VISUAL MODE
 // ═══════════════════════════════════════════════════════════════════════════════
 if valid_tf
-    // Asia session (1080=18:00 to 150=02:30) - Available for all symbols
+    // Asia session (1080=18:00 to 1440=00:00) - Available for all symbols
     if use_boxes
         // Show cycles for all symbols
         if act_90
-            run_cycle(cyc_asia_90, 1080, 150, 90, cols_90, false)
+            run_cycle(cyc_asia_90, 1080, 1440, 90, cols_90, false)
         if act_30
-            run_cycle(cyc_asia_30, 1080, 150, 30, cols_30, false)
+            run_cycle(cyc_asia_30, 1080, 1440, 30, cols_30, false)
         if act_10
-            run_cycle(cyc_asia_10, 1080, 150, 10, cols_10, false)
+            run_cycle(cyc_asia_10, 1080, 1440, 10, cols_10, false)
     
     else if use_lines
         // Asia session cycle lines for all symbols
         if act_90
-            run_cycle_lines(line_asia_90, 1080, 150, 90, "90")
+            run_cycle_lines(line_asia_90, 1080, 1440, 90, "90")
         if act_30
-            run_cycle_lines(line_asia_30, 1080, 150, 30, "30")
+            run_cycle_lines(line_asia_30, 1080, 1440, 30, "30")
         if act_10
-            run_cycle_lines(line_asia_10, 1080, 150, 10, "10")
+            run_cycle_lines(line_asia_10, 1080, 1440, 10, "10")
+    
+    // Midnight to 2:30 cycles (optional, controlled by checkbox)
+    if show_midnight_2_30
+        if use_boxes
+            if act_90
+                run_cycle(cyc_mid_90, 1440, 150, 90, cols_90, false)
+            if act_30
+                run_cycle(cyc_mid_30, 1440, 150, 30, cols_30, false)
+            if act_10
+                run_cycle(cyc_mid_10, 1440, 150, 10, cols_10, false)
+        
+        else if use_lines
+            if act_90
+                run_cycle_lines(line_mid_90, 1440, 150, 90, "90")
+            if act_30
+                run_cycle_lines(line_mid_30, 1440, 150, 30, "30")
+            if act_10
+                run_cycle_lines(line_mid_10, 1440, 150, 10, "10")
     
     // Main cycles only from 2:30 onwards
     if ny_m_total >= 150
@@ -316,98 +344,38 @@ if valid_tf
         draw_open(9, 30, c_930, w_930, s_930, "9:30", 16)
 
 // 90min Cycle Opens Logic
-var line l90_1 = na, var bool stopped90_1 = false
-var line l90_2 = na, var bool stopped90_2 = false
-var line l90_3 = na, var bool stopped90_3 = false
-var line l90_4 = na, var bool stopped90_4 = false
-var line l90_5 = na, var bool stopped90_5 = false
-var line l90_6 = na, var bool stopped90_6 = false
-var line l90_7 = na, var bool stopped90_7 = false
-var line l90_8 = na, var bool stopped90_8 = false
-var line l90_9 = na, var bool stopped90_9 = false
+var line[] l90 = array.new_line(9, na)
+var bool[] stopped90 = array.new_bool(9, false)
 
 if valid_tf and show_90_open and act_90
     // Clear all 90min cycle opens on new day
     if is_new_d
-        line.delete(l90_1), l90_1 := na, stopped90_1 := false
-        line.delete(l90_2), l90_2 := na, stopped90_2 := false
-        line.delete(l90_3), l90_3 := na, stopped90_3 := false
-        line.delete(l90_4), l90_4 := na, stopped90_4 := false
-        line.delete(l90_5), l90_5 := na, stopped90_5 := false
-        line.delete(l90_6), l90_6 := na, stopped90_6 := false
-        line.delete(l90_7), l90_7 := na, stopped90_7 := false
-        line.delete(l90_8), l90_8 := na, stopped90_8 := false
-        line.delete(l90_9), l90_9 := na, stopped90_9 := false
+        for i = 0 to 8
+            line.delete(array.get(l90, i))
+            array.set(l90, i, na)
+            array.set(stopped90, i, false)
 
     // 90min cycle opens: 2:30, 4:00, 5:30, 7:00, 8:30, 10:00, 11:30, 13:00, 14:30
-    if ny_h == 2 and ny_m == 30
-        line.delete(l90_1)
-        l90_1 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_1 := false
-    if ny_h == 4 and ny_m == 0
-        line.delete(l90_2)
-        l90_2 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_2 := false
-        stopped90_1 := true  // Stop 1st cycle (2:30 + 90min = 4:00)
-    if ny_h == 5 and ny_m == 30
-        line.delete(l90_3)
-        l90_3 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_3 := false
-        stopped90_2 := true  // Stop 2nd cycle (4:00 + 90min = 5:30)
-    if ny_h == 7 and ny_m == 0
-        line.delete(l90_4)
-        l90_4 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_4 := false
-        stopped90_3 := true  // Stop 3rd cycle (5:30 + 90min = 7:00)
-    if ny_h == 8 and ny_m == 30
-        line.delete(l90_5)
-        l90_5 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_5 := false
-        stopped90_4 := true  // Stop 4th cycle (7:00 + 90min = 8:30)
-    if ny_h == 10 and ny_m == 0
-        line.delete(l90_6)
-        l90_6 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_6 := false
-        stopped90_5 := true  // Stop 5th cycle (8:30 + 90min = 10:00)
-    if ny_h == 11 and ny_m == 30
-        line.delete(l90_7)
-        l90_7 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_7 := false
-        stopped90_6 := true  // Stop 6th cycle (10:00 + 90min = 11:30)
-    if ny_h == 13 and ny_m == 0
-        line.delete(l90_8)
-        l90_8 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_8 := false
-        stopped90_7 := true  // Stop 7th cycle (11:30 + 90min = 13:00)
-    if ny_h == 14 and ny_m == 30
-        line.delete(l90_9)
-        l90_9 := line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open))
-        stopped90_9 := false
-        stopped90_8 := true  // Stop 8th cycle (13:00 + 90min = 14:30)
+    times_h = array.from(2, 4, 5, 7, 8, 10, 11, 13, 14)
+    times_m = array.from(30, 0, 30, 0, 30, 0, 30, 0, 30)
     
+    for i = 0 to 8
+        if ny_h == array.get(times_h, i) and ny_m == array.get(times_m, i)
+            line.delete(array.get(l90, i))
+            array.set(l90, i, line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open)))
+            array.set(stopped90, i, false)
+            if i > 0
+                array.set(stopped90, i - 1, true)
+
     // Stop last cycle at 16:00
     if ny_h == 16 and ny_m == 0
-        stopped90_9 := true  // Stop 9th cycle (14:30 + 90min = 16:00)
-    
+        array.set(stopped90, 8, true)
+
     // Extend lines
-    if not na(l90_1) and not stopped90_1
-        line.set_x2(l90_1, bar_index)
-    if not na(l90_2) and not stopped90_2
-        line.set_x2(l90_2, bar_index)
-    if not na(l90_3) and not stopped90_3
-        line.set_x2(l90_3, bar_index)
-    if not na(l90_4) and not stopped90_4
-        line.set_x2(l90_4, bar_index)
-    if not na(l90_5) and not stopped90_5
-        line.set_x2(l90_5, bar_index)
-    if not na(l90_6) and not stopped90_6
-        line.set_x2(l90_6, bar_index)
-    if not na(l90_7) and not stopped90_7
-        line.set_x2(l90_7, bar_index)
-    if not na(l90_8) and not stopped90_8
-        line.set_x2(l90_8, bar_index)
-    if not na(l90_9) and not stopped90_9
-        line.set_x2(l90_9, bar_index)
+    for i = 0 to 8
+        ln = array.get(l90, i)
+        if not na(ln) and not array.get(stopped90, i)
+            line.set_x2(ln, bar_index)
 
 // Period Opens (Daily/Weekly)
 draw_per(is_new, val, col, txt) =>
@@ -422,13 +390,10 @@ draw_per(is_new, val, col, txt) =>
 if valid_tf and (show_do or show_wo or show_mo or show_yo)
     is_forex = syminfo.type == "forex"
     is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
-    
-    tz = is_crypto ? "UTC" : "America/New_York"
-    h_tz = hour(time, tz), m_tz = minute(time, tz), d_tz = dayofweek(time, tz)
     open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
-    is_do = h_tz == open_h and m_tz == 0
+    is_do = tz_h == open_h and tz_m == 0
     target_dow = (is_forex or is_futures) ? dayofweek.sunday : dayofweek.monday
-    is_wo = is_do and d_tz == target_dow
+    is_wo = is_do and dow == target_dow
     is_mo = timeframe.change("M")
     is_yo = timeframe.change("12M")
     
@@ -437,19 +402,16 @@ if valid_tf and (show_do or show_wo or show_mo or show_yo)
         if is_do
             d_val := open
         draw_per(is_do, d_val, c_do, "D.O.")
-    
     if show_wo
         var float w_val = na
         if is_wo
             w_val := open
         draw_per(is_wo, w_val, c_wo, "W.O.")
-    
     if show_mo
         var float m_val = na
         if is_mo
             m_val := open
         draw_per(is_mo, m_val, c_mo, "M.O.")
-    
     if show_yo
         var float y_val = na
         if is_yo
@@ -462,8 +424,65 @@ var line l_asia_l = na, var label lb_asia_l = na
 var line l_asia_ce = na, var label lb_asia_ce = na
 var float asia_high = na
 var float asia_low = na
-var bool in_asia_prev = false
-var bool asia_lines_locked = false
+var bool asia_high_locked = false
+var bool asia_low_locked = false
+
+// Track Asia session high/low (18:00 to 00:00) - Real-time drawing
+is_18h = ny_h == 18 and ny_m == 0
+in_asia = ny_m_total >= 1080
+
+if valid_tf
+    // Reset at 18:00 for new Asia session
+    if is_18h
+        line.delete(l_asia_h), label.delete(lb_asia_h)
+        line.delete(l_asia_l), label.delete(lb_asia_l)
+        line.delete(l_asia_ce), label.delete(lb_asia_ce)
+        l_asia_h := na, l_asia_l := na, l_asia_ce := na
+        asia_high := na, asia_low := na
+        asia_high_locked := false, asia_low_locked := false
+    
+    if in_asia
+        // Track Asia high/low during session (18:00 to midnight)
+        asia_high := na(asia_high) ? high : math.max(asia_high, high)
+        asia_low := na(asia_low) ? low : math.min(asia_low, low)
+        asia_ce = (asia_high + asia_low) / 2
+        
+        // Draw/update lines in real-time during Asia session
+        if na(l_asia_h)
+            l_asia_h := line.new(bar_index, asia_high, bar_index, asia_high, color=c_asia, width=1, style=line.style_solid)
+            lb_asia_h := label.new(bar_index, asia_high, "Asia High", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_lower_right, size=size.small)
+            l_asia_l := line.new(bar_index, asia_low, bar_index, asia_low, color=c_asia, width=1, style=line.style_solid)
+            lb_asia_l := label.new(bar_index, asia_low, "Asia Low", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
+            l_asia_ce := line.new(bar_index, asia_ce, bar_index, asia_ce, color=c_asia, width=1, style=line.style_dashed)
+            lb_asia_ce := label.new(bar_index, asia_ce, "Asia C.E.", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_left, size=size.small)
+        else
+            line.set_y1(l_asia_h, asia_high), line.set_y2(l_asia_h, asia_high), line.set_x2(l_asia_h, bar_index)
+            label.set_y(lb_asia_h, asia_high), label.set_x(lb_asia_h, bar_index)
+            line.set_y1(l_asia_l, asia_low), line.set_y2(l_asia_l, asia_low), line.set_x2(l_asia_l, bar_index)
+            label.set_y(lb_asia_l, asia_low), label.set_x(lb_asia_l, bar_index)
+            line.set_y1(l_asia_ce, asia_ce), line.set_y2(l_asia_ce, asia_ce), line.set_x2(l_asia_ce, bar_index)
+            label.set_y(lb_asia_ce, asia_ce), label.set_x(lb_asia_ce, bar_index)
+    
+    // After Asia session ends (midnight onwards), extend lines independently until next 18:00
+    if not in_asia and not na(l_asia_h)
+        // Stop Asia High line if price trades above it
+        if not asia_high_locked and high >= asia_high
+            asia_high_locked := true
+        
+        // Stop Asia Low line if price trades below it
+        if not asia_low_locked and low <= asia_low
+            asia_low_locked := true
+        
+        // Extend only lines that haven't been locked yet
+        if not asia_high_locked
+            line.set_x2(l_asia_h, bar_index)
+            label.set_x(lb_asia_h, bar_index)
+        if not asia_low_locked
+            line.set_x2(l_asia_l, bar_index)
+            label.set_x(lb_asia_l, bar_index)
+        if not asia_high_locked or not asia_low_locked
+            line.set_x2(l_asia_ce, bar_index)
+            label.set_x(lb_asia_ce, bar_index)
 
 // Previous H/L
 var line l_pdh = na, var label lb_pdh = na
@@ -476,85 +495,15 @@ var line l_pml = na, var label lb_pml = na
 var line l_pyh = na, var label lb_pyh = na
 var line l_pyl = na, var label lb_pyl = na
 
-// Track Asia session high/low (18:00 to 02:30) - Real-time drawing
-in_asia = (ny_m_total >= 1080) or (ny_m_total < 150)
-
-if valid_tf
-    just_entered_asia = not in_asia_prev and in_asia
-    just_exited_asia = in_asia_prev and not in_asia
-    
-    // Delete old lines when entering new Asia session
-    if just_entered_asia
-        line.delete(l_asia_h), label.delete(lb_asia_h)
-        line.delete(l_asia_l), label.delete(lb_asia_l)
-        line.delete(l_asia_ce), label.delete(lb_asia_ce)
-        l_asia_h := na, l_asia_l := na, l_asia_ce := na
-        asia_high := na, asia_low := na
-        asia_lines_locked := false
-    
-    if in_asia
-        // Track Asia high/low during session
-        asia_high := na(asia_high) ? high : math.max(asia_high, high)
-        asia_low := na(asia_low) ? low : math.min(asia_low, low)
-        
-        // Calculate Asia C.E. (50% of range)
-        asia_ce = (asia_high + asia_low) / 2
-        
-        // Draw/update lines in real-time during Asia session
-        if na(l_asia_h)
-            // Create lines on first bar of Asia session
-            l_asia_h := line.new(bar_index, asia_high, bar_index, asia_high, color=c_asia, width=1, style=line.style_solid)
-            lb_asia_h := label.new(bar_index, asia_high, "Asia High", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_lower_right, size=size.small)
-            
-            l_asia_l := line.new(bar_index, asia_low, bar_index, asia_low, color=c_asia, width=1, style=line.style_solid)
-            lb_asia_l := label.new(bar_index, asia_low, "Asia Low", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
-            
-            l_asia_ce := line.new(bar_index, asia_ce, bar_index, asia_ce, color=c_asia, width=1, style=line.style_dashed)
-            lb_asia_ce := label.new(bar_index, asia_ce, "Asia C.E.", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_left, size=size.small)
-        else
-            // Update lines as high/low change
-            line.set_y1(l_asia_h, asia_high), line.set_y2(l_asia_h, asia_high), line.set_x2(l_asia_h, bar_index)
-            label.set_y(lb_asia_h, asia_high), label.set_x(lb_asia_h, bar_index)
-            
-            line.set_y1(l_asia_l, asia_low), line.set_y2(l_asia_l, asia_low), line.set_x2(l_asia_l, bar_index)
-            label.set_y(lb_asia_l, asia_low), label.set_x(lb_asia_l, bar_index)
-            
-            line.set_y1(l_asia_ce, asia_ce), line.set_y2(l_asia_ce, asia_ce), line.set_x2(l_asia_ce, bar_index)
-            label.set_y(lb_asia_ce, asia_ce), label.set_x(lb_asia_ce, bar_index)
-    else
-        // Extend all lines until price breaks high or low
-        if not na(l_asia_h) and not asia_lines_locked
-            // Check if price broke the high or low
-            if high >= asia_high or low <= asia_low
-                asia_lines_locked := true
-            else
-                // Extend all lines
-                line.set_x2(l_asia_h, bar_index)
-                line.set_x2(l_asia_l, bar_index)
-                line.set_x2(l_asia_ce, bar_index)
-                label.set_x(lb_asia_h, bar_index)
-                label.set_x(lb_asia_l, bar_index)
-                label.set_x(lb_asia_ce, bar_index)
-    
-    // Update previous state
-    in_asia_prev := in_asia
-
 if valid_tf and (show_pd or show_pw or show_pm or show_py)
-    // Define true day open logic (same as Period Opens section)
     is_forex = syminfo.type == "forex"
     is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
-    
-    tz = is_crypto ? "UTC" : "America/New_York"
-    h_tz = hour(time, tz), m_tz = minute(time, tz)
     open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
-    is_do = h_tz == open_h and m_tz == 0
+    is_do = tz_h == open_h and tz_m == 0
     
     if show_pd
-        // Get previous day high/low from daily timeframe
         [daily_h, daily_l] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead=barmerge.lookahead_on)
         pd50 = (daily_h + daily_l) / 2
-        
-        // Draw PDH (Previous Day High)
         if is_do and not na(daily_h)
             line.delete(l_pdh), label.delete(lb_pdh)
             l_pdh := line.new(bar_index, daily_h, bar_index, daily_h, color=c_pd, style=line.style_dashed)
@@ -562,8 +511,6 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
         if not na(l_pdh)
             line.set_x2(l_pdh, bar_index)
             label.set_x(lb_pdh, bar_index)
-        
-        // Draw PDL (Previous Day Low)
         if is_do and not na(daily_l)
             line.delete(l_pdl), label.delete(lb_pdl)
             l_pdl := line.new(bar_index, daily_l, bar_index, daily_l, color=c_pd, style=line.style_dashed)
@@ -571,8 +518,6 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
         if not na(l_pdl)
             line.set_x2(l_pdl, bar_index)
             label.set_x(lb_pdl, bar_index)
-        
-        // Draw PD 50% (Mid-point)
         if is_do and not na(pd50)
             line.delete(l_pd50), label.delete(lb_pd50)
             l_pd50 := line.new(bar_index, pd50, bar_index, pd50, color=c_pd, style=line.style_dotted)
@@ -582,13 +527,8 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
             label.set_x(lb_pd50, bar_index)
     
     if show_pw
-        // Get previous week high/low from weekly timeframe
         [weekly_h, weekly_l] = request.security(syminfo.tickerid, "W", [high[1], low[1]], lookahead=barmerge.lookahead_on)
-        
-        // Detect new week using timeframe.change
         is_new_w = timeframe.change("W")
-        
-        // Draw PWH (Previous Week High)
         if is_new_w and not na(weekly_h)
             line.delete(l_pwh), label.delete(lb_pwh)
             l_pwh := line.new(bar_index, weekly_h, bar_index + 5, weekly_h, color=c_pw, style=line.style_dashed)
@@ -596,8 +536,6 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
         if not na(l_pwh)
             line.set_x2(l_pwh, bar_index + 5)
             label.set_x(lb_pwh, bar_index + 5)
-        
-        // Draw PWL (Previous Week Low)
         if is_new_w and not na(weekly_l)
             line.delete(l_pwl), label.delete(lb_pwl)
             l_pwl := line.new(bar_index, weekly_l, bar_index + 5, weekly_l, color=c_pw, style=line.style_dashed)
@@ -607,13 +545,8 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
             label.set_x(lb_pwl, bar_index + 5)
     
     if show_pm
-        // Get previous month high/low from monthly timeframe
         [monthly_h, monthly_l] = request.security(syminfo.tickerid, "M", [high[1], low[1]], lookahead=barmerge.lookahead_on)
-        
-        // Detect new month using timeframe.change
         is_new_m = timeframe.change("M")
-        
-        // Draw PMH (Previous Month High)
         if is_new_m and not na(monthly_h)
             line.delete(l_pmh), label.delete(lb_pmh)
             l_pmh := line.new(bar_index, monthly_h, bar_index + 5, monthly_h, color=c_pm, style=line.style_dashed)
@@ -621,8 +554,6 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
         if not na(l_pmh)
             line.set_x2(l_pmh, bar_index + 5)
             label.set_x(lb_pmh, bar_index + 5)
-        
-        // Draw PML (Previous Month Low)
         if is_new_m and not na(monthly_l)
             line.delete(l_pml), label.delete(lb_pml)
             l_pml := line.new(bar_index, monthly_l, bar_index + 5, monthly_l, color=c_pm, style=line.style_dashed)
@@ -632,13 +563,8 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
             label.set_x(lb_pml, bar_index + 5)
     
     if show_py
-        // Get previous year high/low from yearly timeframe
         [yearly_h, yearly_l] = request.security(syminfo.tickerid, "12M", [high[1], low[1]], lookahead=barmerge.lookahead_on)
-        
-        // Detect new year using timeframe.change
         is_new_y = timeframe.change("12M")
-        
-        // Draw PYH (Previous Year High)
         if is_new_y and not na(yearly_h)
             line.delete(l_pyh), label.delete(lb_pyh)
             l_pyh := line.new(bar_index, yearly_h, bar_index + 5, yearly_h, color=c_py, style=line.style_dashed)
@@ -646,8 +572,6 @@ if valid_tf and (show_pd or show_pw or show_pm or show_py)
         if not na(l_pyh)
             line.set_x2(l_pyh, bar_index + 5)
             label.set_x(lb_pyh, bar_index + 5)
-        
-        // Draw PYL (Previous Year Low)
         if is_new_y and not na(yearly_l)
             line.delete(l_pyl), label.delete(lb_pyl)
             l_pyl := line.new(bar_index, yearly_l, bar_index + 5, yearly_l, color=c_py, style=line.style_dashed)
