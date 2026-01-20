@@ -245,7 +245,7 @@ if valid_tf
     // Note: cyc_10 can run earlier (from 90) per original code logic if needed, 
     // but simplified clustering generally prefers uniform windows. 
     // Original code: cyc_10 start 90 (1:30), others 150 (2:30). Maintaining original intent:
-    start_10 = 90
+    start_10 = show_mid_230 ? 90 : 150
     start_main = 150
     end_ny = 960 // 16:00
 
