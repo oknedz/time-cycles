@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="sl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CV - Zdenko - Sales & IoT Expert</title>
+    <style>
+        :root {
+            --sidebar-bg: #e2e4e9;
+            --header-bg: #4a5568;
+            --text-dark: #2d3748;
+            --text-gray: #4a5568;
+            --accent-line: #718096;
+            /* Darkened for print visibility */
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #555;
+            /* Dark background for screen viewing to make A4 pop */
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .cv-container {
+            width: 210mm;
+            min-height: 297mm;
+            /* A4 Height */
+            background: white;
+            display: flex;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            margin: 20px auto;
+            overflow: hidden;
+            /* Prevents overflow content from creating extra pages */
+        }
+
+        /* LEVA STRAN - SIDEBAR */
+        .sidebar {
+            width: 32%;
+            /* Slightly wider for better text fit */
+            background-color: var(--sidebar-bg);
+            padding: 40px 25px;
+            display: flex;
+            flex-direction: column;
+            color: var(--text-dark);
+        }
+
+
+
+        .sidebar-section {
+            margin-bottom: 30px;
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--header-bg);
+            /* Use header color for visibility */
+            padding-bottom: 5px;
+            margin-bottom: 12px;
+            color: var(--header-bg);
+        }
+
+        .sidebar-item {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            line-height: 1.4;
+        }
+
+        .sidebar-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sidebar-list li {
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+            padding-left: 12px;
+            position: relative;
+            line-height: 1.4;
+        }
+
+        .sidebar-list li::before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--header-bg);
+            font-weight: bold;
+        }
+
+        /* DESNA STRAN - MAIN CONTENT */
+        .main-content {
+            width: 68%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: var(--header-bg);
+            color: white;
+            padding: 40px 40px;
+            border-bottom: 4px solid var(--sidebar-bg);
+            /* Bottom separator */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.4rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+
+        .header p {
+            margin: 8px 0 0 0;
+            font-size: 0.9rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .content-padding {
+            padding: 35px 40px;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+        }
+
+        .icon-circle {
+            width: 28px;
+            height: 28px;
+            background-color: var(--header-bg);
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        .section-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--header-bg);
+        }
+
+        .timeline {
+            border-left: none;
+            margin-left: 0;
+            padding-left: 0;
+        }
+
+        .timeline-item {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-item::before {
+            display: none;
+        }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-dark);
+            border-bottom: 1px dashed #cbd5e0;
+            /* Dashed separator for items */
+            padding-bottom: 4px;
+            margin-bottom: 6px;
+        }
+
+        .job-header span:last-child {
+            font-size: 0.8rem;
+            color: var(--text-gray);
+            font-weight: 600;
+        }
+
+        .job-sub {
+            font-style: italic;
+            color: var(--header-bg);
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .job-desc {
+            font-size: 0.85rem;
+            color: #4a5568;
+            margin: 0;
+            padding-left: 15px;
+            line-height: 1.5;
+        }
+
+        .job-desc li {
+            margin-bottom: 4px;
+        }
+
+        .profile-text {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            text-align: justify;
+            color: #4a5568;
+        }
+
+        /* PRINT SETTINGS - CRITICAL FOR PDF */
+        @media print {
+            @page {
+                margin: 0;
+                size: A4;
+            }
+
+            html,
+            body {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+
+            .cv-container {
+                margin: 0;
+                padding: 0;
+                width: 210mm;
+                min-height: 297mm;
+                box-shadow: none;
+                border: none;
+                page-break-inside: avoid;
+            }
+
+            /* Hides header/footer printed by browser default if manual option fails */
+            body::after,
+            body::before {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="cv-container">
+        <div class="sidebar">
+
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Kontakt</div>
+                <div class="sidebar-item"
+                    style="font-size: 1.4rem; font-weight: 800; margin-bottom: 15px; color: #2d3748;">Zdenko Vasič</div>
+                <div class="sidebar-item">📞 +66 65 403 9544 (TH)</div>
+                <div class="sidebar-item">📞 +880 1763 806 854 (BD)</div>
+                <div class="sidebar-item">✉️ vasiczdenko@gmail.com</div>
+                <div class="sidebar-item">📍 Pattaya, Tajska (CET)</div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Kompetence</div>
+                <ul class="sidebar-list">
+                    <li>Vodenje proizvodnje & QA</li>
+                    <li>Poslovanje v Aziji</li>
+                    <li><strong>IT Znanja:</strong></li>
+                    <li>Python, JS, HTML, React</li>
+                    <li>MySQL, Supabase</li>
+                    <li>AI Avtomatizacija</li>
+
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Jeziki</div>
+                <ul class="sidebar-list">
+                    <li>Slovenščina (Materni)</li>
+                    <li>Angleščina (Tekoče)</li>
+                    <li>Hrvaščina (Dobro)</li>
+                    <li>Nemščina / Italijanščina (Osnovno)</li>
+                    <li>Bangla / Hindi (Osnovno)</li>
+                    <li>Tajščina (se učim)</li>
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">Reference</div>
+                <div class="sidebar-item" style="font-weight: bold; margin-bottom: 0;">g. Vlado Levačič</div>
+                <div class="sidebar-item" style="font-size: 0.8rem; font-style: italic;">VENERE d.o.o.</div>
+
+                <div class="sidebar-item" style="font-weight: bold; margin-bottom: 0; margin-top: 10px;">g. Steven
+                    Embling</div>
+                <div class="sidebar-item" style="font-size: 0.8rem; font-style: italic;">MSA Latchways</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header"
+                style="padding: 20px 40px; justify-content: center; flex-direction: column; align-items: flex-start; min-height: auto; text-align: left;">
+                <div style="font-size: 0.85rem; font-weight: 400; opacity: 0.9; margin-bottom: 3px;">Razpisano delovno
+                    mesto:</div>
+                <div
+                    style="font-size: 1.1rem; font-weight: 400; text-transform: uppercase; letter-spacing: 1px; line-height: 1.1;">
+                    KOMERCIALIST ZA MEDNARODNO PRODAJO</div>
+            </div>
+
+            <div class="content-padding">
+
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">Delovne izkušnje</div>
+                    </div>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="job-header">
+                                <span>ZDENEX Garments Quality Assurance</span>
+                                <span>TRENUTNO</span>
+                            </div>
+                            <div class="job-sub">Svetovalec (Consultant) - Azija</div>
+                            <ul class="job-desc">
+                                <li>Svetovanje pri zagotavljanju kakovosti v tekstilni industriji,</li>
+                                <li>Pomagam pri koordinaciji evropske ekipe za izvajanje nadzora na terenu.</li>
+
+                            </ul>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="job-header">
+                                <span>VENERE d.o.o. (Bangladeš)</span>
+                                <span>4 LETA</span>
+                            </div>
+                            <div class="job-sub">Factory Manager (Vodja tovarne)</div>
+                            <ul class="job-desc">
+                                <li>Celostno vodenje tovarne za proizvodnjo oblačil: organizacija dela, HR, logistika
+                                    ter kontrola kakovosti in prozvodnih procesov,</li>
+                                <li>Odgovornost za doseganje proizvodnih ciljev in visokih standardov kakovosti za
+                                    evropski trg,</li>
+                                <li>Redna komunikacija z kupci in Slovensko pisarno,</li>
+                                <li>Uspešno premoščanje kulturnih razlik in vodenje preko 400 zaposlenih.</li>
+                            </ul>
+                        </div>
+
+                        <div class="timeline-item">
+                            <div class="job-header">
+                                <span>MSA LATCHWAYS</span>
+                                <span>8 LET</span>
+                            </div>
+                            <div class="job-sub">Kontrolor Kakovosti (Quality Assurance)</div>
+                            <ul class="job-desc">
+                                <li>Dolgoletne izkušnje z nadzorom kakovosti varnostne opreme (Height Safety),</li>
+                                <li>Dosledno upoštevanje strogih industrijskih standardov in tehnične dokumentacije,
+                                </li>
+                                <li>Analiza napak in implementacija korektivnih ukrepov v proizvodnji.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-header">
+                        <div class="section-title">Izobrazba</div>
+                    </div>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="job-header">
+                                <span>Šolski center Velenje</span>
+                                <span></span>
+                            </div>
+                            <div class="job-sub">Elektrotehnik - Elektronik</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
