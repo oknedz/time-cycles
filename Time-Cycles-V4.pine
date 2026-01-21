@@ -37,14 +37,14 @@ w_90_open     = input.int(1, "", 1, 3, group=grp_ol, inline="90open")
 s_90_open     = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="90open")
 
 show_830      = input.bool(false, "8:30", group=grp_ol, inline="830")
-c_830         = input.color(color.blue, "", group=grp_ol, inline="830")
+c_830         = input.color(color.gray, "", group=grp_ol, inline="830")
 w_830         = input.int(1, "", 1, 3, group=grp_ol, inline="830")
-s_830         = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="830")
+s_830         = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="830")
 
 show_930      = input.bool(false, "9:30", group=grp_ol, inline="930")
-c_930         = input.color(color.green, "", group=grp_ol, inline="930")
+c_930         = input.color(color.gray, "", group=grp_ol, inline="930")
 w_930         = input.int(1, "", 1, 3, group=grp_ol, inline="930")
-s_930         = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
+s_930         = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
 
 // Colors
 c_90_a        = input.color(color.red, "90min A", group=grp_col, inline="90")
