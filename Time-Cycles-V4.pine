@@ -151,6 +151,16 @@ var CycleLine l_ny_90   = CycleLine.new(na, -1, false)
 var CycleLine l_ny_30   = CycleLine.new(na, -1, false)
 var CycleLine l_ny_10   = CycleLine.new(na, -1, false)
 
+// History tracking - store previous day Asia open bar index
+var int prev_asia_bar = na
+var int current_asia_bar = na
+
+// Arrays to track all drawing objects for cleanup
+var array<line> all_lines = array.new<line>()
+var array<linefill> all_fills = array.new<linefill>()
+var array<int> line_bars = array.new<int>()
+var array<int> fill_bars = array.new<int>()
+
 var cols_90 = array.from(c_90_a, c_90_m, c_90_d)
 var cols_30 = array.from(c_30_a, c_30_m, c_30_d)
 var cols_10 = array.from(c_10)
@@ -178,6 +188,14 @@ draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols) =>
             c.t := line.new(bar_index, c.h, bar_index, c.h, color=color.new(col, 100))
             c.b := line.new(bar_index, c.l, bar_index, c.l, color=color.new(col, 100))
             c.f := linefill.new(c.t, c.b, color.new(col, fill_transp))
+            
+            // Track objects for cleanup
+            array.push(all_lines, c.t)
+            array.push(line_bars, bar_index)
+            array.push(all_lines, c.b)
+            array.push(line_bars, bar_index)
+            array.push(all_fills, c.f)
+            array.push(fill_bars, bar_index)
         else
             // Update Box
             c.h := math.max(c.h, high), c.l := math.min(c.l, low)
@@ -201,12 +219,39 @@ draw_cycle_line(CycleLine cl, int start, int end, int per, int min_type) =>
             cl.active := true
             sty = min_type == 90 ? line.style_solid : min_type == 30 ? line.style_dashed : line.style_dotted
             cl.l := line.new(bar_index, low, bar_index, high, color=c_lines, style=sty, extend=extend.both)
+            
+            // Track for cleanup
+            array.push(all_lines, cl.l)
+            array.push(line_bars, bar_index)
     else
         if cl.active
             cl.active := false, cl.idx := -1
     int(na)
 
 // ─── Execution ───
+
+// Track Asia open timestamps
+if ny_h == 18 and ny_m == 0
+    prev_asia_bar := current_asia_bar
+    current_asia_bar := bar_index
+
+// Cleanup old drawings - delete objects older than previous day Asia open
+if not na(prev_asia_bar)
+    // Clean up lines
+    for i = array.size(all_lines) - 1 to 0
+        if array.size(line_bars) > i
+            if line_bars.get(i) < prev_asia_bar
+                line.delete(all_lines.get(i))
+                array.remove(all_lines, i)
+                array.remove(line_bars, i)
+    
+    // Clean up fills
+    for i = array.size(all_fills) - 1 to 0
+        if array.size(fill_bars) > i
+            if fill_bars.get(i) < prev_asia_bar
+                linefill.delete(all_fills.get(i))
+                array.remove(all_fills, i)
+                array.remove(fill_bars, i)
 
 if valid_tf
     // 1. Asia (18:00 - 00:00 -> 1080 - 1440)
