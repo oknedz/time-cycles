@@ -19,6 +19,7 @@ c_lines       = input.color(color.white, "Lines Color", group=grp_cyc, inline="v
 show_90       = input.bool(true, "90min", group=grp_cyc, inline="c1")
 show_30       = input.bool(true, "30min", group=grp_cyc, inline="c1")
 show_10       = input.bool(false, "10min", group=grp_cyc, inline="c1")
+
 show_mid_230  = input.bool(false, "Midnight to 2:30", group=grp_cyc, inline="c2")
 auto_adj      = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
 show_macro    = input.bool(false, "MACRO Times", group=grp_cyc, inline="c3")
@@ -265,6 +266,9 @@ if valid_tf
             draw_cycle_line(l_ny_10, start_10, end_ny, 10, 10)
 
 
+
+
+
 // ─── Alerts ───
 // Simple refactor using loop
 var alert_times_h = array.from(2, 4, 5, 7, 8, 10)
@@ -383,16 +387,35 @@ update_level(bool show, float h_val, float l_val, color col, bool update_trig, L
         if not na(obj.m)
             line.set_x2(obj.m, bar_index+5), label.set_x(obj.lb_m, bar_index+5)
 
-if valid_tf
+if valid_tf or timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly
     // Data Fetching
     // Note: 18:00 NY is defined as the "start" of the new day for this script's logic.
     trig_pd = ny_h == 18 and ny_m == 0
-    [d_h, d_l] = request.security(syminfo.tickerid, "D", [high, low], lookahead=barmerge.lookahead_on)
+    
+    // Fetch HTF data for weekly, monthly, yearly
     [w_h, w_l] = request.security(syminfo.tickerid, "W", [high, low], lookahead=barmerge.lookahead_on)
     [m_h, m_l] = request.security(syminfo.tickerid, "M", [high, low], lookahead=barmerge.lookahead_on)
     [y_h, y_l] = request.security(syminfo.tickerid, "12M", [high, low], lookahead=barmerge.lookahead_on)
+    
+    // Manual tracking of daily high/low from 18:00 to 18:00
+    var float current_day_high = na
+    var float current_day_low = na
+    var float pdh_val = na
+    var float pdl_val = na
+    
+    if trig_pd
+        // Store previous day's values (18:00 to 18:00 period)
+        pdh_val := current_day_high
+        pdl_val := current_day_low
+        // Reset for new day
+        current_day_high := high
+        current_day_low := low
+    else
+        // Update current day's high/low
+        current_day_high := na(current_day_high) ? high : math.max(current_day_high, high)
+        current_day_low := na(current_day_low) ? low : math.min(current_day_low, low)
 
-    update_level(show_pd, d_h, d_l, c_pd, trig_pd, o_pd, "PDH", "PDL")
+    update_level(show_pd, pdh_val, pdl_val, c_pd, trig_pd, o_pd, "PDH", "PDL")
     update_level(show_pw, w_h, w_l, c_pw, timeframe.change("W"), o_pw, "PWH", "PWL")
     update_level(show_pm, m_h, m_l, c_pm, timeframe.change("M"), o_pm, "PMH", "PML")
     update_level(show_py, y_h, y_l, c_py, timeframe.change("12M"), o_py, "PYH", "PYL")
