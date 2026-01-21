@@ -63,6 +63,7 @@ c_dsep        = input.color(color.gray, "", group=grp_day, inline="ds")
 s_dsep        = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_day, inline="ds")
 show_dlbl     = input.bool(true, "Labels", group=grp_day, inline="ds")
 
+
 // Period Opens
 show_do       = input.bool(false, "Daily Open", group=grp_per, inline="do")
 c_do          = input.color(color.yellow, "", group=grp_per, inline="do")
@@ -123,6 +124,13 @@ type LevelObj
     label lb_h
     label lb_l
     label lb_m
+    int start_idx
+
+type TimeLine
+    line l
+    label lb
+    bool stopped
+    int start_idx
 
 // ─── Variables for Cycles ───
 // We need separate variables for each session/timeframe combo to maintain state
@@ -150,6 +158,15 @@ var CycleLine l_mid_10  = CycleLine.new(na, -1, false)
 var CycleLine l_ny_90   = CycleLine.new(na, -1, false)
 var CycleLine l_ny_30   = CycleLine.new(na, -1, false)
 var CycleLine l_ny_10   = CycleLine.new(na, -1, false)
+
+// Opening Lines & Period Opens State
+var TimeLine tl_mid = TimeLine.new(na, na, false, na)
+var TimeLine tl_830 = TimeLine.new(na, na, false, na)
+var TimeLine tl_930 = TimeLine.new(na, na, false, na)
+var TimeLine tl_do  = TimeLine.new(na, na, false, na)
+var TimeLine tl_wo  = TimeLine.new(na, na, false, na)
+var TimeLine tl_mo  = TimeLine.new(na, na, false, na)
+var TimeLine tl_yo  = TimeLine.new(na, na, false, na)
 
 // History tracking - store previous day Asia open bar index
 var int prev_asia_bar = na
@@ -347,30 +364,37 @@ draw_marker(cond, val, col, txt, is_horz) =>
         [line(na), label(na)]
 
 // Day Separator
-if valid_tf and show_dsep and hour(time, calc_tz) == 0 and minute(time, calc_tz) == 0
-    line.new(bar_index, low, bar_index, high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
+if valid_tf and is_new_d
+    if show_dsep
+        line.new(bar_index, low, bar_index, high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
+    if show_dlbl
+        d_names = array.from("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+        // dayofweek returns 1 (Sunday) to 7 (Saturday)
+        dow = dayofweek(time, calc_tz) 
+        // 1->0 (Sun), 2->1 (Mon), etc.
+        txt = d_names.get(dow - 1)
+        label.new(bar_index, high, txt, yloc=yloc.abovebar, color=color.new(color.white, 100), textcolor=c_dsep, style=label.style_none, size=size.small)
 
 // Opening Lines (Manual & 90min)
 // ... (Keeping this part mostly manual or lightweight as it involves specific time checks and extensions)
-draw_op_line(h, m, c, w, s, txt, stop_h) =>
-    var line l = na, var label lb = na, var bool stopped = false
+draw_op_line(TimeLine tl, h, m, c, w, s, txt, stop_h) =>
     if ny_h == h and ny_m == m
-        line.delete(l), label.delete(lb)
-        l := line.new(bar_index, open, bar_index, open, color=c, width=w, style=get_style(s))
-        lb := label.new(bar_index, open, txt, color=color.new(color.white, 100), textcolor=c, style=label.style_label_left, size=size.small)
-        stopped := false
+        line.delete(tl.l), label.delete(tl.lb)
+        tl.l := line.new(bar_index, open, bar_index, open, color=c, width=w, style=get_style(s))
+        tl.lb := label.new(bar_index, open, txt, color=color.new(color.white, 100), textcolor=c, style=label.style_label_left, size=size.small)
+        tl.stopped := false
     if ny_h == stop_h and ny_m == 0
-        stopped := true
-    if not na(l) and not stopped
-        line.set_x2(l, bar_index), label.set_x(lb, bar_index), label.set_y(lb, line.get_y1(l))
+        tl.stopped := true
+    if not na(tl.l) and not tl.stopped
+        line.set_x2(tl.l, bar_index), label.set_x(tl.lb, bar_index), label.set_y(tl.lb, line.get_y1(tl.l))
 
 if valid_tf
     if show_mid
-        draw_op_line(0, 0, c_mid, w_mid, s_mid, "00:00", 24)
+        draw_op_line(tl_mid, 0, 0, c_mid, w_mid, s_mid, "00:00", 24)
     if show_830
-        draw_op_line(8, 30, c_830, w_830, s_830, "8:30", 16)
+        draw_op_line(tl_830, 8, 30, c_830, w_830, s_830, "8:30", 16)
     if show_930
-        draw_op_line(9, 30, c_930, w_930, s_930, "9:30", 16)
+        draw_op_line(tl_930, 9, 30, c_930, w_930, s_930, "9:30", 16)
 
 // 90min Open Lines Array Logic (Optimized)
 var l90 = array.new_line(13, na), var stop90 = array.new_bool(13, false)
@@ -404,46 +428,46 @@ if valid_tf and show_90_open and act_90
 
 // Previous Levels Logic (Consolidated)
 // We defined `update_level` to handle the repetitive drawing and updating of PDH style lines.
-var LevelObj o_pd  = LevelObj.new(na, na, na, na, na, na)
-var LevelObj o_pw  = LevelObj.new(na, na, na, na, na, na)
-var LevelObj o_pm  = LevelObj.new(na, na, na, na, na, na)
-var LevelObj o_py  = LevelObj.new(na, na, na, na, na, na)
+var LevelObj o_pd  = LevelObj.new(na, na, na, na, na, na, na)
+var LevelObj o_pw  = LevelObj.new(na, na, na, na, na, na, na)
+var LevelObj o_pm  = LevelObj.new(na, na, na, na, na, na, na)
+var LevelObj o_py  = LevelObj.new(na, na, na, na, na, na, na)
 
-update_level(bool show, float h_val, float l_val, color col, bool update_trig, LevelObj obj, string t_h, string t_l) =>
+update_level(bool show, float h_val, float l_val, color col, bool update_trig, LevelObj obj, string t_h, string t_l, string t_m) =>
     if show
+        // Manage start index
         if update_trig
+            obj.start_idx := bar_index
+        else if na(obj.start_idx)
+            obj.start_idx := bar_index
+            
+        // Drawing logic
+        if not na(obj.start_idx) and (not na(h_val) or not na(l_val))
             line.delete(obj.h), label.delete(obj.lb_h)
             line.delete(obj.l), label.delete(obj.lb_l)
             line.delete(obj.m), label.delete(obj.lb_m)
-            
+             
+            // Create new (Short lines 10 bars forward)
             if not na(h_val)
-                obj.h    := line.new(bar_index, h_val, bar_index+5, h_val, color=col, style=line.style_dashed)
-                obj.lb_h := label.new(bar_index, h_val, t_h, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+                obj.h    := line.new(bar_index, h_val, bar_index+10, h_val, color=col, style=line.style_dashed)
+                obj.lb_h := label.new(bar_index+10, h_val, t_h, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
             if not na(l_val)
-                obj.l    := line.new(bar_index, l_val, bar_index+5, l_val, color=col, style=line.style_dashed)
-                obj.lb_l := label.new(bar_index, l_val, t_l, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+                obj.l    := line.new(bar_index, l_val, bar_index+10, l_val, color=col, style=line.style_dashed)
+                obj.lb_l := label.new(bar_index+10, l_val, t_l, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
             if not na(h_val) and not na(l_val)
                 mid = (h_val + l_val) / 2
-                obj.m    := line.new(bar_index, mid, bar_index+5, mid, color=col, style=line.style_dotted)
-                obj.lb_m := label.new(bar_index, mid, "C.E.", color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
-        
-        // Extend
-        if not na(obj.h)
-            line.set_x2(obj.h, bar_index+5), label.set_x(obj.lb_h, bar_index+5)
-        if not na(obj.l)
-            line.set_x2(obj.l, bar_index+5), label.set_x(obj.lb_l, bar_index+5)
-        if not na(obj.m)
-            line.set_x2(obj.m, bar_index+5), label.set_x(obj.lb_m, bar_index+5)
+                obj.m    := line.new(bar_index, mid, bar_index+10, mid, color=col, style=line.style_dotted)
+                obj.lb_m := label.new(bar_index+10, mid, t_m, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+
+// Fetch HTF data globally
+[w_h, w_l, w_o] = request.security(syminfo.tickerid, "W", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
+[m_h, m_l, m_o] = request.security(syminfo.tickerid, "M", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
+[y_h, y_l, y_o] = request.security(syminfo.tickerid, "12M", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
 
 if valid_tf or timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly
     // Data Fetching
     // Note: 18:00 NY is defined as the "start" of the new day for this script's logic.
     trig_pd = ny_h == 18 and ny_m == 0
-    
-    // Fetch HTF data for weekly, monthly, yearly
-    [w_h, w_l] = request.security(syminfo.tickerid, "W", [high, low], lookahead=barmerge.lookahead_on)
-    [m_h, m_l] = request.security(syminfo.tickerid, "M", [high, low], lookahead=barmerge.lookahead_on)
-    [y_h, y_l] = request.security(syminfo.tickerid, "12M", [high, low], lookahead=barmerge.lookahead_on)
     
     // Manual tracking of daily high/low from 18:00 to 18:00
     var float current_day_high = na
@@ -463,13 +487,13 @@ if valid_tf or timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly
         current_day_high := na(current_day_high) ? high : math.max(current_day_high, high)
         current_day_low := na(current_day_low) ? low : math.min(current_day_low, low)
 
-    update_level(show_pd, pdh_val, pdl_val, c_pd, trig_pd, o_pd, "PDH", "PDL")
-    update_level(show_pw, w_h, w_l, c_pw, timeframe.change("W"), o_pw, "PWH", "PWL")
-    update_level(show_pm, m_h, m_l, c_pm, timeframe.change("M"), o_pm, "PMH", "PML")
-    update_level(show_py, y_h, y_l, c_py, timeframe.change("12M"), o_py, "PYH", "PYL")
+    update_level(show_pd, pdh_val, pdl_val, c_pd, trig_pd, o_pd, "PDH", "PDL", "C.E.")
+    update_level(show_pw, w_h, w_l, c_pw, timeframe.change("W"), o_pw, "PWH", "PWL", "W.C.E.")
+    update_level(show_pm, m_h, m_l, c_pm, timeframe.change("M"), o_pm, "PMH", "PML", "M.C.E.")
+    update_level(show_py, y_h, y_l, c_py, timeframe.change("12M"), o_py, "PYH", "PYL", "Y.C.E.")
 
 // Asia H/L (18:00 realtime)
-var LevelObj o_asia = LevelObj.new(na, na, na, na, na, na)
+var LevelObj o_asia = LevelObj.new(na, na, na, na, na, na, na)
 var float a_h = na, var float a_l = na
 var bool lock_ah = false, var bool lock_al = false
 
@@ -515,16 +539,23 @@ if valid_tf
 
 // ─── Period Opens (Daily, Weekly, Monthly, Yearly) ───
 // Logic to track and draw the open price of higher timeframes
-draw_period_open(bool active, bool is_new, float val, color col, string txt) =>
-    var line l = na, var label lb = na
-    if active
+draw_period_open(TimeLine tl, bool active, bool is_new, float val, color col, string txt) =>
+    if active and not na(val)
+        // 1. Determine Start Index
+        // If we hit a new period trigger, update start.
         if is_new
-            line.delete(l), label.delete(lb)
-            l := line.new(bar_index, val, bar_index, val, color=col)
-            lb := label.new(bar_index, val, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+            tl.start_idx := bar_index
+        // Fallback: If we haven't seen a trigger yet (e.g. history start > period start), 
+        // default to current bar so we have a starting point for the line.
+        else if na(tl.start_idx)
+            tl.start_idx := bar_index
         
-        if not na(l)
-            line.set_x2(l, bar_index), label.set_x(lb, bar_index), label.set_y(lb, val)
+        // 2. Draw/Update Line
+        if not na(tl.start_idx)
+            line.delete(tl.l), label.delete(tl.lb)
+            // Draw short line at current bar extending right
+            tl.l := line.new(bar_index, val, bar_index + 10, val, color=col)
+            tl.lb := label.new(bar_index + 10, val, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
 
 if valid_tf and (show_do or show_wo or show_mo or show_yo)
     is_forex = syminfo.type == "forex"
@@ -536,26 +567,13 @@ if valid_tf and (show_do or show_wo or show_mo or show_yo)
     var float d_val = na
     if is_do 
         d_val := open
-    draw_period_open(show_do, is_do, d_val, c_do, "D.O.")
+    draw_period_open(tl_do, show_do, is_do, d_val, c_do, "D.O.")
 
     // Weekly Open
-    target_dow = (is_forex or is_futures) ? dayofweek.sunday : dayofweek.monday
-    is_wo = is_do and dayofweek(time, calc_tz) == target_dow
-    var float w_val = na
-    if is_wo
-        w_val := open
-    draw_period_open(show_wo, is_wo, w_val, c_wo, "W.O.")
+    draw_period_open(tl_wo, show_wo, timeframe.change("W"), w_o, c_wo, "W.O.")
 
     // Monthly Open
-    is_mo = timeframe.change("M")
-    var float m_val = na
-    if is_mo
-        m_val := open
-    draw_period_open(show_mo, is_mo, m_val, c_mo, "M.O.")
+    draw_period_open(tl_mo, show_mo, timeframe.change("M"), m_o, c_mo, "M.O.")
 
     // Yearly Open
-    is_yo = timeframe.change("12M")
-    var float y_val = na
-    if is_yo
-        y_val := open
-    draw_period_open(show_yo, is_yo, y_val, c_yo, "Y.O.")
+    draw_period_open(tl_yo, show_yo, timeframe.change("12M"), y_o, c_yo, "Y.O.")
