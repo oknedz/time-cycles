@@ -61,7 +61,12 @@ fill_transp   = input.int(88, "Fill Transparency", 0, 100, group="Display")
 show_dsep     = input.bool(true, "Day Sep", group=grp_day, inline="ds")
 c_dsep        = input.color(color.gray, "", group=grp_day, inline="ds")
 s_dsep        = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_day, inline="ds")
-show_dlbl     = input.bool(true, "Labels", group=grp_day, inline="ds")
+show_wd       = input.bool(true, "Weekdays", group=grp_day, inline="wd")
+c_wd          = input.color(color.gray, "", group=grp_day, inline="wd")
+loc_wd        = input.string("Bottom", "", ["Top", "Bottom"], group=grp_day, inline="wd")
+fmt_wd        = input.string("Short", "Format", ["Short", "Long"], group=grp_day, inline="wd2")
+off_wd        = input.int(0, "Offset (min)", group=grp_day, inline="wd2")
+
 
 
 // Period Opens
@@ -367,13 +372,8 @@ draw_marker(cond, val, col, txt, is_horz) =>
 if valid_tf and is_new_d
     if show_dsep
         line.new(bar_index, low, bar_index, high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
-    if show_dlbl
-        d_names = array.from("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-        // dayofweek returns 1 (Sunday) to 7 (Saturday)
-        dow = dayofweek(time, calc_tz) 
-        // 1->0 (Sun), 2->1 (Mon), etc.
-        txt = d_names.get(dow - 1)
-        label.new(bar_index, high, txt, yloc=yloc.abovebar, color=color.new(color.white, 100), textcolor=c_dsep, style=label.style_none, size=size.small)
+// Weekday Labels Logic logic moved to end of script for plotshape usage
+
 
 // Opening Lines (Manual & 90min)
 // ... (Keeping this part mostly manual or lightweight as it involves specific time checks and extensions)
@@ -577,3 +577,50 @@ if valid_tf and (show_do or show_wo or show_mo or show_yo)
 
     // Yearly Open
     draw_period_open(tl_yo, show_yo, timeframe.change("12M"), y_o, c_yo, "Y.O.")
+
+// ─── Weekday Labels (Top/Bottom of Pane) ───
+// Adapted from reference logic using plotshape for fixed pane positioning
+
+// Configuration
+wd_loc = loc_wd == "Top" ? location.top : location.bottom
+wd_off = off_wd == 0 ? 0 : math.round(off_wd / tf_min)
+c_inv  = color.new(color.white, 100)
+
+// Triggers - Noon for Mon-Fri, Evening for Sunday
+is_mid_day  = ny_h == 12 and ny_m == 0
+is_sun_eve  = ny_h == 19 and ny_m == 30 
+// Fallback for Sunday if 19:30 doesn't exist on bar (e.g. 1H chart)
+if tf_min >= 60
+    is_sun_eve := ny_h == 20 and ny_m == 0
+
+// Determine Day of Week in Calc TZ
+dow = dayofweek(time, calc_tz)
+
+// Master switch
+show_days = valid_tf and show_wd
+
+// Conditions
+is_mon = show_days and dow == dayofweek.monday    and is_mid_day
+is_tue = show_days and dow == dayofweek.tuesday   and is_mid_day
+is_wed = show_days and dow == dayofweek.wednesday and is_mid_day
+is_thu = show_days and dow == dayofweek.thursday  and is_mid_day
+is_fri = show_days and dow == dayofweek.friday    and is_mid_day
+is_sun = show_days and dow == dayofweek.sunday    and (is_crypto ? is_mid_day : is_sun_eve)
+
+// Short Format
+is_short = fmt_wd == "Short"
+plotshape(is_short and is_mon, "Mon", shape.labelup, wd_loc, c_inv, wd_off, "Mon", c_wd, size=size.small)
+plotshape(is_short and is_tue, "Tue", shape.labelup, wd_loc, c_inv, wd_off, "Tue", c_wd, size=size.small)
+plotshape(is_short and is_wed, "Wed", shape.labelup, wd_loc, c_inv, wd_off, "Wed", c_wd, size=size.small)
+plotshape(is_short and is_thu, "Thu", shape.labelup, wd_loc, c_inv, wd_off, "Thu", c_wd, size=size.small)
+plotshape(is_short and is_fri, "Fri", shape.labelup, wd_loc, c_inv, wd_off, "Fri", c_wd, size=size.small)
+plotshape(is_short and is_sun, "Sun", shape.labelup, wd_loc, c_inv, wd_off, "Sun", c_wd, size=size.small)
+
+// Long Format
+is_long = fmt_wd == "Long"
+plotshape(is_long and is_mon, "Monday",    shape.labelup, wd_loc, c_inv, wd_off, "Monday",    c_wd, size=size.small)
+plotshape(is_long and is_tue, "Tuesday",   shape.labelup, wd_loc, c_inv, wd_off, "Tuesday",   c_wd, size=size.small)
+plotshape(is_long and is_wed, "Wednesday", shape.labelup, wd_loc, c_inv, wd_off, "Wednesday", c_wd, size=size.small)
+plotshape(is_long and is_thu, "Thursday",  shape.labelup, wd_loc, c_inv, wd_off, "Thursday",  c_wd, size=size.small)
+plotshape(is_long and is_fri, "Friday",    shape.labelup, wd_loc, c_inv, wd_off, "Friday",    c_wd, size=size.small)
+plotshape(is_long and is_sun, "Sunday",    shape.labelup, wd_loc, c_inv, wd_off, "Sunday",    c_wd, size=size.small)
