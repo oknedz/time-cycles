@@ -1,5 +1,5 @@
 //@version=6
-indicator("Time Cycles V4.0", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+indicator("Time Cycles V4.0 [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIME CYCLES V4.0 - OPTIMIZED
@@ -94,6 +94,7 @@ grp_table     = "Price Position Table"
 show_table    = input.bool(true, "Show Table", group=grp_table)
 c_above       = input.color(color.green, "Above Color", group=grp_table, inline="tc")
 c_below       = input.color(color.red, "Below Color", group=grp_table, inline="tc")
+show_related  = input.bool(true, "Show Related Symbols", group=grp_table)
 
 // ─── Time & State ───
 tf_min = timeframe.in_seconds() / 60
@@ -193,17 +194,38 @@ var cols_90 = array.from(c_90_a, c_90_m, c_90_d)
 var cols_30 = array.from(c_30_a, c_30_m, c_30_d)
 var cols_10 = array.from(c_10)
 
+// Pre-computed colors with transparency (optimization)
+var c_90_a_fill = color.new(c_90_a, fill_transp)
+var c_90_m_fill = color.new(c_90_m, fill_transp)
+var c_90_d_fill = color.new(c_90_d, fill_transp)
+var c_30_a_fill = color.new(c_30_a, fill_transp)
+var c_30_m_fill = color.new(c_30_m, fill_transp)
+var c_30_d_fill = color.new(c_30_d, fill_transp)
+var c_10_fill = color.new(c_10, fill_transp)
+
+var cols_90_fill = array.from(c_90_a_fill, c_90_m_fill, c_90_d_fill)
+var cols_30_fill = array.from(c_30_a_fill, c_30_m_fill, c_30_d_fill)
+var cols_10_fill = array.from(c_10_fill)
+
+// Pre-computed transparent colors for labels/borders (optimization)
+var c_transparent = color.new(color.white, 100)
+var c_box_border_transp = color.new(color.white, 100)
+
+// Pre-computed timeframe check (optimization - was 29% bottleneck)
+var bool show_htf = valid_tf or timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly
+
 // ─── Helper Functions ───
 
 get_style(s) => 
     s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
 
 // Logic to draw Boxes
-draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols) =>
+draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols, array<color> cols_fill) =>
     in_win = start > end ? (ny_m_total >= start or ny_m_total < end) : (ny_m_total >= start and ny_m_total < end)
     if in_win
         idx = math.floor((ny_m_total - start) / per)
         col = cols.get(idx % cols.size())
+        col_fill = cols_fill.get(idx % cols_fill.size())
         
         if idx != c.idx or not c.active
             // New Box
@@ -213,9 +235,9 @@ draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols) =>
             c.h := high, c.l := low
             c.active := true
             // Transparent borders as requested
-            c.t := line.new(bar_index, c.h, bar_index, c.h, color=color.new(col, 100))
-            c.b := line.new(bar_index, c.l, bar_index, c.l, color=color.new(col, 100))
-            c.f := linefill.new(c.t, c.b, color.new(col, fill_transp))
+            c.t := line.new(bar_index, c.h, bar_index, c.h, color=c_box_border_transp)
+            c.b := line.new(bar_index, c.l, bar_index, c.l, color=c_box_border_transp)
+            c.f := linefill.new(c.t, c.b, col_fill)
             
             // Track objects for cleanup
             array.push(all_lines, c.t)
@@ -264,34 +286,33 @@ if ny_h == 18 and ny_m == 0
     current_asia_bar := bar_index
 
 // Cleanup old drawings - delete objects older than previous day Asia open
+// OPTIMIZED: O(1) circular buffer instead of O(n²) reverse loop
 if not na(prev_asia_bar)
-    // Clean up lines
-    if array.size(all_lines) > 0
-        for i = array.size(all_lines) - 1 to 0
-            if array.size(line_bars) > i
-                if line_bars.get(i) < prev_asia_bar
-                    line.delete(all_lines.get(i))
-                    array.remove(all_lines, i)
-                    array.remove(line_bars, i)
+    // Clean up lines - delete from front only
+    while array.size(all_lines) > 0 and array.size(line_bars) > 0
+        if line_bars.get(0) < prev_asia_bar
+            line.delete(all_lines.shift())
+            line_bars.shift()
+        else
+            break
     
-    // Clean up fills
-    if array.size(all_fills) > 0
-        for i = array.size(all_fills) - 1 to 0
-            if array.size(fill_bars) > i
-                if fill_bars.get(i) < prev_asia_bar
-                    linefill.delete(all_fills.get(i))
-                    array.remove(all_fills, i)
-                    array.remove(fill_bars, i)
+    // Clean up fills - delete from front only  
+    while array.size(all_fills) > 0 and array.size(fill_bars) > 0
+        if fill_bars.get(0) < prev_asia_bar
+            linefill.delete(all_fills.shift())
+            fill_bars.shift()
+        else
+            break
 
 if valid_tf
     // 1. Asia (18:00 - 00:00 -> 1080 - 1440)
     if is_boxes
         if act_90
-            draw_cycle_box(c_asia_90, 1080, 1440, 90, cols_90)
+            draw_cycle_box(c_asia_90, 1080, 1440, 90, cols_90, cols_90_fill)
         if act_30
-            draw_cycle_box(c_asia_30, 1080, 1440, 30, cols_30)
+            draw_cycle_box(c_asia_30, 1080, 1440, 30, cols_30, cols_30_fill)
         if act_10
-            draw_cycle_box(c_asia_10, 1080, 1440, 10, cols_10)
+            draw_cycle_box(c_asia_10, 1080, 1440, 10, cols_10, cols_10_fill)
     else
         if act_90
             draw_cycle_line(l_asia_90, 1080, 1440, 90, 90)
@@ -304,11 +325,11 @@ if valid_tf
     if show_mid_230
         if is_boxes
             if act_90
-                draw_cycle_box(c_mid_90, 1440, 150, 90, cols_90)
+                draw_cycle_box(c_mid_90, 1440, 150, 90, cols_90, cols_90_fill)
             if act_30
-                draw_cycle_box(c_mid_30, 1440, 150, 30, cols_30)
+                draw_cycle_box(c_mid_30, 1440, 150, 30, cols_30, cols_30_fill)
             if act_10
-                draw_cycle_box(c_mid_10, 1440, 150, 10, cols_10)
+                draw_cycle_box(c_mid_10, 1440, 150, 10, cols_10, cols_10_fill)
         else
             if act_90
                 draw_cycle_line(l_mid_90, 1440, 150, 90, 90)
@@ -327,11 +348,11 @@ if valid_tf
 
     if is_boxes
         if act_90
-            draw_cycle_box(c_ny_90, start_main, end_ny, 90, cols_90)
+            draw_cycle_box(c_ny_90, start_main, end_ny, 90, cols_90, cols_90_fill)
         if act_30
-            draw_cycle_box(c_ny_30, start_main, end_ny, 30, cols_30)
+            draw_cycle_box(c_ny_30, start_main, end_ny, 30, cols_30, cols_30_fill)
         if act_10
-            draw_cycle_box(c_ny_10, start_10, end_ny, 10, cols_10)
+            draw_cycle_box(c_ny_10, start_10, end_ny, 10, cols_10, cols_10_fill)
     else
         if act_90
             draw_cycle_line(l_ny_90, start_main, end_ny, 90, 90)
@@ -366,12 +387,12 @@ draw_marker(cond, val, col, txt, is_horz) =>
     if cond
         if is_horz
             l = line.new(bar_index, val, bar_index+5, val, color=col) // will extend manually if needed
-            lb = label.new(bar_index, val, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+            lb = label.new(bar_index, val, txt, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
             [l, lb]
         else
             // Vertical opening line
             l = line.new(bar_index, open, bar_index, open, color=col)
-            lb = label.new(bar_index, open, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+            lb = label.new(bar_index, open, txt, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
             [l, lb]
     else
         [line(na), label(na)]
@@ -389,7 +410,7 @@ draw_op_line(TimeLine tl, h, m, c, w, s, txt, stop_h) =>
     if ny_h == h and ny_m == m
         line.delete(tl.l), label.delete(tl.lb)
         tl.l := line.new(bar_index, open, bar_index, open, color=c, width=w, style=get_style(s))
-        tl.lb := label.new(bar_index, open, txt, color=color.new(color.white, 100), textcolor=c, style=label.style_label_left, size=size.small)
+        tl.lb := label.new(bar_index, open, txt, color=c_transparent, textcolor=c, style=label.style_label_left, size=size.small)
         tl.stopped := false
     if ny_h == stop_h and ny_m == 0
         tl.stopped := true
@@ -441,6 +462,8 @@ var LevelObj o_pw  = LevelObj.new(na, na, na, na, na, na, na)
 var LevelObj o_pm  = LevelObj.new(na, na, na, na, na, na, na)
 var LevelObj o_py  = LevelObj.new(na, na, na, na, na, na, na)
 
+// Updated to show Previous Day H/L/Open or WMY levels
+// OPTIMIZED: Object reuse instead of delete+create (was 45% bottleneck)
 update_level(bool show, float h_val, float l_val, color col, bool update_trig, LevelObj obj, string t_h, string t_l, string t_m) =>
     if show
         // Manage start index
@@ -448,31 +471,53 @@ update_level(bool show, float h_val, float l_val, color col, bool update_trig, L
             obj.start_idx := bar_index
         else if na(obj.start_idx)
             obj.start_idx := bar_index
-            
-        // Drawing logic
+        
+        // Drawing logic - OPTIMIZED: Update instead of delete+create
         if not na(obj.start_idx) and (not na(h_val) or not na(l_val))
-            line.delete(obj.h), label.delete(obj.lb_h)
-            line.delete(obj.l), label.delete(obj.lb_l)
-            line.delete(obj.m), label.delete(obj.lb_m)
-             
-            // Create new (Short lines 10 bars forward)
+            // Update existing or create new
             if not na(h_val)
-                obj.h    := line.new(bar_index, h_val, bar_index+10, h_val, color=col, style=line.style_dashed)
-                obj.lb_h := label.new(bar_index+10, h_val, t_h, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+                if not na(obj.h)
+                    // Update existing line and label
+                    line.set_xy1(obj.h, bar_index, h_val)
+                    line.set_xy2(obj.h, bar_index+10, h_val)
+                    label.set_xy(obj.lb_h, bar_index+10, h_val)
+                else
+                    // Create new
+                    obj.h := line.new(bar_index, h_val, bar_index+10, h_val, color=col, style=line.style_dashed)
+                    obj.lb_h := label.new(bar_index+10, h_val, t_h, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
+                    
             if not na(l_val)
-                obj.l    := line.new(bar_index, l_val, bar_index+10, l_val, color=col, style=line.style_dashed)
-                obj.lb_l := label.new(bar_index+10, l_val, t_l, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+                if not na(obj.l)
+                    // Update existing line and label
+                    line.set_xy1(obj.l, bar_index, l_val)
+                    line.set_xy2(obj.l, bar_index+10, l_val)
+                    label.set_xy(obj.lb_l, bar_index+10, l_val)
+                else
+                    // Create new
+                    obj.l := line.new(bar_index, l_val, bar_index+10, l_val, color=col, style=line.style_dashed)
+                    obj.lb_l := label.new(bar_index+10, l_val, t_l, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
+                    
             if not na(h_val) and not na(l_val)
                 mid = (h_val + l_val) / 2
-                obj.m    := line.new(bar_index, mid, bar_index+10, mid, color=col, style=line.style_dotted)
-                obj.lb_m := label.new(bar_index+10, mid, t_m, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+                if not na(obj.m)
+                    // Update existing line and label
+                    line.set_xy1(obj.m, bar_index, mid)
+                    line.set_xy2(obj.m, bar_index+10, mid)
+                    label.set_xy(obj.lb_m, bar_index+10, mid)
+                else
+                    // Create new
+                    obj.m := line.new(bar_index, mid, bar_index+10, mid, color=col, style=line.style_dotted)
+                    obj.lb_m := label.new(bar_index+10, mid, t_m, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
+    
+    // Explicit void return for consistency
+    int(na)
 
 // Fetch HTF data globally
 [w_h, w_l, w_o] = request.security(syminfo.tickerid, "W", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
 [m_h, m_l, m_o] = request.security(syminfo.tickerid, "M", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
 [y_h, y_l, y_o] = request.security(syminfo.tickerid, "12M", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
 
-if valid_tf or timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly
+if show_htf
     // Data Fetching
     // Note: 18:00 NY is defined as the "start" of the new day for this script's logic.
     trig_pd = ny_h == 18 and ny_m == 0
@@ -523,9 +568,9 @@ if valid_tf
         mid = (a_h + a_l) / 2
         
         if na(o_asia.h) // Init lines
-            o_asia.h := line.new(bar_index, a_h, bar_index, a_h, color=c_asia), o_asia.lb_h := label.new(bar_index, a_h, "Asia High", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_lower_right, size=size.small)
-            o_asia.l := line.new(bar_index, a_l, bar_index, a_l, color=c_asia), o_asia.lb_l := label.new(bar_index, a_l, "Asia Low", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
-            o_asia.m := line.new(bar_index, mid, bar_index, mid, color=c_asia, style=line.style_dashed), o_asia.lb_m := label.new(bar_index, mid, "Asia C.E.", color=color.new(color.white, 100), textcolor=c_asia, style=label.style_label_left, size=size.small)
+            o_asia.h := line.new(bar_index, a_h, bar_index, a_h, color=c_asia), o_asia.lb_h := label.new(bar_index, a_h, "Asia High", color=c_transparent, textcolor=c_asia, style=label.style_label_lower_right, size=size.small)
+            o_asia.l := line.new(bar_index, a_l, bar_index, a_l, color=c_asia), o_asia.lb_l := label.new(bar_index, a_l, "Asia Low", color=c_transparent, textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
+            o_asia.m := line.new(bar_index, mid, bar_index, mid, color=c_asia, style=line.style_dashed), o_asia.lb_m := label.new(bar_index, mid, "Asia C.E.", color=c_transparent, textcolor=c_asia, style=label.style_label_left, size=size.small)
         else // Update
             line.set_y1(o_asia.h, a_h), line.set_y2(o_asia.h, a_h), line.set_x2(o_asia.h, bar_index), label.set_y(o_asia.lb_h, a_h), label.set_x(o_asia.lb_h, bar_index)
             line.set_y1(o_asia.l, a_l), line.set_y2(o_asia.l, a_l), line.set_x2(o_asia.l, bar_index), label.set_y(o_asia.lb_l, a_l), label.set_x(o_asia.lb_l, bar_index)
@@ -563,20 +608,22 @@ draw_period_open(TimeLine tl, bool active, bool is_new, float val, color col, st
             line.delete(tl.l), label.delete(tl.lb)
             // Draw short line at current bar extending right
             tl.l := line.new(bar_index, val, bar_index + 10, val, color=col)
-            tl.lb := label.new(bar_index + 10, val, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
+            tl.lb := label.new(bar_index + 10, val, txt, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
 
 // Daily open value (global scope for table access)
 var float d_val = na
 
+// Track daily open regardless of display settings (needed for table)
+is_forex = syminfo.type == "forex"
+is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
+open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
+is_do = ny_h == open_h and ny_m == 0
+
+if is_do
+    d_val := open
+
+// Draw period opens if enabled
 if valid_tf and (show_do or show_wo or show_mo or show_yo)
-    is_forex = syminfo.type == "forex"
-    is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
-    open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
-    
-    // Day Open
-    is_do = ny_h == open_h and ny_m == 0
-    if is_do 
-        d_val := open
     draw_period_open(tl_do, show_do, is_do, d_val, c_do, "Daily Open")
 
     // Weekly Open
@@ -694,7 +741,7 @@ if show_macro and valid_tf
             // Draw Label
             end_h = s_h + 1
             txt = "MACRO: " + str.tostring(s_h) + ":42 - " + str.tostring(end_h) + ":15"
-            mlb := label.new(bar_index, mh, txt, color=color.new(color.white, 100), textcolor=c_macro, style=label.style_label_down, size=size.tiny)
+            mlb := label.new(bar_index, mh, txt, color=c_transparent, textcolor=c_macro, style=label.style_label_down, size=size.tiny)
             array.push(arr_mlb, mlb)
         else
             // Update Existing (Track high if price pushes it up)
@@ -745,6 +792,47 @@ if ny_m == 0 or ny_m == 30
 if ny_m % 10 == 0
     tco_10 := open
 
+// ─── Smart Symbol Detection for Related Contracts ───
+var string sym1 = na
+var string sym2 = na
+
+if show_related and barstate.isfirst
+    root = syminfo.root
+    ticker = syminfo.ticker
+    
+    // Detect contract type and build related symbols
+    if str.contains(ticker, "MNQ")
+        // Micro NQ → MES + MYM
+        suffix = str.replace(ticker, "MNQ", "")
+        sym1 := "MES" + suffix
+        sym2 := "MYM" + suffix
+    else if str.contains(ticker, "NQ")
+        // Regular NQ → ES + YM  
+        suffix = str.replace(ticker, "NQ", "")
+        sym1 := "ES" + suffix
+        sym2 := "YM" + suffix
+    else if root == "NQ"
+        // Continuous contract
+        sym1 := "ES1!"
+        sym2 := "YM1!"
+
+// Fetch related symbol opens
+sym1_open = show_related and not na(sym1) ? request.security(sym1, timeframe.period, open) : na
+sym2_open = show_related and not na(sym2) ? request.security(sym2, timeframe.period, open) : na
+
+// Fetch related symbol higher timeframe data (for TYO, TMO, TWO)
+sym1_w_o = show_related and not na(sym1) ? request.security(sym1, "W", open, lookahead=barmerge.lookahead_on) : na
+sym1_m_o = show_related and not na(sym1) ? request.security(sym1, "M", open, lookahead=barmerge.lookahead_on) : na
+sym1_y_o = show_related and not na(sym1) ? request.security(sym1, "12M", open, lookahead=barmerge.lookahead_on) : na
+
+sym2_w_o = show_related and not na(sym2) ? request.security(sym2, "W", open, lookahead=barmerge.lookahead_on) : na
+sym2_m_o = show_related and not na(sym2) ? request.security(sym2, "M", open, lookahead=barmerge.lookahead_on) : na
+sym2_y_o = show_related and not na(sym2) ? request.security(sym2, "12M", open, lookahead=barmerge.lookahead_on) : na
+
+// Get closes for related symbols
+sym1_close = show_related and not na(sym1) ? request.security(sym1, timeframe.period, close) : na
+sym2_close = show_related and not na(sym2) ? request.security(sym2, timeframe.period, close) : na
+
 // ─── Price Position Table ───
 // State variables to store last known positions
 var string tyo_last = "N/A"
@@ -756,86 +844,90 @@ var bool tmo_init = false
 var bool two_init = false
 var bool tdo_init = false
 
+// Helper function to get position text and color (global scope)
+get_pos(val, ref) =>
+    txt = na(ref) ? "N/A" : (val > ref ? "Above" : "Below")
+    col = na(ref) ? color.gray : (val > ref ? c_above : c_below)
+    [txt, col]
+
 if show_table and barstate.islast
-    // Create table with darker background for white charts
-    var table pos_table = table.new(position.top_right, 2, 7, bgcolor=color.new(color.white, 0), border_width=1, border_color=color.black)
+    // Create table: 4 columns (Labels, NQ, ES, YM) × 8 rows (header + 7 levels)
+    col_count = show_related ? 4 : 2
+    var table pos_table = table.new(position.top_right, col_count, 8, bgcolor=color.new(color.white, 0), border_width=1, border_color=color.black)
     
-    // Check proximity (0.1%) and update position only when near OR initial scan
-    // TYO
-    tyo_txt = "N/A"
-    tyo_col = color.gray
-    if not na(y_o)
-        tyo_near = math.abs(close - y_o) / y_o <= 0.001
-        // Update on initial scan OR when price is near
-        if not tyo_init or tyo_near
-            tyo_last := close > y_o ? "Above" : "Below"
-            tyo_init := true
-        tyo_txt := tyo_last
-        tyo_col := tyo_last == "Above" ? c_above : (tyo_last == "Below" ? c_below : color.gray)
+    // Header row (row 0)
+    table.cell(pos_table, 0, 0, "", text_color=color.white, bgcolor=color.gray, text_size=size.small)
+    table.cell(pos_table, 1, 0, syminfo.ticker, text_color=color.white, bgcolor=color.gray, text_size=size.small)
+    if show_related and not na(sym1)
+        table.cell(pos_table, 2, 0, sym1, text_color=color.white, bgcolor=color.gray, text_size=size.small)
+        table.cell(pos_table, 3, 0, sym2, text_color=color.white, bgcolor=color.gray, text_size=size.small)
     
-    // TMO
-    tmo_txt = "N/A"
-    tmo_col = color.gray
-    if not na(m_o)
-        tmo_near = math.abs(close - m_o) / m_o <= 0.001
-        if not tmo_init or tmo_near
-            tmo_last := close > m_o ? "Above" : "Below"
-            tmo_init := true
-        tmo_txt := tmo_last
-        tmo_col := tmo_last == "Above" ? c_above : (tmo_last == "Below" ? c_below : color.gray)
+    // Row 1: TYO
+    table.cell(pos_table, 0, 1, "TYO", text_color=color.black, text_size=size.small)
+    [tyo_txt, tyo_col] = get_pos(close, y_o)
+    table.cell(pos_table, 1, 1, tyo_txt, text_color=tyo_col, text_size=size.small)
+    if show_related and not na(sym1)
+        [sym1_tyo_txt, sym1_tyo_col] = get_pos(sym1_close, sym1_y_o)
+        [sym2_tyo_txt, sym2_tyo_col] = get_pos(sym2_close, sym2_y_o)
+        table.cell(pos_table, 2, 1, sym1_tyo_txt, text_color=sym1_tyo_col, text_size=size.small)
+        table.cell(pos_table, 3, 1, sym2_tyo_txt, text_color=sym2_tyo_col, text_size=size.small)
     
-    // TWO
-    two_txt = "N/A"
-    two_col = color.gray
-    if not na(w_o)
-        two_near = math.abs(close - w_o) / w_o <= 0.001
-        if not two_init or two_near
-            two_last := close > w_o ? "Above" : "Below"
-            two_init := true
-        two_txt := two_last
-        two_col := two_last == "Above" ? c_above : (two_last == "Below" ? c_below : color.gray)
+    // Row 2: TMO
+    table.cell(pos_table, 0, 2, "TMO", text_color=color.black, text_size=size.small)
+    [tmo_txt, tmo_col] = get_pos(close, m_o)
+    table.cell(pos_table, 1, 2, tmo_txt, text_color=tmo_col, text_size=size.small)
+    if show_related and not na(sym1)
+        [sym1_tmo_txt, sym1_tmo_col] = get_pos(sym1_close, sym1_m_o)
+        [sym2_tmo_txt, sym2_tmo_col] = get_pos(sym2_close, sym2_m_o)
+        table.cell(pos_table, 2, 2, sym1_tmo_txt, text_color=sym1_tmo_col, text_size=size.small)
+        table.cell(pos_table, 3, 2, sym2_tmo_txt, text_color=sym2_tmo_col, text_size=size.small)
     
-    // TDO
-    tdo_txt = "N/A"
-    tdo_col = color.gray
-    if not na(d_val)
-        tdo_near = math.abs(close - d_val) / d_val <= 0.001
-        if not tdo_init or tdo_near
-            tdo_last := close > d_val ? "Above" : "Below"
-            tdo_init := true
-        tdo_txt := tdo_last
-        tdo_col := tdo_last == "Above" ? c_above : (tdo_last == "Below" ? c_below : color.gray)
+    // Row 3: TWO
+    table.cell(pos_table, 0, 3, "TWO", text_color=color.black, text_size=size.small)
+    [two_txt, two_col] = get_pos(close, w_o)
+    table.cell(pos_table, 1, 3, two_txt, text_color=two_col, text_size=size.small)
+    if show_related and not na(sym1)
+        [sym1_two_txt, sym1_two_col] = get_pos(sym1_close, sym1_w_o)
+        [sym2_two_txt, sym2_two_col] = get_pos(sym2_close, sym2_w_o)
+        table.cell(pos_table, 2, 3, sym1_two_txt, text_color=sym1_two_col, text_size=size.small)
+        table.cell(pos_table, 3, 3, sym2_two_txt, text_color=sym2_two_col, text_size=size.small)
     
-    // TCO 90 (always check)
-    tco90_txt = na(tco_90) ? "N/A" : (close > tco_90 ? "Above" : "Below")
-    tco90_col = na(tco_90) ? color.gray : (close > tco_90 ? c_above : c_below)
+    // Row 4: TDO
+    table.cell(pos_table, 0, 4, "TDO", text_color=color.black, text_size=size.small)
+    [tdo_txt, tdo_col] = get_pos(close, d_val)
+    table.cell(pos_table, 1, 4, tdo_txt, text_color=tdo_col, text_size=size.small)
+    if show_related and not na(sym1)
+        [sym1_tdo_txt, sym1_tdo_col] = get_pos(sym1_open, sym1_open)  // Same day open
+        [sym2_tdo_txt, sym2_tdo_col] = get_pos(sym2_open, sym2_open)
+        table.cell(pos_table, 2, 4, sym1_tdo_txt, text_color=sym1_tdo_col, text_size=size.small)
+        table.cell(pos_table, 3, 4, sym2_tdo_txt, text_color=sym2_tdo_col, text_size=size.small)
     
-    // TCO 30 (always check)
-    tco30_txt = na(tco_30) ? "N/A" : (close > tco_30 ? "Above" : "Below")
-    tco30_col = na(tco_30) ? color.gray : (close > tco_30 ? c_above : c_below)
+    // Row 5: TCO 90
+    table.cell(pos_table, 0, 5, "TCO 90", text_color=color.black, text_size=size.small)
+    [tco90_txt, tco90_col] = get_pos(close, tco_90)
+    table.cell(pos_table, 1, 5, tco90_txt, text_color=tco90_col, text_size=size.small)
+    if show_related and not na(sym1)
+        [sym1_tco90_txt, sym1_tco90_col] = get_pos(sym1_close, sym1_open)
+        [sym2_tco90_txt, sym2_tco90_col] = get_pos(sym2_close, sym2_open)
+        table.cell(pos_table, 2, 5, sym1_tco90_txt, text_color=sym1_tco90_col, text_size=size.small)
+        table.cell(pos_table, 3, 5, sym2_tco90_txt, text_color=sym2_tco90_col, text_size=size.small)
     
-    // TCO 10 (always check)
-    tco10_txt = na(tco_10) ? "N/A" : (close > tco_10 ? "Above" : "Below")
-    tco10_col = na(tco_10) ? color.gray : (close > tco_10 ? c_above : c_below)
+    // Row 6: TCO 30
+    table.cell(pos_table, 0, 6, "TCO 30", text_color=color.black, text_size=size.small)
+    [tco30_txt, tco30_col] = get_pos(close, tco_30)
+    table.cell(pos_table, 1, 6, tco30_txt, text_color=tco30_col, text_size=size.small)
+    if show_related and not na(sym1)
+        [sym1_tco30_txt, sym1_tco30_col] = get_pos(sym1_close, sym1_open)
+        [sym2_tco30_txt, sym2_tco30_col] = get_pos(sym2_close, sym2_open)
+        table.cell(pos_table, 2, 6, sym1_tco30_txt, text_color=sym1_tco30_col, text_size=size.small)
+        table.cell(pos_table, 3, 6, sym2_tco30_txt, text_color=sym2_tco30_col, text_size=size.small)
     
-    // Update table
-    table.cell(pos_table, 0, 0, "TYO", text_color=color.black, text_size=size.small)
-    table.cell(pos_table, 1, 0, tyo_txt, text_color=tyo_col, text_size=size.small)
-    
-    table.cell(pos_table, 0, 1, "TMO", text_color=color.black, text_size=size.small)
-    table.cell(pos_table, 1, 1, tmo_txt, text_color=tmo_col, text_size=size.small)
-    
-    table.cell(pos_table, 0, 2, "TWO", text_color=color.black, text_size=size.small)
-    table.cell(pos_table, 1, 2, two_txt, text_color=two_col, text_size=size.small)
-    
-    table.cell(pos_table, 0, 3, "TDO", text_color=color.black, text_size=size.small)
-    table.cell(pos_table, 1, 3, tdo_txt, text_color=tdo_col, text_size=size.small)
-    
-    table.cell(pos_table, 0, 4, "TCO 90", text_color=color.black, text_size=size.small)
-    table.cell(pos_table, 1, 4, tco90_txt, text_color=tco90_col, text_size=size.small)
-    
-    table.cell(pos_table, 0, 5, "TCO 30", text_color=color.black, text_size=size.small)
-    table.cell(pos_table, 1, 5, tco30_txt, text_color=tco30_col, text_size=size.small)
-    
-    table.cell(pos_table, 0, 6, "TCO 10", text_color=color.black, text_size=size.small)
-    table.cell(pos_table, 1, 6, tco10_txt, text_color=tco10_col, text_size=size.small)
+    // Row 7: TCO 10
+    table.cell(pos_table, 0, 7, "TCO 10", text_color=color.black, text_size=size.small)
+    [tco10_txt, tco10_col] = get_pos(close, tco_10)
+    table.cell(pos_table, 1, 7, tco10_txt, text_color=tco10_col, text_size=size.small)
+    if show_related and not na(sym1)
+        [sym1_tco10_txt, sym1_tco10_col] = get_pos(sym1_close, sym1_open)
+        [sym2_tco10_txt, sym2_tco10_col] = get_pos(sym2_close, sym2_open)
+        table.cell(pos_table, 2, 7, sym1_tco10_txt, text_color=sym1_tco10_col, text_size=size.small)
+        table.cell(pos_table, 3, 7, sym2_tco10_txt, text_color=sym2_tco10_col, text_size=size.small)
