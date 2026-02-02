@@ -23,7 +23,7 @@ show_10       = input.bool(false, "10min", group=grp_cyc, inline="c1")
 show_mid_230  = input.bool(false, "Midnight to 2:30", group=grp_cyc, inline="c2")
 auto_adj      = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
 show_macro    = input.bool(false, "MACRO Times", group=grp_cyc, inline="c3")
-c_macro       = input.color(color.black, "", group=grp_cyc, inline="c3")
+c_macro       = input.color(color.gray, "", group=grp_cyc, inline="c3")
 
 // Opening Lines
 show_mid      = input.bool(false, "Midnight", group=grp_ol, inline="mid")
@@ -88,6 +88,12 @@ show_pm       = input.bool(false, "Prev Month H/L", group=grp_prev, inline="pm")
 c_pm          = input.color(color.orange, "", group=grp_prev, inline="pm")
 show_py       = input.bool(false, "Prev Year H/L", group=grp_prev, inline="py")
 c_py          = input.color(color.purple, "", group=grp_prev, inline="py")
+
+// Price Position Table
+grp_table     = "Price Position Table"
+show_table    = input.bool(true, "Show Table", group=grp_table)
+c_above       = input.color(color.green, "Above Color", group=grp_table, inline="tc")
+c_below       = input.color(color.red, "Below Color", group=grp_table, inline="tc")
 
 // ─── Time & State ───
 tf_min = timeframe.in_seconds() / 60
@@ -370,8 +376,8 @@ draw_marker(cond, val, col, txt, is_horz) =>
     else
         [line(na), label(na)]
 
-// Day Separator
-if valid_tf and is_new_d
+// Day Separator & Midnight Line
+if valid_tf and (ny_h == 0 and ny_m == 0)
     if show_dsep
         line.new(bar_index, low, bar_index, high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
 // Weekday Labels Logic logic moved to end of script for plotshape usage
@@ -559,6 +565,9 @@ draw_period_open(TimeLine tl, bool active, bool is_new, float val, color col, st
             tl.l := line.new(bar_index, val, bar_index + 10, val, color=col)
             tl.lb := label.new(bar_index + 10, val, txt, color=color.new(color.white, 100), textcolor=col, style=label.style_label_left, size=size.small)
 
+// Daily open value (global scope for table access)
+var float d_val = na
+
 if valid_tf and (show_do or show_wo or show_mo or show_yo)
     is_forex = syminfo.type == "forex"
     is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
@@ -566,7 +575,6 @@ if valid_tf and (show_do or show_wo or show_mo or show_yo)
     
     // Day Open
     is_do = ny_h == open_h and ny_m == 0
-    var float d_val = na
     if is_do 
         d_val := open
     draw_period_open(tl_do, show_do, is_do, d_val, c_do, "Daily Open")
@@ -621,3 +629,213 @@ plotshape(is_long and is_tue, "Tuesday",   shape.labelup, wd_loc, c_inv, wd_off,
 plotshape(is_long and is_wed, "Wednesday", shape.labelup, wd_loc, c_inv, wd_off, "Wednesday", c_wd, size=size.small)
 plotshape(is_long and is_thu, "Thursday",  shape.labelup, wd_loc, c_inv, wd_off, "Thursday",  c_wd, size=size.small)
 plotshape(is_long and is_fri, "Friday",    shape.labelup, wd_loc, c_inv, wd_off, "Friday",    c_wd, size=size.small)
+
+
+// ─── MACRO Times ───
+// Restored from V3
+// ─── MACRO Times ───
+// Restored: Lines and Labels on Chart (Current Day Only)
+// Reverted: "Inline Organization" removed. Back to natural heights.
+
+if show_macro and valid_tf
+    // Arrays to track macro objects for the current day
+    var array<line> arr_ml = array.new_line()
+    var array<label> arr_mlb = array.new_label()
+    
+    // Reset at 18:00 NY (Start of "New Day")
+    if ny_h == 18 and ny_m == 0
+        if array.size(arr_ml) > 0
+            for i = 0 to array.size(arr_ml) - 1
+                line.delete(arr_ml.get(i))
+            array.clear(arr_ml)
+        if array.size(arr_mlb) > 0
+            for i = 0 to array.size(arr_mlb) - 1
+                label.delete(arr_mlb.get(i))
+            array.clear(arr_mlb)
+
+    // Macro Window: :42 to :15
+    in_mac = (ny_m >= 42 or ny_m <= 15)
+    
+    // State variables
+    var float mh = na, var int m_start = na
+    var line ml = na, var label mlb = na
+    
+    if in_mac
+        s_h = ny_m >= 42 ? ny_h : ny_h - 1
+        
+        // Base height calculation - use high of current bar and track maximum
+        base_h = high
+        
+        // Try to align with active cycle highs for better visibility
+        if act_90
+            if not na(c_ny_90.h) and c_ny_90.active
+                base_h := math.max(base_h, c_ny_90.h)
+            else if not na(c_mid_90.h) and c_mid_90.active
+                base_h := math.max(base_h, c_mid_90.h)
+            else if not na(c_asia_90.h) and c_asia_90.active
+                base_h := math.max(base_h, c_asia_90.h)
+        
+        if act_30
+            if not na(c_ny_30.h) and c_ny_30.active
+                base_h := math.max(base_h, c_ny_30.h)
+            else if not na(c_mid_30.h) and c_mid_30.active
+                base_h := math.max(base_h, c_mid_30.h)
+            else if not na(c_asia_30.h) and c_asia_30.active
+                base_h := math.max(base_h, c_asia_30.h)
+
+        if na(mh) or s_h != m_start
+            // New Macro Start
+            mh := base_h, m_start := s_h
+            
+            // Draw Line at calculated height
+            ml := line.new(bar_index, mh, bar_index, mh, color=c_macro, width=2)
+            array.push(arr_ml, ml)
+            
+            // Draw Label
+            end_h = s_h + 1
+            txt = "MACRO: " + str.tostring(s_h) + ":42 - " + str.tostring(end_h) + ":15"
+            mlb := label.new(bar_index, mh, txt, color=color.new(color.white, 100), textcolor=c_macro, style=label.style_label_down, size=size.tiny)
+            array.push(arr_mlb, mlb)
+        else
+            // Update Existing (Track high if price pushes it up)
+            mh := math.max(mh, base_h)
+            line.set_y1(ml, mh), line.set_y2(ml, mh), line.set_x2(ml, bar_index)
+            label.set_y(mlb, mh), label.set_x(mlb, bar_index)
+    else
+        mh := na, m_start := na
+
+// ─── Track Cycle Opens for Table ───
+var float tco_90 = na
+var float tco_10 = na
+var float tco_30 = na
+
+// Track 90min cycle open (independent of show_90 for table)
+if ny_h == 18 and ny_m == 0
+    tco_90 := open
+else if ny_h == 19 and ny_m == 30
+    tco_90 := open
+else if ny_h == 21 and ny_m == 0
+    tco_90 := open
+else if ny_h == 22 and ny_m == 30
+    tco_90 := open
+else if ny_h == 2 and ny_m == 30
+    tco_90 := open
+else if ny_h == 4 and ny_m == 0
+    tco_90 := open
+else if ny_h == 5 and ny_m == 30
+    tco_90 := open
+else if ny_h == 7 and ny_m == 0
+    tco_90 := open
+else if ny_h == 8 and ny_m == 30
+    tco_90 := open
+else if ny_h == 10 and ny_m == 0
+    tco_90 := open
+else if ny_h == 11 and ny_m == 30
+    tco_90 := open
+else if ny_h == 13 and ny_m == 0
+    tco_90 := open
+else if ny_h == 14 and ny_m == 30
+    tco_90 := open
+
+// Track 30min cycle open (independent of show_30 for table)
+if ny_m == 0 or ny_m == 30
+    tco_30 := open
+
+// Track 10min cycle open (independent of show_10 for table)
+if ny_m % 10 == 0
+    tco_10 := open
+
+// ─── Price Position Table ───
+// State variables to store last known positions
+var string tyo_last = "N/A"
+var string tmo_last = "N/A"
+var string two_last = "N/A"
+var string tdo_last = "N/A"
+var bool tyo_init = false
+var bool tmo_init = false
+var bool two_init = false
+var bool tdo_init = false
+
+if show_table and barstate.islast
+    // Create table with darker background for white charts
+    var table pos_table = table.new(position.top_right, 2, 7, bgcolor=color.new(color.white, 0), border_width=1, border_color=color.black)
+    
+    // Check proximity (0.1%) and update position only when near OR initial scan
+    // TYO
+    tyo_txt = "N/A"
+    tyo_col = color.gray
+    if not na(y_o)
+        tyo_near = math.abs(close - y_o) / y_o <= 0.001
+        // Update on initial scan OR when price is near
+        if not tyo_init or tyo_near
+            tyo_last := close > y_o ? "Above" : "Below"
+            tyo_init := true
+        tyo_txt := tyo_last
+        tyo_col := tyo_last == "Above" ? c_above : (tyo_last == "Below" ? c_below : color.gray)
+    
+    // TMO
+    tmo_txt = "N/A"
+    tmo_col = color.gray
+    if not na(m_o)
+        tmo_near = math.abs(close - m_o) / m_o <= 0.001
+        if not tmo_init or tmo_near
+            tmo_last := close > m_o ? "Above" : "Below"
+            tmo_init := true
+        tmo_txt := tmo_last
+        tmo_col := tmo_last == "Above" ? c_above : (tmo_last == "Below" ? c_below : color.gray)
+    
+    // TWO
+    two_txt = "N/A"
+    two_col = color.gray
+    if not na(w_o)
+        two_near = math.abs(close - w_o) / w_o <= 0.001
+        if not two_init or two_near
+            two_last := close > w_o ? "Above" : "Below"
+            two_init := true
+        two_txt := two_last
+        two_col := two_last == "Above" ? c_above : (two_last == "Below" ? c_below : color.gray)
+    
+    // TDO
+    tdo_txt = "N/A"
+    tdo_col = color.gray
+    if not na(d_val)
+        tdo_near = math.abs(close - d_val) / d_val <= 0.001
+        if not tdo_init or tdo_near
+            tdo_last := close > d_val ? "Above" : "Below"
+            tdo_init := true
+        tdo_txt := tdo_last
+        tdo_col := tdo_last == "Above" ? c_above : (tdo_last == "Below" ? c_below : color.gray)
+    
+    // TCO 90 (always check)
+    tco90_txt = na(tco_90) ? "N/A" : (close > tco_90 ? "Above" : "Below")
+    tco90_col = na(tco_90) ? color.gray : (close > tco_90 ? c_above : c_below)
+    
+    // TCO 30 (always check)
+    tco30_txt = na(tco_30) ? "N/A" : (close > tco_30 ? "Above" : "Below")
+    tco30_col = na(tco_30) ? color.gray : (close > tco_30 ? c_above : c_below)
+    
+    // TCO 10 (always check)
+    tco10_txt = na(tco_10) ? "N/A" : (close > tco_10 ? "Above" : "Below")
+    tco10_col = na(tco_10) ? color.gray : (close > tco_10 ? c_above : c_below)
+    
+    // Update table
+    table.cell(pos_table, 0, 0, "TYO", text_color=color.black, text_size=size.small)
+    table.cell(pos_table, 1, 0, tyo_txt, text_color=tyo_col, text_size=size.small)
+    
+    table.cell(pos_table, 0, 1, "TMO", text_color=color.black, text_size=size.small)
+    table.cell(pos_table, 1, 1, tmo_txt, text_color=tmo_col, text_size=size.small)
+    
+    table.cell(pos_table, 0, 2, "TWO", text_color=color.black, text_size=size.small)
+    table.cell(pos_table, 1, 2, two_txt, text_color=two_col, text_size=size.small)
+    
+    table.cell(pos_table, 0, 3, "TDO", text_color=color.black, text_size=size.small)
+    table.cell(pos_table, 1, 3, tdo_txt, text_color=tdo_col, text_size=size.small)
+    
+    table.cell(pos_table, 0, 4, "TCO 90", text_color=color.black, text_size=size.small)
+    table.cell(pos_table, 1, 4, tco90_txt, text_color=tco90_col, text_size=size.small)
+    
+    table.cell(pos_table, 0, 5, "TCO 30", text_color=color.black, text_size=size.small)
+    table.cell(pos_table, 1, 5, tco30_txt, text_color=tco30_col, text_size=size.small)
+    
+    table.cell(pos_table, 0, 6, "TCO 10", text_color=color.black, text_size=size.small)
+    table.cell(pos_table, 1, 6, tco10_txt, text_color=tco10_col, text_size=size.small)
