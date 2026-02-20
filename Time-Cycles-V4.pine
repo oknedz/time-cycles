@@ -26,8 +26,8 @@ show_macro    = input.bool(false, "MACRO Times", group=grp_cyc, inline="c3")
 c_macro       = input.color(color.gray, "", group=grp_cyc, inline="c3")
 
 // Opening Lines
-show_mid      = input.bool(false, "Midnight", group=grp_ol, inline="mid")
-c_mid         = input.color(color.black, "", group=grp_ol, inline="mid")
+show_mid      = input.bool(true, "Midnight", group=grp_ol, inline="mid")
+c_mid         = input.color(#787b86, "", group=grp_ol, inline="mid")
 w_mid         = input.int(1, "", 1, 3, group=grp_ol, inline="mid")
 s_mid         = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="mid")
 
@@ -36,13 +36,13 @@ c_90_open     = input.color(color.orange, "", group=grp_ol, inline="90open")
 w_90_open     = input.int(1, "", 1, 3, group=grp_ol, inline="90open")
 s_90_open     = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="90open")
 
-show_830      = input.bool(false, "8:30", group=grp_ol, inline="830")
-c_830         = input.color(color.gray, "", group=grp_ol, inline="830")
+show_830      = input.bool(true, "8:30", group=grp_ol, inline="830")
+c_830         = input.color(#787b86, "", group=grp_ol, inline="830")
 w_830         = input.int(1, "", 1, 3, group=grp_ol, inline="830")
 s_830         = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="830")
 
-show_930      = input.bool(false, "9:30", group=grp_ol, inline="930")
-c_930         = input.color(color.gray, "", group=grp_ol, inline="930")
+show_930      = input.bool(true, "9:30", group=grp_ol, inline="930")
+c_930         = input.color(#787b86, "", group=grp_ol, inline="930")
 w_930         = input.int(1, "", 1, 3, group=grp_ol, inline="930")
 s_930         = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
 
@@ -55,7 +55,10 @@ c_30_m        = input.color(color.blue, "M", group=grp_col, inline="30")
 c_30_d        = input.color(color.green, "D", group=grp_col, inline="30")
 c_10          = input.color(color.gray, "10min", group=grp_col)
 c_asia        = input.color(color.purple, "Asia H/L", group=grp_col)
-fill_transp   = input.int(88, "Fill Transparency", 0, 100, group="Display")
+c_london      = input.color(color.red, "London H/L", group=grp_col)
+c_ny_am       = input.color(color.blue, "NY AM H/L", group=grp_col)
+hl_ts         = input.string(size.small, "H/L Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_col)
+fill_transp   = input.int(93, "Fill Transparency", 0, 100, group="Display")
 
 // Day Separator
 show_dsep     = input.bool(true, "Day Sep", group=grp_day, inline="ds")
@@ -70,31 +73,26 @@ off_wd        = input.int(0, "Offset (min)", group=grp_day, inline="wd2")
 
 
 // Period Opens
-show_do       = input.bool(false, "Daily Open", group=grp_per, inline="do")
-c_do          = input.color(color.yellow, "", group=grp_per, inline="do")
-show_wo       = input.bool(false, "Weekly Open", group=grp_per, inline="wo")
-c_wo          = input.color(color.blue, "", group=grp_per, inline="wo")
-show_mo       = input.bool(false, "Monthly Open", group=grp_per, inline="mo")
-c_mo          = input.color(color.orange, "", group=grp_per, inline="mo")
-show_yo       = input.bool(false, "Yearly Open", group=grp_per, inline="yo")
-c_yo          = input.color(color.purple, "", group=grp_per, inline="yo")
+show_do       = input.bool(true, "Daily Open", group=grp_per, inline="do")
+c_do          = input.color(#787b86, "", group=grp_per, inline="do")
+show_wo       = input.bool(true, "Weekly Open", group=grp_per, inline="wo")
+c_wo          = input.color(#2962ff, "", group=grp_per, inline="wo")
+show_mo       = input.bool(true, "Monthly Open", group=grp_per, inline="mo")
+c_mo          = input.color(#ff6d00, "", group=grp_per, inline="mo")
+show_yo       = input.bool(true, "Yearly Open", group=grp_per, inline="yo")
+c_yo          = input.color(#9c27b0, "", group=grp_per, inline="yo")
 
 // Previous Levels
-show_pd       = input.bool(false, "Prev Day H/L", group=grp_prev, inline="pd")
-c_pd          = input.color(color.gray, "", group=grp_prev, inline="pd")
-show_pw       = input.bool(false, "Prev Week H/L", group=grp_prev, inline="pw")
-c_pw          = input.color(color.blue, "", group=grp_prev, inline="pw")
-show_pm       = input.bool(false, "Prev Month H/L", group=grp_prev, inline="pm")
-c_pm          = input.color(color.orange, "", group=grp_prev, inline="pm")
-show_py       = input.bool(false, "Prev Year H/L", group=grp_prev, inline="py")
-c_py          = input.color(color.purple, "", group=grp_prev, inline="py")
+show_pd       = input.bool(true, "Prev Day H/L", group=grp_prev, inline="pd")
+c_pd          = input.color(color.black, "", group=grp_prev, inline="pd")
+show_pw       = input.bool(true, "Prev Week H/L", group=grp_prev, inline="pw")
+c_pw          = input.color(#2962ff, "", group=grp_prev, inline="pw")
+show_pm       = input.bool(true, "Prev Month H/L", group=grp_prev, inline="pm")
+c_pm          = input.color(#ff6d00, "", group=grp_prev, inline="pm")
+show_py       = input.bool(true, "Prev Year H/L", group=grp_prev, inline="py")
+c_py          = input.color(#9c27b0, "", group=grp_prev, inline="py")
 
-// Price Position Table
-grp_table     = "Price Position Table"
-show_table    = input.bool(true, "Show Table", group=grp_table)
-c_above       = input.color(color.green, "Above Color", group=grp_table, inline="tc")
-c_below       = input.color(color.red, "Below Color", group=grp_table, inline="tc")
-show_related  = input.bool(true, "Show Related Symbols", group=grp_table)
+// Price Position Table (Removed)
 
 // ─── Time & State ───
 tf_min = timeframe.in_seconds() / 60
@@ -466,48 +464,27 @@ var LevelObj o_py  = LevelObj.new(na, na, na, na, na, na, na)
 // OPTIMIZED: Object reuse instead of delete+create (was 45% bottleneck)
 update_level(bool show, float h_val, float l_val, color col, bool update_trig, LevelObj obj, string t_h, string t_l, string t_m) =>
     if show
-        // Manage start index
-        if update_trig
-            obj.start_idx := bar_index
-        else if na(obj.start_idx)
-            obj.start_idx := bar_index
+        // Clear previous lines/labels to ensure no history
+        line.delete(obj.h)
+        line.delete(obj.l)
+        line.delete(obj.m)
+        label.delete(obj.lb_h)
+        label.delete(obj.lb_l)
+        label.delete(obj.lb_m)
         
-        // Drawing logic - OPTIMIZED: Update instead of delete+create
-        if not na(obj.start_idx) and (not na(h_val) or not na(l_val))
-            // Update existing or create new
-            if not na(h_val)
-                if not na(obj.h)
-                    // Update existing line and label
-                    line.set_xy1(obj.h, bar_index, h_val)
-                    line.set_xy2(obj.h, bar_index+10, h_val)
-                    label.set_xy(obj.lb_h, bar_index+10, h_val)
-                else
-                    // Create new
-                    obj.h := line.new(bar_index, h_val, bar_index+10, h_val, color=col, style=line.style_dashed)
-                    obj.lb_h := label.new(bar_index+10, h_val, t_h, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-                    
-            if not na(l_val)
-                if not na(obj.l)
-                    // Update existing line and label
-                    line.set_xy1(obj.l, bar_index, l_val)
-                    line.set_xy2(obj.l, bar_index+10, l_val)
-                    label.set_xy(obj.lb_l, bar_index+10, l_val)
-                else
-                    // Create new
-                    obj.l := line.new(bar_index, l_val, bar_index+10, l_val, color=col, style=line.style_dashed)
-                    obj.lb_l := label.new(bar_index+10, l_val, t_l, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-                    
-            if not na(h_val) and not na(l_val)
-                mid = (h_val + l_val) / 2
-                if not na(obj.m)
-                    // Update existing line and label
-                    line.set_xy1(obj.m, bar_index, mid)
-                    line.set_xy2(obj.m, bar_index+10, mid)
-                    label.set_xy(obj.lb_m, bar_index+10, mid)
-                else
-                    // Create new
-                    obj.m := line.new(bar_index, mid, bar_index+10, mid, color=col, style=line.style_dotted)
-                    obj.lb_m := label.new(bar_index+10, mid, t_m, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
+        // Create new lines ONLY at current bar (recent data only)
+        if not na(h_val)
+            obj.h := line.new(bar_index, h_val, bar_index + 5, h_val, color=col, style=line.style_dashed)
+            obj.lb_h := label.new(bar_index + 5, h_val, t_h, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
+            
+        if not na(l_val)
+            obj.l := line.new(bar_index, l_val, bar_index + 5, l_val, color=col, style=line.style_dashed)
+            obj.lb_l := label.new(bar_index + 5, l_val, t_l, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
+            
+        if not na(h_val) and not na(l_val)
+            mid = (h_val + l_val) / 2
+            obj.m := line.new(bar_index, mid, bar_index + 5, mid, color=col, style=line.style_dotted)
+            obj.lb_m := label.new(bar_index + 5, mid, t_m, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
     
     // Explicit void return for consistency
     int(na)
@@ -517,28 +494,32 @@ update_level(bool show, float h_val, float l_val, color col, bool update_trig, L
 [m_h, m_l, m_o] = request.security(syminfo.tickerid, "M", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
 [y_h, y_l, y_o] = request.security(syminfo.tickerid, "12M", [high[1], low[1], open], lookahead=barmerge.lookahead_on)
 
+// PDH/PDL - Manual calculation to ensure exact 00:00-00:00 range in selected timezone
+var float curr_d_h = na
+var float curr_d_l = na
+var float d_h = na
+var float d_l = na
+
+if is_new_d
+    d_h := curr_d_h
+    d_l := curr_d_l
+    curr_d_h := high
+    curr_d_l := low
+else
+    curr_d_h := math.max(nz(curr_d_h, high), high)
+    curr_d_l := math.min(nz(curr_d_l, low), low)
+
+// Track for alert access
+var float pdh_val = na
+var float pdl_val = na
+
 if show_htf
-    // Data Fetching
-    // Note: 18:00 NY is defined as the "start" of the new day for this script's logic.
+    // PDH/PDL Logic: Display at 18:00 NY time
     trig_pd = ny_h == 18 and ny_m == 0
     
-    // Manual tracking of daily high/low from 18:00 to 18:00
-    var float current_day_high = na
-    var float current_day_low = na
-    var float pdh_val = na
-    var float pdl_val = na
-    
-    if trig_pd
-        // Store previous day's values (18:00 to 18:00 period)
-        pdh_val := current_day_high
-        pdl_val := current_day_low
-        // Reset for new day
-        current_day_high := high
-        current_day_low := low
-    else
-        // Update current day's high/low
-        current_day_high := na(current_day_high) ? high : math.max(current_day_high, high)
-        current_day_low := na(current_day_low) ? low : math.min(current_day_low, low)
+    // Update values from daily timeframe
+    pdh_val := d_h
+    pdl_val := d_l
 
     update_level(show_pd, pdh_val, pdl_val, c_pd, trig_pd, o_pd, "PDH", "PDL", "C.E.")
     update_level(show_pw, w_h, w_l, c_pw, timeframe.change("W"), o_pw, "PWH", "PWL", "W.C.E.")
@@ -567,27 +548,159 @@ if valid_tf
         a_l := na(a_l) ? low : math.min(a_l, low)
         mid = (a_h + a_l) / 2
         
+        // Format Range Text
+        range_asia = a_h - a_l
+        txt_asia = "Asia High (" + str.tostring(range_asia, format.mintick) + ")"
+        
         if na(o_asia.h) // Init lines
-            o_asia.h := line.new(bar_index, a_h, bar_index, a_h, color=c_asia), o_asia.lb_h := label.new(bar_index, a_h, "Asia High", color=c_transparent, textcolor=c_asia, style=label.style_label_lower_right, size=size.small)
-            o_asia.l := line.new(bar_index, a_l, bar_index, a_l, color=c_asia), o_asia.lb_l := label.new(bar_index, a_l, "Asia Low", color=c_transparent, textcolor=c_asia, style=label.style_label_upper_right, size=size.small)
-            o_asia.m := line.new(bar_index, mid, bar_index, mid, color=c_asia, style=line.style_dashed), o_asia.lb_m := label.new(bar_index, mid, "Asia C.E.", color=c_transparent, textcolor=c_asia, style=label.style_label_left, size=size.small)
+            o_asia.h := line.new(bar_index, a_h, bar_index, a_h, color=c_asia), o_asia.lb_h := label.new(bar_index, a_h, txt_asia, color=c_transparent, textcolor=c_asia, style=label.style_label_lower_right, size=hl_ts)
+            o_asia.l := line.new(bar_index, a_l, bar_index, a_l, color=c_asia), o_asia.lb_l := label.new(bar_index, a_l, "Asia Low", color=c_transparent, textcolor=c_asia, style=label.style_label_upper_right, size=hl_ts)
+            o_asia.m := line.new(bar_index, mid, bar_index, mid, color=c_asia, style=line.style_dashed), o_asia.lb_m := label.new(bar_index, mid, "C.E.", color=c_transparent, textcolor=c_asia, style=label.style_label_left, size=hl_ts)
         else // Update
-            line.set_y1(o_asia.h, a_h), line.set_y2(o_asia.h, a_h), line.set_x2(o_asia.h, bar_index), label.set_y(o_asia.lb_h, a_h), label.set_x(o_asia.lb_h, bar_index)
+            line.set_y1(o_asia.h, a_h), line.set_y2(o_asia.h, a_h), line.set_x2(o_asia.h, bar_index), label.set_y(o_asia.lb_h, a_h), label.set_x(o_asia.lb_h, bar_index), label.set_text(o_asia.lb_h, txt_asia)
             line.set_y1(o_asia.l, a_l), line.set_y2(o_asia.l, a_l), line.set_x2(o_asia.l, bar_index), label.set_y(o_asia.lb_l, a_l), label.set_x(o_asia.lb_l, bar_index)
             line.set_y1(o_asia.m, mid), line.set_y2(o_asia.m, mid), line.set_x2(o_asia.m, bar_index), label.set_y(o_asia.lb_m, mid), label.set_x(o_asia.lb_m, bar_index)
 
     if not in_asia and not na(o_asia.h)
+        is_ext_time = ny_m_total <= 960
+        
         if not lock_ah and high >= a_h
             lock_ah := true
+            // Snap back
+            line.set_x2(o_asia.h, bar_index), label.set_x(o_asia.lb_h, bar_index)
         if not lock_al and low <= a_l
             lock_al := true
-        
-        if not lock_ah
-            line.set_x2(o_asia.h, bar_index), label.set_x(o_asia.lb_h, bar_index)
-        if not lock_al
+            // Snap back
             line.set_x2(o_asia.l, bar_index), label.set_x(o_asia.lb_l, bar_index)
-        if not lock_ah or not lock_al
-            line.set_x2(o_asia.m, bar_index), label.set_x(o_asia.lb_m, bar_index)
+        
+        if not lock_ah and is_ext_time
+            line.set_x2(o_asia.h, bar_index + 5), label.set_x(o_asia.lb_h, bar_index + 5)
+        if not lock_al and is_ext_time
+            line.set_x2(o_asia.l, bar_index + 5), label.set_x(o_asia.lb_l, bar_index + 5)
+        if (not lock_ah or not lock_al) and is_ext_time
+            line.set_x2(o_asia.m, bar_index + 5), label.set_x(o_asia.lb_m, bar_index + 5)
+
+// London H/L (02:30 start)
+var LevelObj o_london = LevelObj.new(na, na, na, na, na, na, na)
+var float l_h = na, var float l_l = na
+var bool lock_lh = false, var bool lock_ll = false
+
+if valid_tf
+    is_start_london = ny_h == 2 and ny_m == 30
+    in_london = ny_m_total >= 150 and ny_m_total < 420 // 02:30 - 07:00
+    
+    if is_start_london
+        line.delete(o_london.h), label.delete(o_london.lb_h)
+        line.delete(o_london.l), label.delete(o_london.lb_l)
+        line.delete(o_london.m), label.delete(o_london.lb_m)
+        o_london.h := na, o_london.l := na, o_london.m := na
+        l_h := na, l_l := na
+        lock_lh := false, lock_ll := false
+
+    if in_london
+        l_h := na(l_h) ? high : math.max(l_h, high)
+        l_l := na(l_l) ? low : math.min(l_l, low)
+        mid = (l_h + l_l) / 2
+        
+        // Format Range Text
+        range_london = l_h - l_l
+        txt_london = "London High (" + str.tostring(range_london, format.mintick) + ")"
+
+        if na(o_london.h) // Init lines
+            o_london.h := line.new(bar_index, l_h, bar_index, l_h, color=c_london), o_london.lb_h := label.new(bar_index, l_h, txt_london, color=c_transparent, textcolor=c_london, style=label.style_label_lower_right, size=hl_ts)
+            o_london.l := line.new(bar_index, l_l, bar_index, l_l, color=c_london), o_london.lb_l := label.new(bar_index, l_l, "London Low", color=c_transparent, textcolor=c_london, style=label.style_label_upper_right, size=hl_ts)
+            o_london.m := line.new(bar_index, mid, bar_index, mid, color=c_london, style=line.style_dashed), o_london.lb_m := label.new(bar_index, mid, "C.E.", color=c_transparent, textcolor=c_london, style=label.style_label_left, size=hl_ts)
+        else // Update
+            line.set_y1(o_london.h, l_h), line.set_y2(o_london.h, l_h), line.set_x2(o_london.h, bar_index), label.set_y(o_london.lb_h, l_h), label.set_x(o_london.lb_h, bar_index), label.set_text(o_london.lb_h, txt_london)
+            line.set_y1(o_london.l, l_l), line.set_y2(o_london.l, l_l), line.set_x2(o_london.l, bar_index), label.set_y(o_london.lb_l, l_l), label.set_x(o_london.lb_l, bar_index)
+            line.set_y1(o_london.m, mid), line.set_y2(o_london.m, mid), line.set_x2(o_london.m, bar_index), label.set_y(o_london.lb_m, mid), label.set_x(o_london.lb_m, bar_index)
+
+    // Stop extending after 16:00
+    is_ext_time = ny_m_total <= 960
+
+    if not in_london and not na(o_london.h)
+        // Check triggers
+        if not lock_lh and high >= l_h
+            lock_lh := true
+            // Snap back where broken
+            line.set_x2(o_london.h, bar_index), label.set_x(o_london.lb_h, bar_index)
+            
+        if not lock_ll and low <= l_l
+            lock_ll := true
+            // Snap back where broken
+            line.set_x2(o_london.l, bar_index), label.set_x(o_london.lb_l, bar_index)
+        
+        // Extend forward +5 if not broken (and within time)
+        if not lock_lh and is_ext_time
+            line.set_x2(o_london.h, bar_index + 5), label.set_x(o_london.lb_h, bar_index + 5)
+        if not lock_ll and is_ext_time
+            line.set_x2(o_london.l, bar_index + 5), label.set_x(o_london.lb_l, bar_index + 5)
+        if (not lock_lh or not lock_ll) and is_ext_time
+            // Stop extending C.E. (Mid) line after session end (removed extension logic)
+            // Just keep it at end of session bar
+            na
+
+// NY AM H/L (07:00 start)
+var LevelObj o_ny_am = LevelObj.new(na, na, na, na, na, na, na)
+var float ny_am_h = na, var float ny_am_l = na
+var bool lock_ny_am_h = false, var bool lock_ny_am_l = false
+
+if valid_tf
+    is_start_ny_am = ny_h == 7 and ny_m == 0
+    in_ny_am = ny_m_total >= 420 and ny_m_total < 690 // 07:00 - 11:30
+    
+    if is_start_ny_am
+        line.delete(o_ny_am.h), label.delete(o_ny_am.lb_h)
+        line.delete(o_ny_am.l), label.delete(o_ny_am.lb_l)
+        line.delete(o_ny_am.m), label.delete(o_ny_am.lb_m)
+        o_ny_am.h := na, o_ny_am.l := na, o_ny_am.m := na
+        ny_am_h := na, ny_am_l := na
+        lock_ny_am_h := false, lock_ny_am_l := false
+
+    if in_ny_am
+        ny_am_h := na(ny_am_h) ? high : math.max(ny_am_h, high)
+        ny_am_l := na(ny_am_l) ? low : math.min(ny_am_l, low)
+        mid = (ny_am_h + ny_am_l) / 2
+        
+        // Format Range Text
+        range_ny_am = ny_am_h - ny_am_l
+        txt_ny = "NY AM High (" + str.tostring(range_ny_am, format.mintick) + ")"
+
+        if na(o_ny_am.h) // Init lines
+            o_ny_am.h := line.new(bar_index, ny_am_h, bar_index, ny_am_h, color=c_ny_am), o_ny_am.lb_h := label.new(bar_index, ny_am_h, txt_ny, color=c_transparent, textcolor=c_ny_am, style=label.style_label_lower_right, size=hl_ts)
+            o_ny_am.l := line.new(bar_index, ny_am_l, bar_index, ny_am_l, color=c_ny_am), o_ny_am.lb_l := label.new(bar_index, ny_am_l, "NY AM Low", color=c_transparent, textcolor=c_ny_am, style=label.style_label_upper_right, size=hl_ts)
+            o_ny_am.m := line.new(bar_index, mid, bar_index, mid, color=c_ny_am, style=line.style_dashed), o_ny_am.lb_m := label.new(bar_index, mid, "C.E.", color=c_transparent, textcolor=c_ny_am, style=label.style_label_left, size=hl_ts)
+        else // Update
+            line.set_y1(o_ny_am.h, ny_am_h), line.set_y2(o_ny_am.h, ny_am_h), line.set_x2(o_ny_am.h, bar_index), label.set_y(o_ny_am.lb_h, ny_am_h), label.set_x(o_ny_am.lb_h, bar_index), label.set_text(o_ny_am.lb_h, txt_ny)
+            line.set_y1(o_ny_am.l, ny_am_l), line.set_y2(o_ny_am.l, ny_am_l), line.set_x2(o_ny_am.l, bar_index), label.set_y(o_ny_am.lb_l, ny_am_l), label.set_x(o_ny_am.lb_l, bar_index)
+            line.set_y1(o_ny_am.m, mid), line.set_y2(o_ny_am.m, mid), line.set_x2(o_ny_am.m, bar_index), label.set_y(o_ny_am.lb_m, mid), label.set_x(o_ny_am.lb_m, bar_index)
+
+    // Stop extending after 16:00
+    // Stop extending after 16:00
+    // Fix: Ensure we don't extend if we've wrapped around to next day or passed 16:00
+    // ny_m_total resets at midnight. 16:00 is 960.
+    is_ext_time_ny = ny_m_total <= 960 and ny_m_total >= 420
+
+    if not in_ny_am and not na(o_ny_am.h)
+        // Check triggers
+        if not lock_ny_am_h and high >= ny_am_h
+            lock_ny_am_h := true
+            // Snap back where broken
+            line.set_x2(o_ny_am.h, bar_index), label.set_x(o_ny_am.lb_h, bar_index)
+            
+        if not lock_ny_am_l and low <= ny_am_l
+            lock_ny_am_l := true
+            // Snap back where broken
+            line.set_x2(o_ny_am.l, bar_index), label.set_x(o_ny_am.lb_l, bar_index)
+        
+        // Extend forward +5 if not broken (and within time)
+        if not lock_ny_am_h and is_ext_time_ny
+            line.set_x2(o_ny_am.h, bar_index + 5), label.set_x(o_ny_am.lb_h, bar_index + 5)
+        if not lock_ny_am_l and is_ext_time_ny
+            line.set_x2(o_ny_am.l, bar_index + 5), label.set_x(o_ny_am.lb_l, bar_index + 5)
+        if (not lock_ny_am_h or not lock_ny_am_l) and is_ext_time_ny
+            // Just keep it at end of session bar
+            na
 
 
 // ─── Period Opens (Daily, Weekly, Monthly, Yearly) ───
@@ -751,183 +864,14 @@ if show_macro and valid_tf
     else
         mh := na, m_start := na
 
-// ─── Track Cycle Opens for Table ───
-var float tco_90 = na
-var float tco_10 = na
-var float tco_30 = na
 
-// Track 90min cycle open (independent of show_90 for table)
-if ny_h == 18 and ny_m == 0
-    tco_90 := open
-else if ny_h == 19 and ny_m == 30
-    tco_90 := open
-else if ny_h == 21 and ny_m == 0
-    tco_90 := open
-else if ny_h == 22 and ny_m == 30
-    tco_90 := open
-else if ny_h == 2 and ny_m == 30
-    tco_90 := open
-else if ny_h == 4 and ny_m == 0
-    tco_90 := open
-else if ny_h == 5 and ny_m == 30
-    tco_90 := open
-else if ny_h == 7 and ny_m == 0
-    tco_90 := open
-else if ny_h == 8 and ny_m == 30
-    tco_90 := open
-else if ny_h == 10 and ny_m == 0
-    tco_90 := open
-else if ny_h == 11 and ny_m == 30
-    tco_90 := open
-else if ny_h == 13 and ny_m == 0
-    tco_90 := open
-else if ny_h == 14 and ny_m == 30
-    tco_90 := open
+// Calculate crossovers on every bar for consistency
+daily_ce = not na(pdh_val) and not na(pdl_val) ? (pdh_val + pdl_val) / 2 : na
+pdh_cross = ta.cross(close, pdh_val)
+pdl_cross = ta.cross(close, pdl_val)
+ce_cross = ta.cross(close, daily_ce)
 
-// Track 30min cycle open (independent of show_30 for table)
-if ny_m == 0 or ny_m == 30
-    tco_30 := open
-
-// Track 10min cycle open (independent of show_10 for table)
-if ny_m % 10 == 0
-    tco_10 := open
-
-// ─── Smart Symbol Detection for Related Contracts ───
-var string sym1 = na
-var string sym2 = na
-
-if show_related and barstate.isfirst
-    root = syminfo.root
-    ticker = syminfo.ticker
-    
-    // Detect contract type and build related symbols
-    if str.contains(ticker, "MNQ")
-        // Micro NQ → MES + MYM
-        suffix = str.replace(ticker, "MNQ", "")
-        sym1 := "MES" + suffix
-        sym2 := "MYM" + suffix
-    else if str.contains(ticker, "NQ")
-        // Regular NQ → ES + YM  
-        suffix = str.replace(ticker, "NQ", "")
-        sym1 := "ES" + suffix
-        sym2 := "YM" + suffix
-    else if root == "NQ"
-        // Continuous contract
-        sym1 := "ES1!"
-        sym2 := "YM1!"
-
-// Fetch related symbol opens
-sym1_open = show_related and not na(sym1) ? request.security(sym1, timeframe.period, open) : na
-sym2_open = show_related and not na(sym2) ? request.security(sym2, timeframe.period, open) : na
-
-// Fetch related symbol higher timeframe data (for TYO, TMO, TWO)
-sym1_w_o = show_related and not na(sym1) ? request.security(sym1, "W", open, lookahead=barmerge.lookahead_on) : na
-sym1_m_o = show_related and not na(sym1) ? request.security(sym1, "M", open, lookahead=barmerge.lookahead_on) : na
-sym1_y_o = show_related and not na(sym1) ? request.security(sym1, "12M", open, lookahead=barmerge.lookahead_on) : na
-
-sym2_w_o = show_related and not na(sym2) ? request.security(sym2, "W", open, lookahead=barmerge.lookahead_on) : na
-sym2_m_o = show_related and not na(sym2) ? request.security(sym2, "M", open, lookahead=barmerge.lookahead_on) : na
-sym2_y_o = show_related and not na(sym2) ? request.security(sym2, "12M", open, lookahead=barmerge.lookahead_on) : na
-
-// Get closes for related symbols
-sym1_close = show_related and not na(sym1) ? request.security(sym1, timeframe.period, close) : na
-sym2_close = show_related and not na(sym2) ? request.security(sym2, timeframe.period, close) : na
-
-// ─── Price Position Table ───
-// State variables to store last known positions
-var string tyo_last = "N/A"
-var string tmo_last = "N/A"
-var string two_last = "N/A"
-var string tdo_last = "N/A"
-var bool tyo_init = false
-var bool tmo_init = false
-var bool two_init = false
-var bool tdo_init = false
-
-// Helper function to get position text and color (global scope)
-get_pos(val, ref) =>
-    txt = na(ref) ? "N/A" : (val > ref ? "Above" : "Below")
-    col = na(ref) ? color.gray : (val > ref ? c_above : c_below)
-    [txt, col]
-
-if show_table and barstate.islast
-    // Create table: 4 columns (Labels, NQ, ES, YM) × 8 rows (header + 7 levels)
-    col_count = show_related ? 4 : 2
-    var table pos_table = table.new(position.top_right, col_count, 8, bgcolor=color.new(color.white, 0), border_width=1, border_color=color.black)
-    
-    // Header row (row 0)
-    table.cell(pos_table, 0, 0, "", text_color=color.white, bgcolor=color.gray, text_size=size.small)
-    table.cell(pos_table, 1, 0, syminfo.ticker, text_color=color.white, bgcolor=color.gray, text_size=size.small)
-    if show_related and not na(sym1)
-        table.cell(pos_table, 2, 0, sym1, text_color=color.white, bgcolor=color.gray, text_size=size.small)
-        table.cell(pos_table, 3, 0, sym2, text_color=color.white, bgcolor=color.gray, text_size=size.small)
-    
-    // Row 1: TYO
-    table.cell(pos_table, 0, 1, "TYO", text_color=color.black, text_size=size.small)
-    [tyo_txt, tyo_col] = get_pos(close, y_o)
-    table.cell(pos_table, 1, 1, tyo_txt, text_color=tyo_col, text_size=size.small)
-    if show_related and not na(sym1)
-        [sym1_tyo_txt, sym1_tyo_col] = get_pos(sym1_close, sym1_y_o)
-        [sym2_tyo_txt, sym2_tyo_col] = get_pos(sym2_close, sym2_y_o)
-        table.cell(pos_table, 2, 1, sym1_tyo_txt, text_color=sym1_tyo_col, text_size=size.small)
-        table.cell(pos_table, 3, 1, sym2_tyo_txt, text_color=sym2_tyo_col, text_size=size.small)
-    
-    // Row 2: TMO
-    table.cell(pos_table, 0, 2, "TMO", text_color=color.black, text_size=size.small)
-    [tmo_txt, tmo_col] = get_pos(close, m_o)
-    table.cell(pos_table, 1, 2, tmo_txt, text_color=tmo_col, text_size=size.small)
-    if show_related and not na(sym1)
-        [sym1_tmo_txt, sym1_tmo_col] = get_pos(sym1_close, sym1_m_o)
-        [sym2_tmo_txt, sym2_tmo_col] = get_pos(sym2_close, sym2_m_o)
-        table.cell(pos_table, 2, 2, sym1_tmo_txt, text_color=sym1_tmo_col, text_size=size.small)
-        table.cell(pos_table, 3, 2, sym2_tmo_txt, text_color=sym2_tmo_col, text_size=size.small)
-    
-    // Row 3: TWO
-    table.cell(pos_table, 0, 3, "TWO", text_color=color.black, text_size=size.small)
-    [two_txt, two_col] = get_pos(close, w_o)
-    table.cell(pos_table, 1, 3, two_txt, text_color=two_col, text_size=size.small)
-    if show_related and not na(sym1)
-        [sym1_two_txt, sym1_two_col] = get_pos(sym1_close, sym1_w_o)
-        [sym2_two_txt, sym2_two_col] = get_pos(sym2_close, sym2_w_o)
-        table.cell(pos_table, 2, 3, sym1_two_txt, text_color=sym1_two_col, text_size=size.small)
-        table.cell(pos_table, 3, 3, sym2_two_txt, text_color=sym2_two_col, text_size=size.small)
-    
-    // Row 4: TDO
-    table.cell(pos_table, 0, 4, "TDO", text_color=color.black, text_size=size.small)
-    [tdo_txt, tdo_col] = get_pos(close, d_val)
-    table.cell(pos_table, 1, 4, tdo_txt, text_color=tdo_col, text_size=size.small)
-    if show_related and not na(sym1)
-        [sym1_tdo_txt, sym1_tdo_col] = get_pos(sym1_open, sym1_open)  // Same day open
-        [sym2_tdo_txt, sym2_tdo_col] = get_pos(sym2_open, sym2_open)
-        table.cell(pos_table, 2, 4, sym1_tdo_txt, text_color=sym1_tdo_col, text_size=size.small)
-        table.cell(pos_table, 3, 4, sym2_tdo_txt, text_color=sym2_tdo_col, text_size=size.small)
-    
-    // Row 5: TCO 90
-    table.cell(pos_table, 0, 5, "TCO 90", text_color=color.black, text_size=size.small)
-    [tco90_txt, tco90_col] = get_pos(close, tco_90)
-    table.cell(pos_table, 1, 5, tco90_txt, text_color=tco90_col, text_size=size.small)
-    if show_related and not na(sym1)
-        [sym1_tco90_txt, sym1_tco90_col] = get_pos(sym1_close, sym1_open)
-        [sym2_tco90_txt, sym2_tco90_col] = get_pos(sym2_close, sym2_open)
-        table.cell(pos_table, 2, 5, sym1_tco90_txt, text_color=sym1_tco90_col, text_size=size.small)
-        table.cell(pos_table, 3, 5, sym2_tco90_txt, text_color=sym2_tco90_col, text_size=size.small)
-    
-    // Row 6: TCO 30
-    table.cell(pos_table, 0, 6, "TCO 30", text_color=color.black, text_size=size.small)
-    [tco30_txt, tco30_col] = get_pos(close, tco_30)
-    table.cell(pos_table, 1, 6, tco30_txt, text_color=tco30_col, text_size=size.small)
-    if show_related and not na(sym1)
-        [sym1_tco30_txt, sym1_tco30_col] = get_pos(sym1_close, sym1_open)
-        [sym2_tco30_txt, sym2_tco30_col] = get_pos(sym2_close, sym2_open)
-        table.cell(pos_table, 2, 6, sym1_tco30_txt, text_color=sym1_tco30_col, text_size=size.small)
-        table.cell(pos_table, 3, 6, sym2_tco30_txt, text_color=sym2_tco30_col, text_size=size.small)
-    
-    // Row 7: TCO 10
-    table.cell(pos_table, 0, 7, "TCO 10", text_color=color.black, text_size=size.small)
-    [tco10_txt, tco10_col] = get_pos(close, tco_10)
-    table.cell(pos_table, 1, 7, tco10_txt, text_color=tco10_col, text_size=size.small)
-    if show_related and not na(sym1)
-        [sym1_tco10_txt, sym1_tco10_col] = get_pos(sym1_close, sym1_open)
-        [sym2_tco10_txt, sym2_tco10_col] = get_pos(sym2_close, sym2_open)
-        table.cell(pos_table, 2, 7, sym1_tco10_txt, text_color=sym1_tco10_col, text_size=size.small)
-        table.cell(pos_table, 3, 7, sym2_tco10_txt, text_color=sym2_tco10_col, text_size=size.small)
+// Trigger alert when crossing occurs (independent of display settings)
+if pdh_cross or pdl_cross or ce_cross
+    msg = pdh_cross ? "Price crossed PDH" : pdl_cross ? "Price crossed PDL" : "Price crossed Daily C.E."
+    alert(msg, alert.freq_once_per_bar)

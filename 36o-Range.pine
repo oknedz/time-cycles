@@ -1,0 +1,147 @@
+//@version=5
+indicator("36o-Range", overlay=true)
+
+// --- Inputs ---
+// Using simplest string method as requested, reverting complex split inputs
+from_time_str = input.string("0900", "From Time (HHMM)")
+to_time_str   = input.string("1600", "To Time (HHMM)")
+
+show_daily    = input.bool(true, "Show Daily Range")
+show_1h       = input.bool(true, "Show 60 min Range")
+show_30m      = input.bool(true, "Show 30m Range")
+show_15m      = input.bool(true, "Show 15m Range")
+
+text_col      = input.color(color.white, "Text Color")
+bracket_col   = input.color(color.gray, "Bracket Color")
+bg_col        = input.color(color.new(color.black, 0), "Background Color")
+text_s        = input.string(size.small, "Font Size", options = [size.auto, size.tiny, size.small, size.normal, size.large, size.huge])
+
+// --- Helper to validate/fix time string ---
+// Ensures we have 4 digits to prevent "incorrect entry syntax" errors
+fix_time_str(t) =>
+    len = str.length(t)
+    if len == 4
+        t
+    else if len == 3
+        "0" + t // e.g. "930" -> "0930"
+    else if len == 1 or len == 2
+        // Likely invalid, but let's try to pad or return valid default
+        "0000"
+    else
+        t // Return as is if 0 or >4, let Pine error out or user fix
+
+from_time = fix_time_str(from_time_str)
+to_time   = fix_time_str(to_time_str)
+
+// --- Symbol & Timeframe Checks ---
+is_nq = syminfo.ticker == "NQ1!" or syminfo.root == "NQ"
+current_tf = timeframe.period
+
+// --- Calculations ---
+// Define session string. We use "1234567" to cover all days of the week.
+session_string = from_time + "-" + to_time + ":1234567"
+
+// Function to calculate session sum (reusable for main TF and 1H)
+// Function to calculate session sum (reusable for main TF and 1H)
+calc_sum() =>
+    in_s = not na(time(timeframe.period, session_string, "America/New_York"))
+    rng = math.abs(high - low)
+    var float s = 0.0
+    var int c = 0
+    var float l_360 = 0.0
+    
+    // Detect new session start (transition from false to true)
+    // We use a history check to see if we just entered the session
+    is_start = in_s and not in_s[1] 
+    
+    if in_s
+        // Reset if new session start
+        if is_start
+            s := rng
+            c := 1
+            l_360 := rng
+        else
+            s += rng
+            c += 1
+            l_360 += rng
+        
+        // Loop reset logic
+        if l_360 >= 360
+            l_360 := l_360 - 360
+            
+    [s, c, l_360]
+
+// 1. Current Timeframe Calculation
+[range_sum, candle_count, range_loop_360] = calc_sum()
+
+// 2. Additional Timeframe Calculations
+daily_range                    = request.security(syminfo.tickerid, "D", high - low)
+[sum_1h, count_1h, loop_1h]    = request.security(syminfo.tickerid, "60", calc_sum())
+[sum_30m, count_30m, loop_30m] = request.security(syminfo.tickerid, "30", calc_sum())
+[sum_15m, count_15m, loop_15m] = request.security(syminfo.tickerid, "15", calc_sum())
+
+// Detect when the loop value drops (indicating a 360-point reset)
+// Check if the integer count of 360 cycles has increased
+int cycles_now = math.floor(range_sum / 360)
+int cycles_prev = math.floor(range_sum[1] / 360) 
+// Alert triggers only if we completed a NEW cycle (ignoring day resets where count drops)
+bool loop_reset = cycles_now > cycles_prev
+
+if loop_reset and is_nq
+    alert("360 Range Loop Completed! Total Sum: " + str.tostring(range_sum), alert.freq_once_per_bar)
+
+// --- Display ---
+// 3 columns: Label, Value, Cycle Count
+var table sum_table = table.new(position.top_right, 3, 9, bgcolor = bg_col)
+
+// Calculate full 360 cycles count
+cycles_360 = math.floor(range_sum / 360)
+
+if barstate.islast
+    table.clear(sum_table, 0, 0, 2, 8)
+    
+    // Add Symbol Row
+    table.cell(sum_table, 0, 0, "Symbol", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 1, 0, syminfo.ticker, text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 2, 0, "", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+
+    table.cell(sum_table, 0, 1, "Range SUM", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 1, 1, str.tostring(range_sum, format.mintick), text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 2, 1, "(" + str.tostring(cycles_360, "#") + ")", text_color = bracket_col, text_size = text_s, bgcolor = bg_col) // New column
+
+    table.cell(sum_table, 0, 2, "Actual 360", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 1, 2, str.tostring(range_loop_360, format.mintick), text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 2, 2, "", text_color = text_col, text_size = text_s, bgcolor = bg_col) // Empty cell
+
+    table.cell(sum_table, 0, 3, "Candles", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 1, 3, str.tostring(candle_count), text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 2, 3, "", text_color = text_col, text_size = text_s, bgcolor = bg_col) // Empty cell
+
+    table.cell(sum_table, 0, 4, "TF", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 1, 4, current_tf, text_color = text_col, text_size = text_s, bgcolor = bg_col)
+    table.cell(sum_table, 2, 4, "", text_color = text_col, text_size = text_s, bgcolor = bg_col) // Empty cell
+
+    int row_idx = 5
+    if show_daily
+        table.cell(sum_table, 0, row_idx, "Daily Range", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 1, row_idx, str.tostring(daily_range, format.mintick), text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 2, row_idx, "(" + str.tostring(math.floor(daily_range / 360), "#") + ")", text_color = bracket_col, text_size = text_s, bgcolor = bg_col)
+        row_idx += 1
+
+    if show_1h
+        table.cell(sum_table, 0, row_idx, "60m Sum", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 1, row_idx, str.tostring(sum_1h, format.mintick), text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 2, row_idx, "(" + str.tostring(math.floor(sum_1h / 360), "#") + ")", text_color = bracket_col, text_size = text_s, bgcolor = bg_col)
+        row_idx += 1
+
+    if show_30m
+        table.cell(sum_table, 0, row_idx, "30m Sum", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 1, row_idx, str.tostring(sum_30m, format.mintick), text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 2, row_idx, "(" + str.tostring(math.floor(sum_30m / 360), "#") + ")", text_color = bracket_col, text_size = text_s, bgcolor = bg_col)
+        row_idx += 1
+
+    if show_15m
+        table.cell(sum_table, 0, row_idx, "15m Sum", text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 1, row_idx, str.tostring(sum_15m, format.mintick), text_color = text_col, text_size = text_s, bgcolor = bg_col)
+        table.cell(sum_table, 2, row_idx, "(" + str.tostring(math.floor(sum_15m / 360), "#") + ")", text_color = bracket_col, text_size = text_s, bgcolor = bg_col)
+        row_idx += 1
