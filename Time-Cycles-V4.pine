@@ -1,429 +1,333 @@
 //@version=6
-indicator("Time Cycles V4.0 [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+indicator("Time Cycles V4.0 [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, calc_bars_count=20000)
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TIME CYCLES V4.0 - OPTIMIZED
-// ═══════════════════════════════════════════════════════════════════════════════
+// --- Input Groups ---
 
-// ─── Inputs ───
-grp_cyc       = "Cycles"
-grp_ol        = "Opening Lines"
-grp_col       = "Colors"
-grp_day       = "Day"
-grp_per       = "Period Opens"
-grp_prev      = "Previous Levels"
+grp_cyc = "Cycles"
+grp_ol = "Opening Lines"
+grp_col = "Colors"
+grp_day = "Day"
 
-// Cycles
-cycle_visual  = input.string("Show Boxes", "Cycle Visual", ["Show Boxes", "Show Lines"], group=grp_cyc, inline="vis")
-c_lines       = input.color(color.white, "Lines Color", group=grp_cyc, inline="vis") // Used for vertical lines
-show_90       = input.bool(true, "90min", group=grp_cyc, inline="c1")
-show_30       = input.bool(true, "30min", group=grp_cyc, inline="c1")
-show_10       = input.bool(false, "10min", group=grp_cyc, inline="c1")
+// Cycle settings: toggle 90/30/10min, midnight window, cycle start, auto-adjust, macro times
+show_90 = input.bool(true, "90min", group=grp_cyc, inline="c1")
+show_30 = input.bool(true, "30min", group=grp_cyc, inline="c1")
+show_10 = input.bool(false, "10min", group=grp_cyc, inline="c1")
+show_mid_win = input.bool(false, "Midnight Window", group=grp_cyc, inline="c2")
+var array<string> cyc_opts = array.from("1:00", "1:30", "2:00", "2:30", "3:00", "3:30", "4:00", "4:30")
+var array<int> cyc_mins = array.from(60, 90, 120, 150, 180, 210, 240, 270)
+cyc_start_str = input.string("2:00", "Cycle Start (London)", options=["1:00", "1:30", "2:00", "2:30", "3:00", "3:30", "4:00", "4:30"], group=grp_cyc, inline="c4")
+auto_adj = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
+show_macro = input.bool(false, "MACRO Times", group=grp_cyc, inline="c3")
+c_macro = input.color(color.gray, "", group=grp_cyc, inline="c3")
 
-show_mid_230  = input.bool(false, "Midnight to 2:30", group=grp_cyc, inline="c2")
-auto_adj      = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
-show_macro    = input.bool(false, "MACRO Times", group=grp_cyc, inline="c3")
-c_macro       = input.color(color.gray, "", group=grp_cyc, inline="c3")
+// Opening lines: midnight, 8:30, 9:30, and 90min cycle opens
+show_mid = input.bool(true, "Midnight", group=grp_ol, inline="mid")
+c_mid = input.color(#787b86, "", group=grp_ol, inline="mid")
+w_mid = input.int(1, "", 1, 3, group=grp_ol, inline="mid")
+s_mid = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="mid")
+show_90_open = input.bool(false, "90min Cycle Opens", group=grp_ol, inline="90open")
+c_90_open = input.color(color.orange, "", group=grp_ol, inline="90open")
+w_90_open = input.int(1, "", 1, 3, group=grp_ol, inline="90open")
+s_90_open = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="90open")
+show_830 = input.bool(true, "8:30", group=grp_ol, inline="830")
+c_830 = input.color(#787b86, "", group=grp_ol, inline="830")
+w_830 = input.int(1, "", 1, 3, group=grp_ol, inline="830")
+s_830 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="830")
+show_930 = input.bool(true, "9:30", group=grp_ol, inline="930")
+c_930 = input.color(#787b86, "", group=grp_ol, inline="930")
+w_930 = input.int(1, "", 1, 3, group=grp_ol, inline="930")
+s_930 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
 
-// Opening Lines
-show_mid      = input.bool(true, "Midnight", group=grp_ol, inline="mid")
-c_mid         = input.color(#787b86, "", group=grp_ol, inline="mid")
-w_mid         = input.int(1, "", 1, 3, group=grp_ol, inline="mid")
-s_mid         = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="mid")
+// Cycle box colors: A=red, M=blue, D=green per cycle size
+c_90_a = input.color(color.red, "90min A", group=grp_col, inline="90")
+c_90_m = input.color(color.blue, "M", group=grp_col, inline="90")
+c_90_d = input.color(color.green, "D", group=grp_col, inline="90")
+c_30_a = input.color(color.red, "30min A", group=grp_col, inline="30")
+c_30_m = input.color(color.blue, "M", group=grp_col, inline="30")
+c_30_d = input.color(color.green, "D", group=grp_col, inline="30")
+c_10 = input.color(color.gray, "10min", group=grp_col)
+// Session high/low line colors
+c_asia = input.color(color.purple, "Asia H/L", group=grp_col)
+c_london = input.color(color.red, "London H/L", group=grp_col)
+c_ny_am = input.color(color.blue, "NY AM H/L", group=grp_col)
+hl_ts = input.string(size.small, "H/L Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_col)
+fill_transp = input.int(93, "Fill Transparency", 0, 100, group="Display")
 
-show_90_open  = input.bool(false, "90min Cycle Opens", group=grp_ol, inline="90open")
-c_90_open     = input.color(color.orange, "", group=grp_ol, inline="90open")
-w_90_open     = input.int(1, "", 1, 3, group=grp_ol, inline="90open")
-s_90_open     = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="90open")
+// Day display: day separator and weekday labels
+show_dsep = input.bool(true, "Day Sep", group=grp_day, inline="ds")
+c_dsep = input.color(color.gray, "", group=grp_day, inline="ds")
+s_dsep = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_day, inline="ds")
+show_wd = input.bool(true, "Weekdays", group=grp_day, inline="wd")
+c_wd = input.color(color.gray, "", group=grp_day, inline="wd")
+loc_wd = input.string("Bottom", "", ["Top", "Bottom"], group=grp_day, inline="wd")
+fmt_wd = input.string("Short", "Format", ["Short", "Long"], group=grp_day, inline="wd2")
+off_wd = input.int(0, "Offset (min)", group=grp_day, inline="wd2")
 
-show_830      = input.bool(true, "8:30", group=grp_ol, inline="830")
-c_830         = input.color(#787b86, "", group=grp_ol, inline="830")
-w_830         = input.int(1, "", 1, 3, group=grp_ol, inline="830")
-s_830         = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="830")
+// Previous Day High/Low: horizontal lines at prior calendar-day (NY midnight-to-midnight) high & low
+grp_pdhl = "Prev Day H/L"
+show_pdhl = input.bool(true, "Show PDH/PDL", group=grp_pdhl)
+c_pdh = input.color(color.black, "PDH", group=grp_pdhl, inline="pdh")
+w_pdh = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdh")
+s_pdh = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdh")
+c_pdl = input.color(color.black, "PDL", group=grp_pdhl, inline="pdl")
+w_pdl = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdl")
+s_pdl = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdl")
+show_pdce = input.bool(true, "50% C.E.", group=grp_pdhl, inline="pdce")
+c_pdce = input.color(color.black, "", group=grp_pdhl, inline="pdce")
+w_pdce = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdce")
+s_pdce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdce")
+show_pdhl_lbl = input.bool(true, "Show Labels", group=grp_pdhl, inline="pdlbl")
+pdhl_ts = input.string(size.small, "Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_pdhl, inline="pdlbl")
 
-show_930      = input.bool(true, "9:30", group=grp_ol, inline="930")
-c_930         = input.color(#787b86, "", group=grp_ol, inline="930")
-w_930         = input.int(1, "", 1, 3, group=grp_ol, inline="930")
-s_930         = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
+// --- Time & Symbol Configuration ---
 
-// Colors
-c_90_a        = input.color(color.red, "90min A", group=grp_col, inline="90")
-c_90_m        = input.color(color.blue, "M", group=grp_col, inline="90")
-c_90_d        = input.color(color.green, "D", group=grp_col, inline="90")
-c_30_a        = input.color(color.red, "30min A", group=grp_col, inline="30")
-c_30_m        = input.color(color.blue, "M", group=grp_col, inline="30")
-c_30_d        = input.color(color.green, "D", group=grp_col, inline="30")
-c_10          = input.color(color.gray, "10min", group=grp_col)
-c_asia        = input.color(color.purple, "Asia H/L", group=grp_col)
-c_london      = input.color(color.red, "London H/L", group=grp_col)
-c_ny_am       = input.color(color.blue, "NY AM H/L", group=grp_col)
-hl_ts         = input.string(size.small, "H/L Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_col)
-fill_transp   = input.int(93, "Fill Transparency", 0, 100, group="Display")
-
-// Day Separator
-show_dsep     = input.bool(true, "Day Sep", group=grp_day, inline="ds")
-c_dsep        = input.color(color.gray, "", group=grp_day, inline="ds")
-s_dsep        = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_day, inline="ds")
-show_wd       = input.bool(true, "Weekdays", group=grp_day, inline="wd")
-c_wd          = input.color(color.gray, "", group=grp_day, inline="wd")
-loc_wd        = input.string("Bottom", "", ["Top", "Bottom"], group=grp_day, inline="wd")
-fmt_wd        = input.string("Short", "Format", ["Short", "Long"], group=grp_day, inline="wd2")
-off_wd        = input.int(0, "Offset (min)", group=grp_day, inline="wd2")
-
-
-
-// Period Opens
-show_do       = input.bool(true, "Daily Open", group=grp_per, inline="do")
-c_do          = input.color(#787b86, "", group=grp_per, inline="do")
-show_wo       = input.bool(true, "Weekly Open", group=grp_per, inline="wo")
-c_wo          = input.color(#2962ff, "", group=grp_per, inline="wo")
-show_mo       = input.bool(true, "Monthly Open", group=grp_per, inline="mo")
-c_mo          = input.color(#ff6d00, "", group=grp_per, inline="mo")
-show_yo       = input.bool(true, "Yearly Open", group=grp_per, inline="yo")
-c_yo          = input.color(#9c27b0, "", group=grp_per, inline="yo")
-
-// Previous Levels
-show_pd       = input.bool(true, "Prev Day H/L", group=grp_prev, inline="pd")
-c_pd          = input.color(color.black, "", group=grp_prev, inline="pd")
-show_pw       = input.bool(true, "Prev Week H/L", group=grp_prev, inline="pw")
-c_pw          = input.color(#2962ff, "", group=grp_prev, inline="pw")
-show_pm       = input.bool(true, "Prev Month H/L", group=grp_prev, inline="pm")
-c_pm          = input.color(#ff6d00, "", group=grp_prev, inline="pm")
-show_py       = input.bool(true, "Prev Year H/L", group=grp_prev, inline="py")
-c_py          = input.color(#9c27b0, "", group=grp_prev, inline="py")
-
-// Price Position Table (Removed)
-
-// ─── Time & State ───
 tf_min = timeframe.in_seconds() / 60
-valid_tf = tf_min <= 240
+valid_tf = tf_min <= 240                                    // Only draw cycles on intraday TFs <= 4h
 act_90 = auto_adj ? (tf_min <= 240 and show_90) : show_90
 act_30 = auto_adj ? (tf_min <= 60 and show_30) : show_30
 act_10 = auto_adj ? (tf_min <= 30 and show_10) : show_10
-
-is_boxes = cycle_visual == "Show Boxes"
 is_crypto = syminfo.type == "crypto"
-// Timezones
 calc_tz = is_crypto ? "UTC" : "America/New_York"
-ny_h = hour(time, "America/New_York"), ny_m = minute(time, "America/New_York")
-ny_m_total = ny_h * 60 + ny_m
+ny_h = hour(time, "America/New_York")
+ny_m = minute(time, "America/New_York")
+ny_m_total = ny_h * 60 + ny_m                               // Minute of day in NY time
+var int cyc_start = cyc_mins.get(array.indexof(cyc_opts, cyc_start_str))  // London/NY cycle anchor (minutes of day)
+is_new_d = ta.change(dayofmonth(time, "America/New_York")) != 0    // True at NY calendar midnight
 
-is_new_d = ta.change(time("D", calc_tz)) != 0
-// Handle Sunday/Monday merge for non-crypto (same as original logic)
-if syminfo.type != "crypto" and dayofweek(time, calc_tz) == dayofweek.monday and dayofweek(time[1], calc_tz) == dayofweek.sunday
-    is_new_d := false
+// --- User-Defined Types ---
 
-// ─── Custom Types ───
+// Cycle: bounding box for one cycle period (top=cycle high, bottom=cycle low, fill+border from one box)
 type Cycle
-    line t
-    line b
-    linefill f
-    int idx
-    float h
-    float l
-    bool active
+    box bx                                                  // Bounding box: top=cycle high, bottom=cycle low
+    int idx                                                 // Current sub-period index within the cycle
+    float h                                                 // Running high within this cycle box
+    float l                                                 // Running low within this cycle box
+    bool active                                             // True while inside the cycle time window
 
-type CycleLine
-    line l
-    int idx
-    bool active
-
+// LevelObj: session high/low level with center equilibrium line, labels, and its running state
 type LevelObj
-    line h
-    line l
-    line m // mid/ce
-    label lb_h
-    label lb_l
-    label lb_m
-    int start_idx
+    line h                                                  // High level line
+    line l                                                  // Low level line
+    line m                                                  // Midpoint (C.E.) line
+    label lb_h                                              // High label
+    label lb_l                                              // Low label
+    label lb_m                                              // Mid label
+    float hv                                                // Running high of the session
+    float lv                                                // Running low of the session
+    bool lock_h                                             // True after price breaks above the high
+    bool lock_l                                             // True after price breaks below the low
 
+// TimeLine: a horizontal line drawn at a specific time with a label, extends forward
 type TimeLine
     line l
     label lb
-    bool stopped
-    int start_idx
+    bool stopped                                            // True after stop time, line stops extending
 
-// ─── Variables for Cycles ───
-// We need separate variables for each session/timeframe combo to maintain state
-var Cycle c_asia_90 = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle c_asia_30 = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle c_asia_10 = Cycle.new(na, na, na, -1, na, na, false)
+// --- Persistent State: Cycle Boxes ---
 
-var Cycle c_mid_90  = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle c_mid_30  = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle c_mid_10  = Cycle.new(na, na, na, -1, na, na, false)
+var Cycle c_asia_90 = Cycle.new(na, -1, na, na, false)
+var Cycle c_asia_30 = Cycle.new(na, -1, na, na, false)
+var Cycle c_asia_10 = Cycle.new(na, -1, na, na, false)
+var Cycle c_mid_90 = Cycle.new(na, -1, na, na, false)
+var Cycle c_mid_30 = Cycle.new(na, -1, na, na, false)
+var Cycle c_mid_10 = Cycle.new(na, -1, na, na, false)
+var Cycle c_ny_90 = Cycle.new(na, -1, na, na, false)
+var Cycle c_ny_30 = Cycle.new(na, -1, na, na, false)
+var Cycle c_ny_10 = Cycle.new(na, -1, na, na, false)
 
-var Cycle c_ny_90   = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle c_ny_30   = Cycle.new(na, na, na, -1, na, na, false)
-var Cycle c_ny_10   = Cycle.new(na, na, na, -1, na, na, false)
+// --- Persistent State: Opening Lines ---
 
-// For Line Mode
-var CycleLine l_asia_90 = CycleLine.new(na, -1, false)
-var CycleLine l_asia_30 = CycleLine.new(na, -1, false)
-var CycleLine l_asia_10 = CycleLine.new(na, -1, false)
+var TimeLine tl_mid = TimeLine.new(na, na, false)            // Midnight line
+var TimeLine tl_830 = TimeLine.new(na, na, false)            // 8:30 line
+var TimeLine tl_930 = TimeLine.new(na, na, false)            // 9:30 line
 
-var CycleLine l_mid_90  = CycleLine.new(na, -1, false)
-var CycleLine l_mid_30  = CycleLine.new(na, -1, false)
-var CycleLine l_mid_10  = CycleLine.new(na, -1, false)
+// --- Cleanup State: Track all drawn boxes for session-boundary cleanup ---
 
-var CycleLine l_ny_90   = CycleLine.new(na, -1, false)
-var CycleLine l_ny_30   = CycleLine.new(na, -1, false)
-var CycleLine l_ny_10   = CycleLine.new(na, -1, false)
-
-// Opening Lines & Period Opens State
-var TimeLine tl_mid = TimeLine.new(na, na, false, na)
-var TimeLine tl_830 = TimeLine.new(na, na, false, na)
-var TimeLine tl_930 = TimeLine.new(na, na, false, na)
-var TimeLine tl_do  = TimeLine.new(na, na, false, na)
-var TimeLine tl_wo  = TimeLine.new(na, na, false, na)
-var TimeLine tl_mo  = TimeLine.new(na, na, false, na)
-var TimeLine tl_yo  = TimeLine.new(na, na, false, na)
-
-// History tracking - store previous day Asia open bar index
 var int prev_asia_bar = na
 var int current_asia_bar = na
+var array<box> all_boxes = array.new<box>()                  // Every cycle box drawn since the previous 18:00 boundary
+var array<int> box_bars = array.new<int>()                   // Creation bar of each box (parallel to all_boxes)
 
-// Arrays to track all drawing objects for cleanup
-var array<line> all_lines = array.new<line>()
-var array<linefill> all_fills = array.new<linefill>()
-var array<int> line_bars = array.new<int>()
-var array<int> fill_bars = array.new<int>()
+// --- Color Arrays for Cycle Boxes ---
 
-var cols_90 = array.from(c_90_a, c_90_m, c_90_d)
-var cols_30 = array.from(c_30_a, c_30_m, c_30_d)
-var cols_10 = array.from(c_10)
+var color c_90_a_fill = color.new(c_90_a, fill_transp)
+var color c_90_m_fill = color.new(c_90_m, fill_transp)
+var color c_90_d_fill = color.new(c_90_d, fill_transp)
+var color c_30_a_fill = color.new(c_30_a, fill_transp)
+var color c_30_m_fill = color.new(c_30_m, fill_transp)
+var color c_30_d_fill = color.new(c_30_d, fill_transp)
+var color c_10_fill = color.new(c_10, fill_transp)
+var array<color> cols_90_fill = array.from(c_90_a_fill, c_90_m_fill, c_90_d_fill)
+var array<color> cols_30_fill = array.from(c_30_a_fill, c_30_m_fill, c_30_d_fill)
+var array<color> cols_10_fill = array.from(c_10_fill)
 
-// Pre-computed colors with transparency (optimization)
-var c_90_a_fill = color.new(c_90_a, fill_transp)
-var c_90_m_fill = color.new(c_90_m, fill_transp)
-var c_90_d_fill = color.new(c_90_d, fill_transp)
-var c_30_a_fill = color.new(c_30_a, fill_transp)
-var c_30_m_fill = color.new(c_30_m, fill_transp)
-var c_30_d_fill = color.new(c_30_d, fill_transp)
-var c_10_fill = color.new(c_10, fill_transp)
+var color c_trans = color.new(color.white, 100)              // Fully transparent (used as label background)
+var color c_box_border = color.new(color.white, 100)         // Invisible box border (cycles use fill only)
 
-var cols_90_fill = array.from(c_90_a_fill, c_90_m_fill, c_90_d_fill)
-var cols_30_fill = array.from(c_30_a_fill, c_30_m_fill, c_30_d_fill)
-var cols_10_fill = array.from(c_10_fill)
+// --- Utility ---
 
-// Pre-computed transparent colors for labels/borders (optimization)
-var c_transparent = color.new(color.white, 100)
-var c_box_border_transp = color.new(color.white, 100)
+// Convert style string to line.style_* constant
+get_style(s) => s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
 
-// Pre-computed timeframe check (optimization - was 29% bottleneck)
-var bool show_htf = valid_tf or timeframe.isdaily or timeframe.isweekly or timeframe.ismonthly
+// Place the three level drawings at a given y and x. Returns x so the call is value-returning.
+set_level(line ln, label lb, float y, int x) =>
+    line.set_y1(ln, y)
+    line.set_y2(ln, y)
+    line.set_x2(ln, x)
+    label.set_xy(lb, x, y)
+    x
 
-// ─── Helper Functions ───
+// Post-session path: only the x coordinate moves — y is frozen at the session value.
+set_level_x(line ln, label lb, int x) =>
+    line.set_x2(ln, x)
+    label.set_x(lb, x)
+    x
 
-get_style(s) => 
-    s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
-
-// Logic to draw Boxes
-draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols, array<color> cols_fill) =>
-    in_win = start > end ? (ny_m_total >= start or ny_m_total < end) : (ny_m_total >= start and ny_m_total < end)
-    if in_win
-        idx = math.floor((ny_m_total - start) / per)
-        col = cols.get(idx % cols.size())
-        col_fill = cols_fill.get(idx % cols_fill.size())
-        
-        if idx != c.idx or not c.active
-            // New Box
-            if not na(c.t)
-                line.set_x2(c.t, bar_index - 1), line.set_x2(c.b, bar_index - 1)
-            c.idx := idx
-            c.h := high, c.l := low
-            c.active := true
-            // Transparent borders as requested
-            c.t := line.new(bar_index, c.h, bar_index, c.h, color=c_box_border_transp)
-            c.b := line.new(bar_index, c.l, bar_index, c.l, color=c_box_border_transp)
-            c.f := linefill.new(c.t, c.b, col_fill)
-            
-            // Track objects for cleanup
-            array.push(all_lines, c.t)
-            array.push(line_bars, bar_index)
-            array.push(all_lines, c.b)
-            array.push(line_bars, bar_index)
-            array.push(all_fills, c.f)
-            array.push(fill_bars, bar_index)
+// Track a session's running high/low, then extend or lock its three levels after the session.
+// is_start: reset trigger for this session. in_sess: inside the session window.
+// ext_ok: inside the post-session extension window (session end through 16:00 NY).
+update_level(LevelObj o, bool is_start, bool in_sess, bool ext_ok, string name, color col) =>
+    if is_start                                             // Session start: reset
+        line.delete(o.h)
+        label.delete(o.lb_h)
+        line.delete(o.l)
+        label.delete(o.lb_l)
+        line.delete(o.m)
+        label.delete(o.lb_m)
+        o.h := na
+        o.l := na
+        o.m := na
+        o.hv := na
+        o.lv := na
+        o.lock_h := false
+        o.lock_l := false
+    if in_sess                                              // During session: track running H/L
+        o.hv := na(o.hv) ? high : math.max(o.hv, high)
+        o.lv := na(o.lv) ? low : math.min(o.lv, low)
+        if na(o.h)
+            o.h := line.new(bar_index, o.hv, bar_index, o.hv, color=col)
+            o.lb_h := label.new(bar_index, o.hv, name + " High (" + str.tostring(o.hv - o.lv, format.mintick) + ")", color=c_trans, textcolor=col, style=label.style_label_lower_right, size=hl_ts)
+            o.l := line.new(bar_index, o.lv, bar_index, o.lv, color=col)
+            o.lb_l := label.new(bar_index, o.lv, name + " Low", color=c_trans, textcolor=col, style=label.style_label_upper_right, size=hl_ts)
+            o.m := line.new(bar_index, (o.hv + o.lv) / 2, bar_index, (o.hv + o.lv) / 2, color=col, style=line.style_dashed)
+            o.lb_m := label.new(bar_index, (o.hv + o.lv) / 2, "C.E.", color=c_trans, textcolor=col, style=label.style_label_left, size=hl_ts)
         else
-            // Update Box
-            c.h := math.max(c.h, high), c.l := math.min(c.l, low)
-            line.set_y1(c.t, c.h), line.set_y2(c.t, c.h), line.set_x2(c.t, bar_index)
-            line.set_y1(c.b, c.l), line.set_y2(c.b, c.l), line.set_x2(c.b, bar_index)
-    else
-        if c.active
-            c.active := false
-            if not na(c.t)
-                line.set_x2(c.t, bar_index - 1), line.set_x2(c.b, bar_index - 1)
-            c.t := na, c.b := na, c.idx := -1
-    int(na)
+            set_level(o.h, o.lb_h, o.hv, bar_index)
+            set_level(o.l, o.lb_l, o.lv, bar_index)
+            set_level(o.m, o.lb_m, (o.hv + o.lv) / 2, bar_index)
+    if not in_sess and not na(o.h)                          // After session: lock on a break, else extend
+        if not o.lock_h and high >= o.hv
+            o.lock_h := true
+            set_level_x(o.h, o.lb_h, bar_index)
+        if not o.lock_l and low <= o.lv
+            o.lock_l := true
+            set_level_x(o.l, o.lb_l, bar_index)
+        if ext_ok and not o.lock_h
+            set_level_x(o.h, o.lb_h, bar_index + 5)
+        if ext_ok and not o.lock_l
+            set_level_x(o.l, o.lb_l, bar_index + 5)
+        if ext_ok and (not o.lock_h or not o.lock_l)
+            set_level_x(o.m, o.lb_m, bar_index + 5)
 
-// Logic to draw Vertical Lines
-draw_cycle_line(CycleLine cl, int start, int end, int per, int min_type) =>
+// --- Cycle Box Drawing ---
+
+// Draw/update a cycle bounding box. Creates a box from bar high to bar low filled with the cycle color.
+// Called every bar. Creates a new box when entering a new sub-period (idx change or activation).
+// Extends the box to current bar on subsequent bars within the same sub-period.
+// Closes the box when leaving the cycle time window.
+draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols_fill) =>
+    // Check if current time is within [start, end); handles wrap-around (e.g. 1440-60)
     in_win = start > end ? (ny_m_total >= start or ny_m_total < end) : (ny_m_total >= start and ny_m_total < end)
+    eff = start > end and ny_m_total < end ? ny_m_total + 1440 : ny_m_total   // Wrap-around: shift into next day so idx stays positive
     if in_win
-        idx = math.floor((ny_m_total - start) / per)
-        if idx != cl.idx or not cl.active
-            cl.idx := idx
-            cl.active := true
-            sty = min_type == 90 ? line.style_solid : min_type == 30 ? line.style_dashed : line.style_dotted
-            cl.l := line.new(bar_index, low, bar_index, high, color=c_lines, style=sty, extend=extend.both)
-            
-            // Track for cleanup
-            array.push(all_lines, cl.l)
-            array.push(line_bars, bar_index)
-    else
-        if cl.active
-            cl.active := false, cl.idx := -1
-    int(na)
+        idx = math.floor((eff - start) / per)               // Which sub-period are we in (0, 1, 2...)
+        col_fill = cols_fill.get(idx % cols_fill.size())
+        if idx != c.idx or not c.active                      // New sub-period or just activated
+            if not na(c.bx)
+                box.set_right(c.bx, bar_index - 1)           // Close previous box
+            c.idx := idx
+            c.h := high
+            c.l := low
+            c.active := true
+            c.bx := box.new(left=bar_index, top=c.h, right=bar_index, bottom=c.l, border_color=c_box_border, border_width=1, bgcolor=col_fill)
+            array.push(all_boxes, c.bx)
+            array.push(box_bars, bar_index)
+        else                                                 // Same sub-period: extend box to new high/low
+            c.h := math.max(c.h, high)
+            c.l := math.min(c.l, low)
+            box.set_top(c.bx, c.h)
+            box.set_bottom(c.bx, c.l)
+            box.set_right(c.bx, bar_index)
+    if not in_win and c.active                               // Left the cycle window: close box
+        c.active := false
+        if not na(c.bx)
+            box.set_right(c.bx, bar_index - 1)
+            c.bx := na
+            c.idx := -1
 
-// ─── Execution ───
+// --- Session Cleanup: Delete old boxes at 18:00 (Asia session boundary) ---
 
-// Track Asia open timestamps
 if ny_h == 18 and ny_m == 0
     prev_asia_bar := current_asia_bar
     current_asia_bar := bar_index
 
-// Cleanup old drawings - delete objects older than previous day Asia open
-// OPTIMIZED: O(1) circular buffer instead of O(n²) reverse loop
 if not na(prev_asia_bar)
-    // Clean up lines - delete from front only
-    while array.size(all_lines) > 0 and array.size(line_bars) > 0
-        if line_bars.get(0) < prev_asia_bar
-            line.delete(all_lines.shift())
-            line_bars.shift()
-        else
-            break
-    
-    // Clean up fills - delete from front only  
-    while array.size(all_fills) > 0 and array.size(fill_bars) > 0
-        if fill_bars.get(0) < prev_asia_bar
-            linefill.delete(all_fills.shift())
-            fill_bars.shift()
-        else
-            break
+    while array.size(all_boxes) > 0 and box_bars.get(0) < prev_asia_bar
+        box.delete(all_boxes.shift())
+        box_bars.shift()
+
+// --- Cycle Drawing: Asia (18:00-00:00 NY), Midnight (00:00 to cycle start, optional), London/NY (cycle start to 16:00) ---
 
 if valid_tf
-    // 1. Asia (18:00 - 00:00 -> 1080 - 1440)
-    if is_boxes
+    // Asia session: minutes 1080-1440
+    if act_90
+        draw_cycle_box(c_asia_90, 1080, 1440, 90, cols_90_fill)
+    if act_30
+        draw_cycle_box(c_asia_30, 1080, 1440, 30, cols_30_fill)
+    if act_10
+        draw_cycle_box(c_asia_10, 1080, 1440, 10, cols_10_fill)
+
+    // Midnight window (optional, wraps from 1440 back to cycle start)
+    if show_mid_win
         if act_90
-            draw_cycle_box(c_asia_90, 1080, 1440, 90, cols_90, cols_90_fill)
+            draw_cycle_box(c_mid_90, 1440, cyc_start, 90, cols_90_fill)
         if act_30
-            draw_cycle_box(c_asia_30, 1080, 1440, 30, cols_30, cols_30_fill)
+            draw_cycle_box(c_mid_30, 1440, cyc_start, 30, cols_30_fill)
         if act_10
-            draw_cycle_box(c_asia_10, 1080, 1440, 10, cols_10, cols_10_fill)
-    else
-        if act_90
-            draw_cycle_line(l_asia_90, 1080, 1440, 90, 90)
-        if act_30
-            draw_cycle_line(l_asia_30, 1080, 1440, 30, 30)
-        if act_10
-            draw_cycle_line(l_asia_10, 1080, 1440, 10, 10)
+            draw_cycle_box(c_mid_10, 1440, cyc_start, 10, cols_10_fill)
 
-    // 2. Midnight - 2:30 (1440 - 150) - Optional
-    if show_mid_230
-        if is_boxes
-            if act_90
-                draw_cycle_box(c_mid_90, 1440, 150, 90, cols_90, cols_90_fill)
-            if act_30
-                draw_cycle_box(c_mid_30, 1440, 150, 30, cols_30, cols_30_fill)
-            if act_10
-                draw_cycle_box(c_mid_10, 1440, 150, 10, cols_10, cols_10_fill)
-        else
-            if act_90
-                draw_cycle_line(l_mid_90, 1440, 150, 90, 90)
-            if act_30
-                draw_cycle_line(l_mid_30, 1440, 150, 30, 30)
-            if act_10
-                draw_cycle_line(l_mid_10, 1440, 150, 10, 10)
+    // London/NY session: minutes cyc_start-960; all cycle sizes anchored at the chosen start
+    if act_90
+        draw_cycle_box(c_ny_90, cyc_start, 960, 90, cols_90_fill)
+    if act_30
+        draw_cycle_box(c_ny_30, cyc_start, 960, 30, cols_30_fill)
+    if act_10
+        draw_cycle_box(c_ny_10, cyc_start, 960, 10, cols_10_fill)
 
-    // 3. NY Session (Starts 2:30 -> 150)
-    // Note: cyc_10 can run earlier (from 90) per original code logic if needed, 
-    // but simplified clustering generally prefers uniform windows. 
-    // Original code: cyc_10 start 90 (1:30), others 150 (2:30). Maintaining original intent:
-    start_10 = show_mid_230 ? 90 : 150
-    start_main = 150
-    end_ny = 960 // 16:00
+// --- Day Separator: Vertical line at midnight ---
 
-    if is_boxes
-        if act_90
-            draw_cycle_box(c_ny_90, start_main, end_ny, 90, cols_90, cols_90_fill)
-        if act_30
-            draw_cycle_box(c_ny_30, start_main, end_ny, 30, cols_30, cols_30_fill)
-        if act_10
-            draw_cycle_box(c_ny_10, start_10, end_ny, 10, cols_10, cols_10_fill)
-    else
-        if act_90
-            draw_cycle_line(l_ny_90, start_main, end_ny, 90, 90)
-        if act_30
-            draw_cycle_line(l_ny_30, start_main, end_ny, 30, 30)
-        if act_10
-            draw_cycle_line(l_ny_10, start_10, end_ny, 10, 10)
+if valid_tf and (ny_h == 0 and ny_m == 0) and show_dsep
+    line.new(bar_index, low, bar_index, high == low ? high + syminfo.mintick : high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
 
+// --- Opening Line Drawing ---
 
-
-
-
-// ─── Alerts ───
-// Optimized: Only check alert times when relevant (at specific minutes)
-var alert_times_h = array.from(2, 4, 5, 7, 8, 10)
-var alert_times_m = array.from(30, 0, 30, 0, 30, 0)
-var alert_trig    = array.new_bool(6, false)
-
-// Pre-calculate target minutes for efficiency (optimization)
-var int[] target_minutes = array.from(150, 270, 330, 450, 510, 630) // 2:30, 4:30, 5:30, 7:30, 8:30, 10:30 in minutes from midnight
-
-if act_90 and valid_tf
-    if is_new_d
-        array.fill(alert_trig, false)
-    
-    // Only check alerts at specific minutes to reduce computation
-    int current_minutes_from_midnight = ny_h * 60 + ny_m
-    bool is_alert_minute = array.includes(target_minutes, current_minutes_from_midnight)
-    
-    if is_alert_minute
-        for i = 0 to 5
-            if ny_h == alert_times_h.get(i) and ny_m == alert_times_m.get(i) and not alert_trig.get(i)
-                alert("90min Cycle " + str.tostring(i+1), alert.freq_once_per_bar)
-                alert_trig.set(i, true)
-
-// ─── Visuals (Opening Lines & Period Lines) ───
-
-// Reusable drawer for single-time vertical/horizontal markers
-draw_marker(cond, val, col, txt, is_horz) =>
-    if cond
-        if is_horz
-            l = line.new(bar_index, val, bar_index+5, val, color=col) // will extend manually if needed
-            lb = label.new(bar_index, val, txt, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-            [l, lb]
-        else
-            // Vertical opening line
-            l = line.new(bar_index, open, bar_index, open, color=col)
-            lb = label.new(bar_index, open, txt, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-            [l, lb]
-    else
-        [line(na), label(na)]
-
-// Day Separator & Midnight Line
-if valid_tf and (ny_h == 0 and ny_m == 0)
-    if show_dsep
-        line.new(bar_index, low, bar_index, high == low ? high + syminfo.mintick : high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
-// Weekday Labels Logic logic moved to end of script for plotshape usage
-
-
-// Opening Lines (Manual & 90min)
-// ... (Keeping this part mostly manual or lightweight as it involves specific time checks and extensions)
-draw_op_line(TimeLine tl, h, m, c, w, s, txt, stop_h) =>
-    if ny_h == h and ny_m == m
-        line.delete(tl.l), label.delete(tl.lb)
+// Draw a horizontal line at the open price when a specific time is reached.
+// The line extends forward each bar until the stop hour.
+draw_op_line(TimeLine tl, int h, int m, color c, int w, string s, string txt, int stop_h) =>
+    if ny_h == h and ny_m == m                               // Time reached: create new line at current open
+        line.delete(tl.l)
+        label.delete(tl.lb)
         tl.l := line.new(bar_index, open, bar_index, open, color=c, width=w, style=get_style(s))
-        tl.lb := label.new(bar_index, open, txt, color=c_transparent, textcolor=c, style=label.style_label_left, size=size.small)
+        tl.lb := label.new(bar_index, open, txt, color=c_trans, textcolor=c, style=label.style_label_left, size=size.small)
         tl.stopped := false
-    if ny_h == stop_h and ny_m == 0
+    if ny_h == stop_h and ny_m == 0                          // Stop time reached: stop extending
         tl.stopped := true
-    if not na(tl.l) and not tl.stopped
-        line.set_x2(tl.l, bar_index), label.set_x(tl.lb, bar_index), label.set_y(tl.lb, line.get_y1(tl.l))
+    if not na(tl.l) and not tl.stopped                       // Active: extend line forward
+        line.set_x2(tl.l, bar_index)
+        label.set_x(tl.lb, bar_index)
+        label.set_y(tl.lb, line.get_y1(tl.l))
 
+// Draw opening lines
 if valid_tf
     if show_mid
         draw_op_line(tl_mid, 0, 0, c_mid, w_mid, s_mid, "00:00", 24)
@@ -432,544 +336,198 @@ if valid_tf
     if show_930
         draw_op_line(tl_930, 9, 30, c_930, w_930, s_930, "9:30", 16)
 
-// 90min Open Lines Array Logic (Optimized)
-var l90 = array.new_line(13, na), var stop90 = array.new_bool(13, false)
-t90_h = array.from(18, 19, 21, 22, 2, 4, 5, 7, 8, 10, 11, 13, 14)
-t90_m = array.from(0, 30, 0, 30, 30, 0, 30, 0, 30, 0, 30, 0, 30)
+// --- 90-Minute Cycle Opens: Horizontal lines at each 90min boundary ---
+
+var array<line> l90 = array.new_line()                       // Open lines (one per boundary)
+var array<bool> stop90 = array.new_bool()
+var array<int> t90_h = array.new<int>()                      // Boundary hours (built at first bar / 18:00)
+var array<int> t90_m = array.new<int>()                      // Boundary minutes
 
 if valid_tf and show_90_open and act_90
-    // Reset at Asia session open (18:00)
-    if ny_h == 18 and ny_m == 0
-        for i = 0 to 12
+    if barstate.isfirst or (ny_h == 18 and ny_m == 0)        // Build boundary list for this session
+        for i = 0 to array.size(l90) - 1
             line.delete(l90.get(i))
-            l90.set(i, na)
-            stop90.set(i, false)
-    
-    for i = 0 to 12 // Check triggers
+        array.clear(l90), array.clear(stop90)
+        array.clear(t90_h), array.clear(t90_m)
+        // Asia boundaries: 18:00, 19:30, 21:00, 22:30
+        array.push(t90_h, 18), array.push(t90_m, 0)
+        array.push(t90_h, 19), array.push(t90_m, 30)
+        array.push(t90_h, 21), array.push(t90_m, 0)
+        array.push(t90_h, 22), array.push(t90_m, 30)
+        // London/NY boundaries: anchored at chosen cycle start, every 90min until 16:00
+        nb = cyc_start
+        while nb < 960
+            array.push(t90_h, math.floor(nb / 60))
+            array.push(t90_m, nb % 60)
+            nb += 90
+        for i = 0 to array.size(t90_h) - 1
+            array.push(l90, na)
+            array.push(stop90, false)
+    for i = 0 to array.size(t90_h) - 1                       // At each boundary: draw new line at open
         if ny_h == t90_h.get(i) and ny_m == t90_m.get(i)
             line.delete(l90.get(i))
             l90.set(i, line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open)))
             stop90.set(i, false)
             if i > 0
-                stop90.set(i-1, true) // Stop previous
-    
-    if ny_h == 16 and ny_m == 0
-        stop90.set(12, true) // Stop last
-
-    for i = 0 to 12 // Extend
+                stop90.set(i-1, true)                        // Stop previous line
+    if ny_h == 16 and ny_m == 0 and array.size(stop90) > 0   // 16:00: stop last line
+        stop90.set(array.size(stop90) - 1, true)
+    for i = 0 to array.size(l90) - 1                         // Extend all active lines
         ln = l90.get(i)
         if not na(ln) and not stop90.get(i)
             line.set_x2(ln, bar_index)
 
+// --- Session High/Low: Asia (18:00-00:00 NY), London (cycle start +4.5h), NY AM (+4.5h to +9h) ---
+// One routine for all three: track H/L during the session, then extend/lock after it.
 
-// Previous Levels Logic (Consolidated)
-// We defined `update_level` to handle the repetitive drawing and updating of PDH style lines.
-var LevelObj o_pd  = LevelObj.new(na, na, na, na, na, na, na)
-var LevelObj o_pw  = LevelObj.new(na, na, na, na, na, na, na)
-var LevelObj o_pm  = LevelObj.new(na, na, na, na, na, na, na)
-var LevelObj o_py  = LevelObj.new(na, na, na, na, na, na, na)
-
-// Updated to show Previous Day H/L/Open or WMY levels
-// OPTIMIZED: Object reuse instead of delete+create (was 45% bottleneck)
-update_level(bool show, float h_val, float l_val, color col, bool update_trig, LevelObj obj, string t_h, string t_l, string t_m) =>
-    if show
-        // Only update when trigger occurs (e.g., timeframe change) to minimize object recreation
-        if update_trig
-            // Update horizontal levels (H/L) - recreate only when values change significantly
-            if not na(h_val)
-                if na(obj.h) or math.abs(line.get_y1(obj.h) - h_val) > syminfo.mintick * 4
-                    line.delete(obj.h)
-                    label.delete(obj.lb_h)
-                    obj.h := line.new(bar_index, h_val, bar_index + 5, h_val, color=col, style=line.style_dashed)
-                    obj.lb_h := label.new(bar_index + 5, h_val, t_h, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-                else
-                    // Update existing objects
-                    line.set_y1(obj.h, h_val), line.set_y2(obj.h, h_val), line.set_x2(obj.h, bar_index)
-                    label.set_y(obj.lb_h, h_val), label.set_x(obj.lb_h, bar_index)
-                    
-            if not na(l_val)
-                if na(obj.l) or math.abs(line.get_y1(obj.l) - l_val) > syminfo.mintick * 4
-                    line.delete(obj.l)
-                    label.delete(obj.lb_l)
-                    obj.l := line.new(bar_index, l_val, bar_index + 5, l_val, color=col, style=line.style_dashed)
-                    obj.lb_l := label.new(bar_index + 5, l_val, t_l, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-                else
-                    // Update existing objects
-                    line.set_y1(obj.l, l_val), line.set_y2(obj.l, l_val), line.set_x2(obj.l, bar_index)
-                    label.set_y(obj.lb_l, l_val), label.set_x(obj.lb_l, bar_index)
-                    
-            // Update middle line (C.E.) - only if both H and L exist
-            if not na(h_val) and not na(l_val)
-                mid = (h_val + l_val) / 2
-                if na(obj.m) or math.abs(line.get_y1(obj.m) - mid) > syminfo.mintick * 4
-                    line.delete(obj.m)
-                    label.delete(obj.lb_m)
-                    obj.m := line.new(bar_index, mid, bar_index + 5, mid, color=col, style=line.style_dotted)
-                    obj.lb_m := label.new(bar_index + 5, mid, t_m, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-                else
-                    // Update existing objects
-                    line.set_y1(obj.m, mid), line.set_y2(obj.m, mid), line.set_x2(obj.m, bar_index)
-                    label.set_y(obj.lb_m, mid), label.set_x(obj.lb_m, bar_index)
-        else
-            // Still extend existing lines to current bar when not updating values
-            // Only extend if we're within the active period for this timeframe
-            // For PD: active during the day (after 18:00 NY time)
-            // For PW/PM/PY: we rely on the update_trig mechanism to control when they're active
-            bool should_extend = false
-            // Compare object IDs by checking if they reference the same object
-            // We do this by comparing a field that should be unique to each object instance
-            bool is_pd_obj = false
-            bool is_pw_obj = false
-            bool is_pm_obj = false
-            bool is_py_obj = false
-            
-            // Since we can't directly compare LevelObj objects, we'll use a workaround:
-            // Check if the object's h field matches our stored reference objects' h fields
-            // This assumes that if h fields match, they're the same object instance
-            if not na(obj.h) and not na(o_pd.h)
-                is_pd_obj := obj.h == o_pd.h
-            if not na(obj.h) and not na(o_pw.h)
-                is_pw_obj := obj.h == o_pw.h
-            if not na(obj.h) and not na(o_pm.h)
-                is_pm_obj := obj.h == o_pm.h
-            if not na(obj.h) and not na(o_py.h)
-                is_py_obj := obj.h == o_py.h
-                
-            if is_pd_obj
-                // Previous Day levels are active after daily reset (18:00 NY time)
-                should_extend := ny_h >= 18 or (ny_h < 18 and ny_m > 0) // Simplified: active after reset
-            else
-                if is_pw_obj or is_pm_obj or is_py_obj
-                    // Weekly/Monthly/Yearly levels: only extend on update triggers to prevent weird placement
-                    should_extend := update_trig
-                else
-                    // Default behavior for other objects (like Asia H/L)
-                    should_extend := true
-                
-            if should_extend
-                if not na(obj.h)
-                    line.set_x2(obj.h, bar_index)
-                    label.set_x(obj.lb_h, bar_index)
-                if not na(obj.l)
-                    line.set_x2(obj.l, bar_index)
-                    label.set_x(obj.lb_l, bar_index)
-                if not na(obj.m)
-                    line.set_x2(obj.m, bar_index)
-                    label.set_x(obj.lb_m, bar_index)
-    else
-        // Clear objects when not showing
-        if not na(obj.h)
-            line.delete(obj.h)
-            label.delete(obj.lb_h)
-            obj.h := na
-            obj.lb_h := na
-        if not na(obj.l)
-            line.delete(obj.l)
-            label.delete(obj.lb_l)
-            obj.l := na
-            obj.lb_l := na
-        if not na(obj.m)
-            line.delete(obj.m)
-            label.delete(obj.lb_m)
-            obj.m := na
-            obj.lb_m := na
-    
-    // Explicit void return for consistency
-    int(na)
-
-// Fetch HTF data globally
-[w_h, w_l, w_o] = request.security(syminfo.tickerid, "W", [high[1], low[1], open], lookahead=barmerge.lookahead_off)
-[m_h, m_l, m_o] = request.security(syminfo.tickerid, "M", [high[1], low[1], open], lookahead=barmerge.lookahead_off)
-[y_h, y_l, y_o] = request.security(syminfo.tickerid, "12M", [high[1], low[1], open], lookahead=barmerge.lookahead_off)
-
-// PDH/PDL - Manual calculation to ensure exact 00:00-00:00 range in selected timezone
-var float curr_d_h = na
-var float curr_d_l = na
-var float d_h = na
-var float d_l = na
-
-if is_new_d
-    // Store previous session's values
-    d_h := curr_d_h
-    d_l := curr_d_l
-    // Reset tracking for new session - start with current bar
-    curr_d_h := high
-    curr_d_l := low
-else
-    // Accumulate session high/low throughout the session
-    curr_d_h := math.max(curr_d_h, high)
-    curr_d_l := math.min(curr_d_l, low)
-
-// Track for alert access
-var float pdh_val = na
-var float pdl_val = na
-
-if show_htf
-    // PDH/PDL Logic: Display at 18:00 NY time
-    trig_pd = ny_h == 18 and ny_m == 0
-    
-    // Update values from daily timeframe
-    pdh_val := d_h
-    pdl_val := d_l
-
-    update_level(show_pd, pdh_val, pdl_val, c_pd, trig_pd, o_pd, "PDH", "PDL", "C.E.")
-    update_level(show_pw, w_h, w_l, c_pw, timeframe.change("W"), o_pw, "PWH", "PWL", "W.C.E.")
-    update_level(show_pm, m_h, m_l, c_pm, timeframe.change("M"), o_pm, "PMH", "PML", "M.C.E.")
-    update_level(show_py, y_h, y_l, c_py, timeframe.change("12M"), o_py, "PYH", "PYL", "Y.C.E.")
-
-// Asia H/L (18:00 realtime)
-var LevelObj o_asia = LevelObj.new(na, na, na, na, na, na, na)
-var float a_h = na, var float a_l = na
-var bool lock_ah = false, var bool lock_al = false
+var LevelObj o_asia = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_london = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_ny_am = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
 
 if valid_tf
-    is_18h_asia = ny_h == 18 and ny_m == 0
-    in_asia = ny_m_total >= 1080 
-    
-    if is_18h_asia
-        line.delete(o_asia.h), label.delete(o_asia.lb_h)
-        line.delete(o_asia.l), label.delete(o_asia.lb_l)
-        line.delete(o_asia.m), label.delete(o_asia.lb_m)
-        o_asia.h := na, o_asia.l := na, o_asia.m := na
-        a_h := na, a_l := na
-        lock_ah := false, lock_al := false
+    // Asia session: minutes 1080-1440. Reset exactly at the 18:00 NY bar.
+    in_asia = ny_m_total >= 1080
+    update_level(o_asia, ny_h == 18 and ny_m == 0, in_asia, ny_m_total <= 960, "Asia", c_asia)
 
-    if in_asia
-        a_h := na(a_h) ? high : math.max(a_h, high)
-        a_l := na(a_l) ? low : math.min(a_l, low)
-        mid = (a_h + a_l) / 2
-        
-        // Format Range Text
-        range_asia = a_h - a_l
-        txt_asia = "Asia High (" + str.tostring(range_asia, format.mintick) + ")"
-        
-        if na(o_asia.h) // Init lines
-            o_asia.h := line.new(bar_index, a_h, bar_index, a_h, color=c_asia), o_asia.lb_h := label.new(bar_index, a_h, txt_asia, color=c_transparent, textcolor=c_asia, style=label.style_label_lower_right, size=hl_ts)
-            o_asia.l := line.new(bar_index, a_l, bar_index, a_l, color=c_asia), o_asia.lb_l := label.new(bar_index, a_l, "Asia Low", color=c_transparent, textcolor=c_asia, style=label.style_label_upper_right, size=hl_ts)
-            o_asia.m := line.new(bar_index, mid, bar_index, mid, color=c_asia, style=line.style_dashed), o_asia.lb_m := label.new(bar_index, mid, "C.E.", color=c_transparent, textcolor=c_asia, style=label.style_label_left, size=hl_ts)
-        else // Update
-            line.set_y1(o_asia.h, a_h), line.set_y2(o_asia.h, a_h), line.set_x2(o_asia.h, bar_index), label.set_y(o_asia.lb_h, a_h), label.set_x(o_asia.lb_h, bar_index), label.set_text(o_asia.lb_h, txt_asia)
-            line.set_y1(o_asia.l, a_l), line.set_y2(o_asia.l, a_l), line.set_x2(o_asia.l, bar_index), label.set_y(o_asia.lb_l, a_l), label.set_x(o_asia.lb_l, bar_index)
-            line.set_y1(o_asia.m, mid), line.set_y2(o_asia.m, mid), line.set_x2(o_asia.m, bar_index), label.set_y(o_asia.lb_m, mid), label.set_x(o_asia.lb_m, bar_index)
+    // London session: cycle start through +4.5h NY.
+    in_london = ny_m_total >= cyc_start and ny_m_total < cyc_start + 270
+    update_level(o_london, in_london and not in_london[1], in_london, ny_m_total >= cyc_start + 270 and ny_m_total <= 960, "London", c_london)
 
-    if not in_asia and not na(o_asia.h)
-        is_ext_time = ny_m_total <= 960
-        
-        if not lock_ah and high >= a_h
-            lock_ah := true
-            // Snap back
-            line.set_x2(o_asia.h, bar_index), label.set_x(o_asia.lb_h, bar_index)
-        if not lock_al and low <= a_l
-            lock_al := true
-            // Snap back
-            line.set_x2(o_asia.l, bar_index), label.set_x(o_asia.lb_l, bar_index)
-        
-        if not lock_ah and is_ext_time
-            line.set_x2(o_asia.h, bar_index + 5), label.set_x(o_asia.lb_h, bar_index + 5)
-        if not lock_al and is_ext_time
-            line.set_x2(o_asia.l, bar_index + 5), label.set_x(o_asia.lb_l, bar_index + 5)
-        if (not lock_ah or not lock_al) and is_ext_time
-            line.set_x2(o_asia.m, bar_index + 5), label.set_x(o_asia.lb_m, bar_index + 5)
+    // NY AM session: cycle start +4.5h through +9h NY.
+    in_ny_am = ny_m_total >= cyc_start + 270 and ny_m_total < cyc_start + 540
+    update_level(o_ny_am, in_ny_am and not in_ny_am[1], in_ny_am, ny_m_total >= cyc_start + 270 and ny_m_total <= 960, "NY AM", c_ny_am)
 
-// London H/L (02:30 start)
-var LevelObj o_london = LevelObj.new(na, na, na, na, na, na, na)
-var float l_h = na, var float l_l = na
-var bool lock_lh = false, var bool lock_ll = false
+// --- Weekday Labels: Display day name at 12:00 (midday) ---
 
-if valid_tf
-    is_start_london = ny_h == 2 and ny_m == 30
-    in_london = ny_m_total >= 150 and ny_m_total < 420 // 02:30 - 07:00
-    
-    if is_start_london
-        line.delete(o_london.h), label.delete(o_london.lb_h)
-        line.delete(o_london.l), label.delete(o_london.lb_l)
-        line.delete(o_london.m), label.delete(o_london.lb_m)
-        o_london.h := na, o_london.l := na, o_london.m := na
-        l_h := na, l_l := na
-        lock_lh := false, lock_ll := false
-
-    if in_london
-        l_h := na(l_h) ? high : math.max(l_h, high)
-        l_l := na(l_l) ? low : math.min(l_l, low)
-        mid = (l_h + l_l) / 2
-        
-        // Format Range Text
-        range_london = l_h - l_l
-        txt_london = "London High (" + str.tostring(range_london, format.mintick) + ")"
-
-        if na(o_london.h) // Init lines
-            o_london.h := line.new(bar_index, l_h, bar_index, l_h, color=c_london), o_london.lb_h := label.new(bar_index, l_h, txt_london, color=c_transparent, textcolor=c_london, style=label.style_label_lower_right, size=hl_ts)
-            o_london.l := line.new(bar_index, l_l, bar_index, l_l, color=c_london), o_london.lb_l := label.new(bar_index, l_l, "London Low", color=c_transparent, textcolor=c_london, style=label.style_label_upper_right, size=hl_ts)
-            o_london.m := line.new(bar_index, mid, bar_index, mid, color=c_london, style=line.style_dashed), o_london.lb_m := label.new(bar_index, mid, "C.E.", color=c_transparent, textcolor=c_london, style=label.style_label_left, size=hl_ts)
-        else // Update
-            line.set_y1(o_london.h, l_h), line.set_y2(o_london.h, l_h), line.set_x2(o_london.h, bar_index), label.set_y(o_london.lb_h, l_h), label.set_x(o_london.lb_h, bar_index), label.set_text(o_london.lb_h, txt_london)
-            line.set_y1(o_london.l, l_l), line.set_y2(o_london.l, l_l), line.set_x2(o_london.l, bar_index), label.set_y(o_london.lb_l, l_l), label.set_x(o_london.lb_l, bar_index)
-            line.set_y1(o_london.m, mid), line.set_y2(o_london.m, mid), line.set_x2(o_london.m, bar_index), label.set_y(o_london.lb_m, mid), label.set_x(o_london.lb_m, bar_index)
-
-    // Stop extending after 16:00
-    is_ext_time = ny_m_total <= 960
-
-    if not in_london and not na(o_london.h)
-        // Check triggers
-        if not lock_lh and high >= l_h
-            lock_lh := true
-            // Snap back where broken
-            line.set_x2(o_london.h, bar_index), label.set_x(o_london.lb_h, bar_index)
-            
-        if not lock_ll and low <= l_l
-            lock_ll := true
-            // Snap back where broken
-            line.set_x2(o_london.l, bar_index), label.set_x(o_london.lb_l, bar_index)
-        
-        // Extend forward +5 if not broken (and within time)
-        if not lock_lh and is_ext_time
-            line.set_x2(o_london.h, bar_index + 5), label.set_x(o_london.lb_h, bar_index + 5)
-        if not lock_ll and is_ext_time
-            line.set_x2(o_london.l, bar_index + 5), label.set_x(o_london.lb_l, bar_index + 5)
-        if (not lock_lh or not lock_ll) and is_ext_time
-            // Stop extending C.E. (Mid) line after session end (removed extension logic)
-            // Just keep it at end of session bar
-            na
-
-// NY AM H/L (07:00 start)
-var LevelObj o_ny_am = LevelObj.new(na, na, na, na, na, na, na)
-var float ny_am_h = na, var float ny_am_l = na
-var bool lock_ny_am_h = false, var bool lock_ny_am_l = false
-
-if valid_tf
-    is_start_ny_am = ny_h == 7 and ny_m == 0
-    in_ny_am = ny_m_total >= 420 and ny_m_total < 690 // 07:00 - 11:30
-    
-    if is_start_ny_am
-        line.delete(o_ny_am.h), label.delete(o_ny_am.lb_h)
-        line.delete(o_ny_am.l), label.delete(o_ny_am.lb_l)
-        line.delete(o_ny_am.m), label.delete(o_ny_am.lb_m)
-        o_ny_am.h := na, o_ny_am.l := na, o_ny_am.m := na
-        ny_am_h := na, ny_am_l := na
-        lock_ny_am_h := false, lock_ny_am_l := false
-
-    if in_ny_am
-        ny_am_h := na(ny_am_h) ? high : math.max(ny_am_h, high)
-        ny_am_l := na(ny_am_l) ? low : math.min(ny_am_l, low)
-        mid = (ny_am_h + ny_am_l) / 2
-        
-        // Format Range Text
-        range_ny_am = ny_am_h - ny_am_l
-        txt_ny = "NY AM High (" + str.tostring(range_ny_am, format.mintick) + ")"
-
-        if na(o_ny_am.h) // Init lines
-            o_ny_am.h := line.new(bar_index, ny_am_h, bar_index, ny_am_h, color=c_ny_am), o_ny_am.lb_h := label.new(bar_index, ny_am_h, txt_ny, color=c_transparent, textcolor=c_ny_am, style=label.style_label_lower_right, size=hl_ts)
-            o_ny_am.l := line.new(bar_index, ny_am_l, bar_index, ny_am_l, color=c_ny_am), o_ny_am.lb_l := label.new(bar_index, ny_am_l, "NY AM Low", color=c_transparent, textcolor=c_ny_am, style=label.style_label_upper_right, size=hl_ts)
-            o_ny_am.m := line.new(bar_index, mid, bar_index, mid, color=c_ny_am, style=line.style_dashed), o_ny_am.lb_m := label.new(bar_index, mid, "C.E.", color=c_transparent, textcolor=c_ny_am, style=label.style_label_left, size=hl_ts)
-        else // Update
-            line.set_y1(o_ny_am.h, ny_am_h), line.set_y2(o_ny_am.h, ny_am_h), line.set_x2(o_ny_am.h, bar_index), label.set_y(o_ny_am.lb_h, ny_am_h), label.set_x(o_ny_am.lb_h, bar_index), label.set_text(o_ny_am.lb_h, txt_ny)
-            line.set_y1(o_ny_am.l, ny_am_l), line.set_y2(o_ny_am.l, ny_am_l), line.set_x2(o_ny_am.l, bar_index), label.set_y(o_ny_am.lb_l, ny_am_l), label.set_x(o_ny_am.lb_l, bar_index)
-            line.set_y1(o_ny_am.m, mid), line.set_y2(o_ny_am.m, mid), line.set_x2(o_ny_am.m, bar_index), label.set_y(o_ny_am.lb_m, mid), label.set_x(o_ny_am.lb_m, bar_index)
-
-    // Stop extending after 16:00
-    // Stop extending after 16:00
-    // Fix: Ensure we don't extend if we've wrapped around to next day or passed 16:00
-    // ny_m_total resets at midnight. 16:00 is 960.
-    is_ext_time_ny = ny_m_total <= 960 and ny_m_total >= 420
-
-    if not in_ny_am and not na(o_ny_am.h)
-        // Check triggers
-        if not lock_ny_am_h and high >= ny_am_h
-            lock_ny_am_h := true
-            // Snap back where broken
-            line.set_x2(o_ny_am.h, bar_index), label.set_x(o_ny_am.lb_h, bar_index)
-            
-        if not lock_ny_am_l and low <= ny_am_l
-            lock_ny_am_l := true
-            // Snap back where broken
-            line.set_x2(o_ny_am.l, bar_index), label.set_x(o_ny_am.lb_l, bar_index)
-        
-        // Extend forward +5 if not broken (and within time)
-        if not lock_ny_am_h and is_ext_time_ny
-            line.set_x2(o_ny_am.h, bar_index + 5), label.set_x(o_ny_am.lb_h, bar_index + 5)
-        if not lock_ny_am_l and is_ext_time_ny
-            line.set_x2(o_ny_am.l, bar_index + 5), label.set_x(o_ny_am.lb_l, bar_index + 5)
-        if (not lock_ny_am_h or not lock_ny_am_l) and is_ext_time_ny
-            // Just keep it at end of session bar
-            na
-
-
-// ─── Period Opens (Daily, Weekly, Monthly, Yearly) ───
-// Logic to track and draw the open price of higher timeframes
-draw_period_open(TimeLine tl, bool active, bool is_new, float val, color col, string txt) =>
-    if active and not na(val)
-        // 1. Determine Start Index
-        // If we hit a new period trigger, update start.
-        if is_new
-            tl.start_idx := bar_index
-        // Fallback: If we haven't seen a trigger yet (e.g. history start > period start), 
-        // default to current bar so we have a starting point for the line.
-        else if na(tl.start_idx)
-            tl.start_idx := bar_index
-        
-        // 2. Draw/Update Line
-        if not na(tl.start_idx)
-            line.delete(tl.l), label.delete(tl.lb)
-            // Draw short line at current bar extending right
-            tl.l := line.new(bar_index, val, bar_index + 10, val, color=col)
-            tl.lb := label.new(bar_index + 10, val, txt, color=c_transparent, textcolor=col, style=label.style_label_left, size=size.small)
-
-// Daily open value (global scope for table access)
-var float d_val = na
-
-// Track daily open regardless of display settings (needed for table)
-is_forex = syminfo.type == "forex"
-is_futures = syminfo.type == "futures" or str.contains(syminfo.root, "NQ") or str.contains(syminfo.root, "ES") or str.contains(syminfo.root, "YM") or str.contains(syminfo.root, "RTY")
-open_h = is_crypto ? 0 : is_forex ? 17 : is_futures ? 18 : 0
-is_do = ny_h == open_h and ny_m == 0
-
-if is_do
-    d_val := open
-
-// Draw period opens if enabled
-if valid_tf and (show_do or show_wo or show_mo or show_yo)
-    draw_period_open(tl_do, show_do, is_do, d_val, c_do, "Daily Open")
-
-    // Weekly Open
-    draw_period_open(tl_wo, show_wo, timeframe.change("W"), w_o, c_wo, "W.O.")
-
-    // Monthly Open
-    draw_period_open(tl_mo, show_mo, timeframe.change("M"), m_o, c_mo, "M.O.")
-
-    // Yearly Open
-    draw_period_open(tl_yo, show_yo, timeframe.change("12M"), y_o, c_yo, "Y.O.")
-
-// ─── Weekday Labels (Top/Bottom of Pane) ───
-// Adapted from reference logic using plotshape for fixed pane positioning
-
-// Configuration
 wd_loc = loc_wd == "Top" ? location.top : location.bottom
 wd_off = off_wd == 0 ? 0 : math.round(off_wd / tf_min)
-c_inv  = color.new(color.white, 100)
-
-// Triggers - Noon for Mon-Fri
-is_mid_day  = ny_h == 12 and ny_m == 0
-
-// Determine Day of Week in Calc TZ
+c_inv = color.new(color.white, 100)                          // Invisible plotshape background
+is_mid_day = ny_h == 12 and ny_m == 0
 dow = dayofweek(time, calc_tz)
-
-// Master switch
 show_days = valid_tf and show_wd
-
-// Conditions
-is_mon = show_days and dow == dayofweek.monday    and is_mid_day
-is_tue = show_days and dow == dayofweek.tuesday   and is_mid_day
-is_wed = show_days and dow == dayofweek.wednesday and is_mid_day
-is_thu = show_days and dow == dayofweek.thursday  and is_mid_day
-is_fri = show_days and dow == dayofweek.friday    and is_mid_day
-
-
-// Short Format
 is_short = fmt_wd == "Short"
-plotshape(is_short and is_mon, "Mon", shape.labelup, wd_loc, c_inv, wd_off, "Mon", c_wd, size=size.small)
-plotshape(is_short and is_tue, "Tue", shape.labelup, wd_loc, c_inv, wd_off, "Tue", c_wd, size=size.small)
-plotshape(is_short and is_wed, "Wed", shape.labelup, wd_loc, c_inv, wd_off, "Wed", c_wd, size=size.small)
-plotshape(is_short and is_thu, "Thu", shape.labelup, wd_loc, c_inv, wd_off, "Thu", c_wd, size=size.small)
-plotshape(is_short and is_fri, "Fri", shape.labelup, wd_loc, c_inv, wd_off, "Fri", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.monday, "Mon", shape.labelup, wd_loc, c_inv, wd_off, "Mon", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.tuesday, "Tue", shape.labelup, wd_loc, c_inv, wd_off, "Tue", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.wednesday, "Wed", shape.labelup, wd_loc, c_inv, wd_off, "Wed", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.thursday, "Thu", shape.labelup, wd_loc, c_inv, wd_off, "Thu", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.friday, "Fri", shape.labelup, wd_loc, c_inv, wd_off, "Fri", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.monday, "Monday", shape.labelup, wd_loc, c_inv, wd_off, "Monday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.tuesday, "Tuesday", shape.labelup, wd_loc, c_inv, wd_off, "Tuesday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.wednesday, "Wednesday", shape.labelup, wd_loc, c_inv, wd_off, "Wednesday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.thursday, "Thursday", shape.labelup, wd_loc, c_inv, wd_off, "Thursday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.friday, "Friday", shape.labelup, wd_loc, c_inv, wd_off, "Friday", c_wd, size=size.small)
 
-
-// Long Format
-is_long = fmt_wd == "Long"
-plotshape(is_long and is_mon, "Monday",    shape.labelup, wd_loc, c_inv, wd_off, "Monday",    c_wd, size=size.small)
-plotshape(is_long and is_tue, "Tuesday",   shape.labelup, wd_loc, c_inv, wd_off, "Tuesday",   c_wd, size=size.small)
-plotshape(is_long and is_wed, "Wednesday", shape.labelup, wd_loc, c_inv, wd_off, "Wednesday", c_wd, size=size.small)
-plotshape(is_long and is_thu, "Thursday",  shape.labelup, wd_loc, c_inv, wd_off, "Thursday",  c_wd, size=size.small)
-plotshape(is_long and is_fri, "Friday",    shape.labelup, wd_loc, c_inv, wd_off, "Friday",    c_wd, size=size.small)
-
-
-// ─── MACRO Times ───
-// Restored from V3
-// ─── MACRO Times ───
-// Restored: Lines and Labels on Chart (Current Day Only)
-// Reverted: "Inline Organization" removed. Back to natural heights.
+// --- MACRO Times: Track hourly high between :42 and :15 of the next hour ---
+// For each hour, finds the highest price in the window from h:42 to (h+1):15.
+// Uses cycle box highs as reference when available.
 
 if show_macro and valid_tf
-    // Persistent arrays to track macro objects (initialized once)
     var array<line> arr_ml = array.new_line()
     var array<label> arr_mlb = array.new_label()
     var line ml = na
     var label mlb = na
     var float mh = na
     var int m_start = na
-    
-    // Reset at 18:00 NY (Start of "New Day") - Clear previous day's objects
-    if ny_h == 18 and ny_m == 0
-        if array.size(arr_ml) > 0
-            for i = 0 to array.size(arr_ml) - 1
-                line.delete(arr_ml.get(i))
-            array.clear(arr_ml)
-        if array.size(arr_mlb) > 0
-            for i = 0 to array.size(arr_mlb) - 1
-                label.delete(arr_mlb.get(i))
-            array.clear(arr_mlb)
+    if ny_h == 18 and ny_m == 0                              // 18:00: clear all previous macro lines
+        for i = 0 to array.size(arr_ml) - 1
+            line.delete(arr_ml.get(i))
+        array.clear(arr_ml)
+        for i = 0 to array.size(arr_mlb) - 1
+            label.delete(arr_mlb.get(i))
+        array.clear(arr_mlb)
         ml := na
         mlb := na
         mh := na
         m_start := na
-    
-    // Macro Window: :42 to :15
-    in_mac = (ny_m >= 42 or ny_m <= 15)
-    
+    in_mac = (ny_m >= 42 or ny_m <= 15)                      // Window: h:42 to (h+1):15
     if in_mac
-        s_h = ny_m >= 42 ? ny_h : ny_h - 1
-        
-        // Base height calculation - use high of current bar and track maximum
+        s_h = ny_m >= 42 ? ny_h : ny_h - 1                   // Which hour does this window belong to
         base_h = high
-        
-        // Try to align with active cycle highs for better visibility
-        if act_90
+        if act_90                                             // Use 90min cycle high if active (highest priority)
             if not na(c_ny_90.h) and c_ny_90.active
                 base_h := math.max(base_h, c_ny_90.h)
             else if not na(c_mid_90.h) and c_mid_90.active
                 base_h := math.max(base_h, c_mid_90.h)
             else if not na(c_asia_90.h) and c_asia_90.active
                 base_h := math.max(base_h, c_asia_90.h)
-        
-        if act_30
+        if act_30                                             // Use 30min cycle high if active
             if not na(c_ny_30.h) and c_ny_30.active
                 base_h := math.max(base_h, c_ny_30.h)
             else if not na(c_mid_30.h) and c_mid_30.active
                 base_h := math.max(base_h, c_mid_30.h)
-            else if not na(c_asia_30.h) and c_asia_30.active  // Note: Fixed typo from c_asia_30 to c_asia_90 for consistency
-                base_h := math.max(base_h, c_asia_90.h)
-        
-        if na(mh) or s_h != m_start
-            // New Macro Start - Create new objects
-            mh := base_h, m_start := s_h
-            
-            // Draw Line at calculated height
+            else if not na(c_asia_30.h) and c_asia_30.active
+                base_h := math.max(base_h, c_asia_30.h)
+        if na(mh) or s_h != m_start                           // New hour window: create line
+            mh := base_h
+            m_start := s_h
             ml := line.new(bar_index, mh, bar_index, mh, color=c_macro, width=2)
             array.push(arr_ml, ml)
-            
-            // Draw Label
             end_h = s_h + 1
-            txt = "MACRO: " + str.tostring(s_h) + ":42 - " + str.tostring(end_h) + ":15"
-            mlb := label.new(bar_index, mh, txt, color=c_transparent, textcolor=c_macro, style=label.style_label_down, size=size.tiny)
+            mlb := label.new(bar_index, mh, "MACRO: " + str.tostring(s_h) + ":42 - " + str.tostring(end_h) + ":15", color=c_trans, textcolor=c_macro, style=label.style_label_down, size=size.tiny)
             array.push(arr_mlb, mlb)
-        else
-            // Update Existing (Track high if price pushes it up) - Only update if objects exist
+        else                                                 // Same hour: extend line to new high
             if not na(ml) and not na(mlb)
                 mh := math.max(mh, base_h)
-                line.set_y1(ml, mh), line.set_y2(ml, mh), line.set_x2(ml, bar_index)
-                label.set_y(mlb, mh), label.set_x(mlb, bar_index)
-    else
-        // Outside macro window - keep last values but don't extend
+                line.set_y1(ml, mh)
+                line.set_y2(ml, mh)
+                line.set_x2(ml, bar_index)
+                label.set_y(mlb, mh)
+                label.set_x(mlb, bar_index)
+    else                                                     // Outside macro window: reset
         mh := na
         m_start := na
 
+// --- Previous Day High/Low ---
+// Track calendar-day (NY midnight-to-midnight) high/low manually — request.security("D") uses the
+// exchange session, not calendar midnight. At each new day, capture the just-completed day's range
+// into pd_ph/pd_pl and draw fresh horizontal lines across the new day, extending to the live bar.
 
-// Calculate crossovers on every bar for consistency
-daily_ce = not na(pdh_val) and not na(pdl_val) ? (pdh_val + pdl_val) / 2 : na
-pdh_cross = ta.cross(close, pdh_val)
-pdl_cross = ta.cross(close, pdl_val)
-ce_cross = ta.cross(close, daily_ce)
+var float pd_h = na                                          // Running high of current forming day
+var float pd_l = na                                          // Running low of current forming day
+var float pd_ph = na                                         // Previous day's high (displayed)
+var float pd_pl = na                                         // Previous day's low (displayed)
+var line pd_line_h = na
+var line pd_line_l = na
+var line pd_line_ce = na
+var label pd_lbl_h = na
+var label pd_lbl_l = na
+var label pd_lbl_ce = na
 
-// Trigger alert when crossing occurs (independent of display settings)
-if pdh_cross or pdl_cross or ce_cross
-    msg = pdh_cross ? "Price crossed PDH" : pdl_cross ? "Price crossed PDL" : "Price crossed Daily C.E."
-    alert(msg, alert.freq_once_per_bar)
+if valid_tf and show_pdhl
+    new_day = is_new_d
+
+    if new_day and not na(pd_h) and not na(pd_l)             // Roll over: completed day becomes "previous day"
+        pd_ph := pd_h
+        pd_pl := pd_l
+        pd_ce = (pd_ph + pd_pl) / 2                          // 50% equilibrium of previous day's range
+        // Delete prior day's lines/labels — only the current day's PDH/PDL/C.E. stays visible
+        if not na(pd_line_h)
+            line.delete(pd_line_h),  label.delete(pd_lbl_h)
+            line.delete(pd_line_l),  label.delete(pd_lbl_l)
+        if not na(pd_line_ce)
+            line.delete(pd_line_ce), label.delete(pd_lbl_ce)
+        // Start fresh lines anchored at this midnight bar
+        pd_line_h := line.new(bar_index, pd_ph, bar_index, pd_ph, color=c_pdh, width=w_pdh, style=get_style(s_pdh))
+        pd_line_l := line.new(bar_index, pd_pl, bar_index, pd_pl, color=c_pdl, width=w_pdl, style=get_style(s_pdl))
+        pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PDH" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PDL" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
+        if show_pdce
+            pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
+            pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
+        else
+            pd_line_ce := na                                 // C.E. disabled: stop extending prior line (leaves it frozen)
+            pd_lbl_ce := na
+
+    if new_day                                               // Reset running extremes for the day just starting
+        pd_h := high
+        pd_l := low
+    else
+        pd_h := na(pd_h) ? high : math.max(pd_h, high)
+        pd_l := na(pd_l) ? low  : math.min(pd_l, low)
+
+    if not na(pd_line_h)                                     // Extend lines/labels to the live bar
+        line.set_x2(pd_line_h, bar_index), line.set_x2(pd_line_l, bar_index)
+        label.set_x(pd_lbl_h, bar_index), label.set_x(pd_lbl_l, bar_index)
+    if not na(pd_line_ce)
+        line.set_x2(pd_line_ce, bar_index)
+        label.set_x(pd_lbl_ce, bar_index)
