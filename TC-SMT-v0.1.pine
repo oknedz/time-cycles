@@ -35,7 +35,7 @@
 //  © 2025-2026. Stoneface. All rights reserved.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-indicator("TC-SMT v0.1 [StoneFace]", shorttitle="TC-SMT v0.1", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, calc_bars_count=20000)
+indicator("TC-SMT v0.1 [StoneFace]", shorttitle="TimeCycle + SMT v0.1 [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, calc_bars_count=20000)
 
 // ╔═════════════════════════════════════════════════════════════════════════════╗
 // ║  PART 1 — TIME CYCLES V4.0                     (Time-Cycles-V4.pine)        ║
@@ -624,24 +624,109 @@ if valid_tf and show_pdhl
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Auto-detect MNQ contract suffix or use manual inputs
-autoDetectContracts = input.bool(true, "Auto-Detect Contracts", group="Comparison Symbols", tooltip="Automatically set MES/MYM with matching contract month when on MNQ chart")
+// ── Comparison-symbol auto-detection ─────────────────────────────────────────
+// Maps the chart's own symbol onto Symbol 1 / Symbol 2:
+//
+//     NQ / MNQ   ->  ES / MES  +  YM / MYM
+//     ES / MES   ->  NQ / MNQ  +  YM / MYM
+//     YM / MYM   ->  ES / MES  +  NQ / MNQ
+//     BTCUSDT.P  ->  TOTAL     +  ETHUSDT.P
+//     ETHUSDT.P  ->  TOTAL     +  BTCUSDT.P
+//
+// Both properties of the chart symbol carry over to the comparisons:
+//   • size class — a mini chart compares against minis (NQ1! -> ES1! + YM1!),
+//     a micro chart against micros (MNQZ2026 -> MESZ2026 + MYMZ2026)
+//   • contract code — continuous stays continuous ("1!", "2!"), dated stays
+//     dated with the same month/year (NQZ2026 -> ESZ2026 + YMZ2026)
+//
+// Exchange ids (TradingView): CME_MINI for the NQ and ES families, CBOT_MINI for
+// the YM family — the mini/micro Dow is listed on CBOT, not CME, which is also
+// what the manual defaults below use. TOTAL is emitted with no exchange, as
+// specified; the crypto pair keeps the chart symbol's own exchange (e.g. MEXC).
+//
+// Any other chart symbol leaves both values na and the manual Symbol 1 / Symbol 2
+// inputs are used instead.
+autoDetectContracts = input.bool(true, "Auto-Detect Contracts", group="Comparison Symbols", tooltip="Sets Symbol 1/2 from the chart symbol: NQ/MNQ -> ES/MES + YM/MYM, ES/MES -> NQ/MNQ + YM/MYM, YM/MYM -> ES/MES + NQ/MNQ, BTCUSDT.P/ETHUSDT.P -> TOTAL + the other one. Contract size class (mini/micro) and contract month are carried over to the comparisons.")
 
-getContractSuffix(ticker) =>
-    // Extract suffix after removing exchange prefix
-    parts = str.split(ticker, ":")
-    cleanTicker = array.size(parts) > 1 ? array.get(parts, 1) : array.get(parts, 0)
-    
-    // Look for MNQ pattern and extract suffix (e.g., MNQH2025 -> H2025)
-    if str.contains(cleanTicker, "MNQ")
-        suffixStart = str.pos(cleanTicker, "MNQ") + 3
-        str.substring(cleanTicker, suffixStart)
-    else
-        na
+// Comparison families in output order (Symbol 1 first), their micro roots and
+// their exchanges. The chart's own family is skipped when building the pair.
+// Constant tables — built once, unlike the detection itself.
+var compFams  = array.from("ES", "NQ", "YM")
+var compMicro = array.from("MES", "MNQ", "MYM")
+var compExch  = array.from("CME_MINI", "CME_MINI", "CBOT_MINI")
 
-contractSuffix = getContractSuffix(syminfo.ticker)
-autoSymbol1 = na(contractSuffix) ? na : "MES" + contractSuffix
-autoSymbol2 = na(contractSuffix) ? na : "MYM" + contractSuffix
+// Chart-symbol roots, longest first so MNQ is never matched as NQ
+var mainRoots = array.from("MNQ", "MES", "MYM", "NQ", "ES", "YM")
+var mainFams  = array.from("NQ",  "ES",  "YM",  "NQ", "ES", "YM")
+var mainMicro = array.from(true,  true,  true,  false, false, false)
+
+monthCodeChars = "FGHJKMNQUVXZ"                              // futures month codes
+
+// Contract code of a futures ticker: "1!"/"2!"/"3!" (continuous), or a month code
+// followed by a 4-digit year ("Z2026"). Anything else is rejected, which keeps
+// lookalikes such as ESGD or ESTX50 from being read as ES/NQ/YM futures.
+isContractCode(string s) =>
+    n = str.length(s)
+    ok = false
+    if n == 2 and str.substring(s, 1, 2) == "!" and not na(str.tonumber(str.substring(s, 0, 1)))
+        ok := true                                           // NQ1!, ES2!, YM3!
+    else if n == 5 and str.contains(monthCodeChars, str.substring(s, 0, 1)) and not na(str.tonumber(str.substring(s, 1, 5)))
+        ok := true                                           // NQZ2026, MESH2027
+    ok
+
+// "<exchange>:<family><code>", using the micro root on micro charts
+compSymbol(string fam, bool micro, string code) =>
+    famIdx = array.indexof(compFams, fam)
+    array.get(compExch, famIdx) + ":" + (micro ? array.get(compMicro, famIdx) : fam) + code
+
+// Returns [symbol1, symbol2]; both na when the chart symbol is not mapped
+detectComparisonSymbols() =>
+    tickParts = str.split(syminfo.ticker, ":")
+    base = array.size(tickParts) > 1 ? array.get(tickParts, 1) : array.get(tickParts, 0)
+    idParts = str.split(syminfo.tickerid, ":")
+    chartExch = array.size(idParts) > 1 ? array.get(idParts, 0) : ""
+
+    string sym1 = na
+    string sym2 = na
+
+    // 1) Index futures — known root plus a valid contract code. The futures /
+    //    CME-CBOT test keeps chart symbols that merely start with those letters
+    //    (equities, funds) out of the mapping.
+    futuresLike = syminfo.type == "futures" or str.contains(chartExch, "CME") or str.contains(chartExch, "CBOT")
+    if futuresLike
+        for i = 0 to array.size(mainRoots) - 1
+            root = array.get(mainRoots, i)
+            if str.startswith(base, root)
+                code = str.substring(base, str.length(root))
+                if isContractCode(code)
+                    fam = array.get(mainFams, i)
+                    micro = array.get(mainMicro, i)
+                    for j = 0 to array.size(compFams) - 1
+                        cf = array.get(compFams, j)
+                        if cf != fam
+                            if na(sym1)
+                                sym1 := compSymbol(cf, micro, code)
+                            else
+                                sym2 := compSymbol(cf, micro, code)
+                    break
+
+    // 2) Crypto — TOTAL carries no exchange; the pair keeps the chart's own
+    //    exchange and its spot/perpetual form ("BTCUSDT" vs "BTCUSDT.P").
+    if na(sym1)
+        clen = str.length(base)
+        perp = clen > 2 and str.substring(base, clen - 2, clen) == ".P"
+        cryptRoot = perp ? str.substring(base, 0, clen - 2) : base
+        if cryptRoot == "BTCUSDT" or cryptRoot == "ETHUSDT"
+            other = (cryptRoot == "BTCUSDT" ? "ETHUSDT" : "BTCUSDT") + (perp ? ".P" : "")
+            sym1 := "TOTAL"
+            sym2 := chartExch == "" ? other : chartExch + ":" + other
+
+    [sym1, sym2]
+
+// Re-derived on every bar from syminfo, exactly like the original SMT code, so
+// changing the chart symbol re-detects immediately instead of keeping the pair
+// computed for the previous chart symbol.
+[autoSymbol1, autoSymbol2] = detectComparisonSymbols()
 
 manualSymbol1 = input.symbol("CME_MINI:MES1!", "Symbol 1", confirm=false, group="Comparison Symbols", inline="sym1")
 manualSymbol2 = input.symbol("CBOT_MINI:MYM1!", "Symbol 2", confirm=false, group="Comparison Symbols", inline="sym2")
