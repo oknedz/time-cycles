@@ -2168,19 +2168,24 @@ pad2(int v) =>
 // O(1): nextMarkOffset[] holds the minutes to the next mark (wrapping midnight).
 // Note: ts = t + off*60000 (real-time delta); on the 2 DST days/year the line
 // may sit one hour off for a single bar - the table text stays correct.
+// Returns [nextTs, "HH:MM", sum]: unix ms of the mark, its wall-clock text, and
+// the hour + minute sum that identifies the mark's GB number, so the number never
+// has to be worked out by hand.
 nextGbtMark(int t, int h, int m) =>
     int totalMins = h * 60 + m
     int off = array.get(nextMarkOffset, totalMins)
     int nextMins = (totalMins + off) % 1440
-    [t + off * 60000, pad2(math.floor(nextMins / 60)) + ":" + pad2(nextMins % 60)]
+    nh = math.floor(nextMins / 60)
+    nm = nextMins % 60
+    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(math.round(nh + nm))]
 
 showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
-var table nextGbtTable = table.new(position.top_right, 1, 1)
+var table nextGbtTable = table.new(position.top_right, 2, 1)
 var line nextGbtLine = na
 var string lastNextTxt = ""
 
 if not na(time)
-    [nTs, nTxt] = nextGbtMark(time, sessH, sessM)
+    [nTs, nTxt, nSum] = nextGbtMark(time, sessH, sessM)
     
     // Dynamic vertical line at the next mark: deleted and redrawn every bar
     // so it always points at the next upcoming time (one line, no accumulation)
@@ -2189,9 +2194,11 @@ if not na(time)
             line.delete(nextGbtLine)
         nextGbtLine := line.new(nTs, 0, nTs, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dotted, color=color.gray, width=1)
     
-    // Table text only changes when the next mark changes
+    // Table text only changes when the next mark changes. Left cell = the next
+    // GB time, right cell = its hour + minute sum (the GB number).
     if nTxt != lastNextTxt
         table.cell(nextGbtTable, 0, 0, "Next: " + nTxt, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 0, nSum, text_color=color.black, text_size=size.normal)
         lastNextTxt := nTxt
 
 
@@ -2235,7 +2242,7 @@ grp_rgbt = "Real GBT"
 enableRealGbt = input.bool(false, "Enable Real GBT", group=grp_rgbt, tooltip="Marks every hour on the Real GBT minutes: 3, 11, 17, 23, 29, 35, 41, 47, 53 and 59 past the hour. Same minutes in every hour — no sliding. The upper master-grid numbers (65, 71, 77, 83, 89, 97) are not minutes and are excluded.")
 realGbtTol = input.bool(false, "Include +/- 1 Minute Tolerance", group=grp_rgbt, tooltip="OPTIONAL, off by default. Also marks one minute either side of each Real GBT minute (e.g. :16 and :18 for :17). Those marks are drawn dimmed.")
 realGbtCol = input.color(color.aqua, "Number Color", group=grp_rgbt)
-realGbtMax = input.int(40, "Max Real GBT Labels", minval=1, maxval=100, group=grp_rgbt, tooltip="FIFO cap for the Real GBT numbers — applied to the numbers riding the active 90min line and to the finished cycles separately. Oldest are deleted first so recent marks always render.")
+realGbtMax = input.int(40, "Max Real GBT Labels", minval=1, maxval=300, group=grp_rgbt, tooltip="FIFO cap for the Real GBT numbers — applied to the numbers riding the active 90min line and to the finished cycles separately. Oldest are deleted first so recent marks always render.")
 
 // Real GBT minutes — master-grid numbers that are valid minutes (< 60)
 realGbtMinutes = array.from(3, 11, 17, 23, 29, 35, 41, 47, 53, 59)
@@ -2318,3 +2325,58 @@ if realGbtHit and not na(rgbtTop)
     while array.size(rgbtCur) > realGbtMax             // very long windows: oldest number drops off the line
         rgbtGoneCur = array.shift(rgbtCur)
         label.delete(rgbtGoneCur)
+
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  ALGO TABLE — editable GB grid for Algo 1 / Algo 2          (new, additive) ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//
+//  Two rows of GB numbers, sitting under the Next table:
+//
+//      Algo 1 | 0 | 11(14) | 41(44) | 3(7) | 17(23) | 29(35)/71(77)
+//      Algo 2 | 3(7) | 59(65) | 17(23) | 11(14) | 47(50) 53(56) | 29(35)
+//
+//  Each row is ONE editable string and "|" separates its cells, so cells can be
+//  added, removed, reordered or reworded without touching the code — the table
+//  grows to the widest row on its own. Borders are frame + cell grid, and every
+//  visual aspect is an input: position, background, cell text, row-label text,
+//  border colour, border width and text size.
+//
+//  Position: a Pine table cannot be offset pixel-wise, it snaps to one of nine
+//  anchors, so "under the Next table" is the anchor below it — Middle Right by
+//  default. Choose another anchor from the Position input if you prefer.
+//
+//  Standalone: nothing else in the script reads or writes this table.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+grp_algo = "Algo Table"
+showAlgoTable = input.bool(true, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
+algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
+algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
+algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
+algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
+algoPos = input.string("Middle Right", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
+algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
+algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
+algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
+algoLblCol = input.color(color.black, "Row Labels", group=grp_algo)
+algoBorderCol = input.color(color.gray, "Border", group=grp_algo)
+algoBorderW = input.int(1, "Border Width", 0, 3, group=grp_algo)
+
+// Anchor picked from the Position input
+algoAnchor = algoPos == "Top Right" ? position.top_right : algoPos == "Top Center" ? position.top_center : algoPos == "Top Left" ? position.top_left : algoPos == "Middle Right" ? position.middle_right : algoPos == "Middle Center" ? position.middle_center : algoPos == "Middle Left" ? position.middle_left : algoPos == "Bottom Right" ? position.bottom_right : algoPos == "Bottom Center" ? position.bottom_center : position.bottom_left
+
+// Split each row on "|"; the grid takes the widest row plus one label column
+algoCells1 = str.split(algoRow1Txt, "|")
+algoCells2 = str.split(algoRow2Txt, "|")
+algoCols = math.max(array.size(algoCells1), array.size(algoCells2))
+
+var table algoTable = na
+if showAlgoTable and na(algoTable)
+    algoTable := table.new(algoAnchor, algoCols + 1, 2, frame_color=algoBorderCol, frame_width=algoBorderW, border_color=algoBorderCol, border_width=algoBorderW)
+    table.cell(algoTable, 0, 0, algoRow1Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+    table.cell(algoTable, 0, 1, algoRow2Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+    for c = 0 to algoCols - 1                       // cell count guards: never index past a row
+        if c < array.size(algoCells1)
+            table.cell(algoTable, c + 1, 0, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        if c < array.size(algoCells2)
+            table.cell(algoTable, c + 1, 1, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
