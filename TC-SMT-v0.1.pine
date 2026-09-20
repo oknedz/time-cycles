@@ -2199,3 +2199,122 @@ if not na(time)
 // Reposition labels once per bar (not per manager)
 if needReposition
     repositionAllLabels()
+
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  REAL GBT — GB minutes that repeat in every hour            (new, additive) ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//
+//  The master grid is read as minute-of-hour values, so a Real GBT time is the
+//  SAME minute in every hour — 3 lands on :03 of every hour (10:03, 13:03, 21:03),
+//  17 on :17 of every hour, and so on. There is no sliding with the hour.
+//
+//  Real GBT minutes = the master-grid numbers that are valid minutes (< 60):
+//
+//      3, 11, 17, 23, 29, 35, 41, 47, 53, 59
+//
+//  The upper grid numbers are dropped — a minute can never reach them:
+//  65, 71, 77, 83, 89, 97.
+//
+//  Each mark prints ONE number — no duplicates above and below. The numbers ride
+//  the active 90-minute cycle: they sit on a single horizontal line at that
+//  cycle's running high, each number anchored to its own candle, and the whole
+//  line moves up/down with the cycle as it extends. When no 90-minute cycle is
+//  active (16:00-18:00 gap, or 00:00-cycle start with the Midnight Window off)
+//  the last line is kept, so numbers keep printing on the same line. No dots, no
+//  vertical lines.
+//
+//  The ±1 minute tolerance is an OPTIONAL addition and is off by default: when
+//  enabled it also marks the minute either side of each Real GBT minute and dims
+//  those marks so they stay distinguishable from the exact ones.
+//
+//  Standalone: the swing marks, the GB candle SMT and the cycle logic above are
+//  untouched.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+grp_rgbt = "Real GBT"
+enableRealGbt = input.bool(false, "Enable Real GBT", group=grp_rgbt, tooltip="Marks every hour on the Real GBT minutes: 3, 11, 17, 23, 29, 35, 41, 47, 53 and 59 past the hour. Same minutes in every hour — no sliding. The upper master-grid numbers (65, 71, 77, 83, 89, 97) are not minutes and are excluded.")
+realGbtTol = input.bool(false, "Include +/- 1 Minute Tolerance", group=grp_rgbt, tooltip="OPTIONAL, off by default. Also marks one minute either side of each Real GBT minute (e.g. :16 and :18 for :17). Those marks are drawn dimmed.")
+realGbtCol = input.color(color.aqua, "Number Color", group=grp_rgbt)
+realGbtMax = input.int(40, "Max Real GBT Labels", minval=1, maxval=100, group=grp_rgbt, tooltip="FIFO cap for the Real GBT numbers — applied to the numbers riding the active 90min line and to the finished cycles separately. Oldest are deleted first so recent marks always render.")
+
+// Real GBT minutes — master-grid numbers that are valid minutes (< 60)
+realGbtMinutes = array.from(3, 11, 17, 23, 29, 35, 41, 47, 53, 59)
+
+// Minute lookup, built once
+buildRealGbtLut() =>
+    lut = array.new<bool>(60, false)
+    for i = 0 to array.size(realGbtMinutes) - 1
+        array.set(lut, array.get(realGbtMinutes, i), true)
+    lut
+
+var array<bool> realGbtLut = buildRealGbtLut()
+
+// True when a minute-of-hour is a Real GBT minute. No hour term: the same minutes
+// repeat in every hour.
+isRealGbtMinute(int m) =>
+    ok = false
+    if m >= 0 and m < 60
+        ok := array.get(realGbtLut, m)
+    ok
+
+realGbtExact = isRealGbtMinute(sessM)
+realGbtNear = realGbtTol and (isRealGbtMinute(sessM - 1) or isRealGbtMinute(sessM + 1))
+realGbtHit = enableRealGbt and (realGbtExact or realGbtNear)
+
+// Number to print: the matched Real GBT minute (for a tolerance hit, its neighbour)
+realGbtNum = realGbtExact ? sessM : (isRealGbtMinute(sessM - 1) ? sessM - 1 : sessM + 1)
+realGbtColUse = realGbtHit and not realGbtExact ? color.new(realGbtCol, 55) : realGbtCol
+
+// ── The 90-minute cycle line the numbers ride on ─────────────────────────────
+// Every number of the active 90min cycle sits on one horizontal line at that
+// cycle's running high and moves with it as the cycle extends. The x of each
+// number never changes: it stays anchored to its own candle.
+var float rgbtTop = na                          // the line (running high of the active cycle)
+var int rgbtId = -1                             // identity of the active 90min cycle
+var int rgbtPrevId = -1
+var float rgbtApplied = na                      // line value last written to the numbers
+var array<label> rgbtCur = array.new<label>()   // numbers still riding the active line
+var array<label> rgbtOld = array.new<label>()   // numbers of finished cycles (capped)
+
+if act_90
+    if c_ny_90.active
+        rgbtTop := c_ny_90.h
+        rgbtId := 1000 + c_ny_90.idx
+    else if c_asia_90.active
+        rgbtTop := c_asia_90.h
+        rgbtId := 2000 + c_asia_90.idx
+    else if show_mid_win and c_mid_90.active
+        rgbtTop := c_mid_90.h
+        rgbtId := 3000 + c_mid_90.idx
+
+// New cycle: hand the finished cycle's numbers over to the capped pile so the
+// moving list only ever holds labels that are still alive, then start a fresh
+// line. With no active cycle rgbtTop is left untouched, so the numbers keep
+// printing on the same line.
+if rgbtId != rgbtPrevId
+    if array.size(rgbtCur) > 0
+        for i = 0 to array.size(rgbtCur) - 1
+            array.push(rgbtOld, array.get(rgbtCur, i))
+    array.clear(rgbtCur)
+    rgbtApplied := na
+rgbtPrevId := rgbtId
+
+// Cap the finished pile — those numbers no longer move, so deleting one is safe
+while array.size(rgbtOld) > realGbtMax
+    rgbtGoneOld = array.shift(rgbtOld)
+    label.delete(rgbtGoneOld)
+
+// The cycle extended: move this cycle's numbers to the new high
+if not na(rgbtTop) and (na(rgbtApplied) or rgbtApplied != rgbtTop)
+    if array.size(rgbtCur) > 0
+        for i = 0 to array.size(rgbtCur) - 1
+            label.set_y(array.get(rgbtCur, i), rgbtTop)
+    rgbtApplied := rgbtTop
+
+// One number per Real GBT candle, on the line, above the 90min cycle box
+if realGbtHit and not na(rgbtTop)
+    rgbtLb = label.new(bar_index, rgbtTop, str.tostring(realGbtNum), color=color.new(color.white, 100), textcolor=realGbtColUse, style=label.style_label_down, size=size.small)
+    array.push(rgbtCur, rgbtLb)
+    while array.size(rgbtCur) > realGbtMax             // very long windows: oldest number drops off the line
+        rgbtGoneCur = array.shift(rgbtCur)
+        label.delete(rgbtGoneCur)
