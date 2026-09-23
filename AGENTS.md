@@ -1,69 +1,140 @@
-# Agent Instructions
+# AGENTS.md - Time Cycles Trading Indicator
 
-> This file is mirrored across CLAUDE.md, AGENTS.md, and GEMINI.md so the same instructions load in any AI environment.
+## Project Overview
+This is a Pine Script v6 TradingView indicator for visualizing time-based cycles (90min, 30min, 10min) across trading sessions (Asia, London, NY AM/PM). Main file: `Time-Cycles-V4.pine`.
 
-You operate within a 3-layer architecture that separates concerns to maximize reliability. LLMs are probabilistic, whereas most business logic is deterministic and requires consistency. This system fixes that mismatch.
+## Build / Validation Commands
 
-## The 3-Layer Architecture
+### Pine Script
+- **Validation**: TradingView compiles Pine Script on save automatically
+- **Manual Check**: Use `tradingview_pine_check` tool or paste into TradingView Pine Editor
+- **Static Analysis**: Use `tradingview_pine_analyze` tool (offline, no chart needed)
 
-**Layer 1: Directive (What to do)**
-- Basically just SOPs written in Markdown, live in `directives/`
-- Define the goals, inputs, tools/scripts to use, outputs, and edge cases
-- Natural language instructions, like you'd give a mid-level employee
+### Python Scripts (project utility)
+```bash
+# Validate skill structure
+python scripts/quick_validate.py <skill_directory>
 
-**Layer 2: Orchestration (Decision making)**
-- This is you. Your job: intelligent routing.
-- Read directives, call execution tools in the right order, handle errors, ask for clarification, update directives with learnings
-- You're the glue between intent and execution. E.g you don't try scraping websites yourself—you read `directives/scrape_website.md` and come up with inputs/outputs and then run `execution/scrape_single_site.py`
+# Skill packaging
+python scripts/package_skill.py <skill_dir> <output_dir>
+```
 
-**Layer 3: Execution (Doing the work)**
-- Deterministic Python scripts in `execution/`
-- Environment variables, api tokens, etc are stored in `.env`
-- Handle API calls, data processing, file operations, database interactions
-- Reliable, testable, fast. Use scripts instead of manual work. Commented well.
+## Code Style Guidelines
 
-**Why this works:** if you do everything yourself, errors compound. 90% accuracy per step = 59% success over 5 steps. The solution is push complexity into deterministic code. That way you just focus on decision-making.
+### File Organization
+- Use `.pine` extension (configured in `.vscode/settings.json`)
+- Main indicator: `Time-Cycles-V4.pine` (version in indicator name)
+- Edit existing files; do not create new files unless explicitly requested
 
-## Operating Principles
+### Pine Script v6 Conventions
 
-**1. Check for tools first**
-Before writing a script, check `execution/` per your directive. Only create new scripts if none exist.
+**Version declaration** (required first line):
+```pine
+//@version=6
+indicator("Name", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500)
+```
 
-**2. Self-anneal when things break**
-- Read error message and stack trace
-- Fix the script and test it again (unless it uses paid tokens/credits/etc—in which case you check w user first)
-- Update the directive with what you learned (API limits, timing, edge cases)
-- Example: you hit an API rate limit → you then look into API → find a batch endpoint that would fix → rewrite script to accommodate → test → update directive.
+**Type definitions** (use custom types for structured data):
+```pine
+type Cycle
+    line t
+    line b
+    linefill f
+    int idx
+    float h
+    float l
+    bool active
+```
 
-**3. Update directives as you learn**
-Directives are living documents. When you discover API constraints, better approaches, common errors, or timing expectations—update the directive. But don't create or overwrite directives without asking unless explicitly told to. Directives are your instruction set and must be preserved (and improved upon over time, not extemporaneously used and then discarded).
+**Variables**:
+- Use `var` for persistent state (lines, labels, arrays)
+- Use `na` for uninitialized values
+- Prefix color variables with `c_` (e.g., `c_90_a`, `c_asia`)
+- Prefix line/style variables with `w_` (width), `s_` (style)
 
-## Self-annealing loop
+**Naming**:
+- Group inputs: `grp_cyc`, `grp_ol`, `grp_col`, etc.
+- Boolean toggles: `show_90`, `show_30`, `show_mid`
+- Session prefixes: `asia_`, `london_`, `ny_am_`
+- Cycle types: `c_` for cycles (e.g., `c_asia_90`)
 
-Errors are learning opportunities. When something breaks:
-1. Fix it
-2. Update the tool
-3. Test tool, make sure it works
-4. Update directive to include new flow
-5. System is now stronger
+**Line drawing**:
+- Use `line.new()`, `line.set_x2()`, `line.set_y1()` for extension
+- Use `extend=extend.both` for horizontal lines across chart
+- Box borders: transparent `color.new(color.white, 100)`
 
-## File Organization
+**Input groups** (match existing pattern):
+```pine
+grp_cyc = "Cycles"
+show_90 = input.bool(true, "90min", group=grp_cyc, inline="c1")
+```
 
-**Deliverables vs Intermediates:**
-- **Deliverables**: Google Sheets, Google Slides, or other cloud-based outputs that the user can access
-- **Intermediates**: Temporary files needed during processing
+**Colors**: Use hex (`#787b86`) or `color.red`, `color.blue`, etc. Transparency via `color.new(col, transparency)`.
 
-**Directory structure:**
-- `.tmp/` - All intermediate files (dossiers, scraped data, temp exports). Never commit, always regenerated.
-- `execution/` - Python scripts (the deterministic tools)
-- `directives/` - SOPs in Markdown (the instruction set)
-- `.env` - Environment variables and API keys
-- `credentials.json`, `token.json` - Google OAuth credentials (required files, in `.gitignore`)
+### Time Handling
+- Always use "America/New_York" timezone for non-crypto
+- Use "UTC" for crypto symbols
+- Calculate `ny_m_total = ny_h * 60 + ny_m` for minute-of-day checks
+- Session windows: Asia (1080-1440), London (150-420), NY AM (420-690)
 
-**Key principle:** Local files are only for processing. Deliverables live in cloud services (Google Sheets, Slides, etc.) where the user can access them. Everything in `.tmp/` can be deleted and regenerated.
+### Drawing Cleanup
+- Track all lines/fills in arrays: `all_lines`, `all_fills`, `line_bars`, `fill_bars`
+- Delete old objects when `prev_asia_bar` moves forward
+- Use O(1) shift operations, avoid O(n²) reverse loops
 
-## Summary
+### Error Handling
+- If user provides an error, use MCP tool to fix syntax immediately
+- Always scan for similar errors in the same file
+- Check array bounds: use `array.size()` before `.get()`
+- Guard `na` checks before accessing line/label properties
 
-You sit between human intent (directives) and deterministic execution (Python scripts). Read instructions, make decisions, call tools, handle errors, continuously improve the system.
+## Project Structure
+```
+├── Time-Cycles-V4.pine         # Main indicator (primary)
+├── timeCyclesV4/               # Copy/working version
+├── scripts/                    # Python utilities
+│   ├── quick_validate.py       # Skill validation
+│   ├── package_skill.py
+│   └── init_skill.py
+├── skills/                     # Skill definitions
+│   ├── code-logic/SKILL.md
+│   └── learn/SKILL.md
+├── project-docs/               # Documentation
+├── references/                 # Workflow docs
+├── .vscode/settings.json       # File associations
+└── SKILL.md                    # Default skill (coding guidelines)
+```
 
-Be pragmatic. Be reliable. Self-anneal.
+## Key SKILL.md Guidelines
+- **Simplicity first**: Minimum code that solves the problem
+- **Surgical changes**: Touch only what you must; match existing style
+- **Goal-driven**: Define success criteria before implementing
+- **Think before coding**: Surface tradeoffs, don't hide confusion
+
+## Session Quarter System (for reference)
+- ASIA: 18:00-00:00 (4 × 90min quarters)
+- LONDON: 00:00-06:00 (4 × 90min quarters)
+- NY AM: 06:00-12:00 (4 × 90min quarters)
+- NY PM: 12:00-18:00 (4 × 90min quarters)
+
+Each 90min can be subdivided into 3 × 30min or 9 × 10min cycles.
+
+## Input Settings Pattern
+```pine
+grp = "Group Name"
+show = input.bool(true, "Label", group=grp, inline="x1")
+color = input.color(color.red, "", group=grp, inline="x1")
+width = input.int(1, "", 1, 3, group=grp, inline="x1")
+style = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp, inline="x1")
+```
+
+## Known Symbol Types
+- Crypto: `syminfo.type == "crypto"` → UTC timezone
+- Forex: `syminfo.type == "forex"` → 17:00 open
+- Futures (NQ, ES, YM, RTY): 18:00 open
+
+## No Build/Test Infrastructure
+Pine Script is interpreted by TradingView. There are no traditional test commands. Code is validated by:
+1. TradingView compiler on save
+2. `tradingview_pine_check` tool
+3. `tradingview_pine_analyze` tool (offline static analysis)
