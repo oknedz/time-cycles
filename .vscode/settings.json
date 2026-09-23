@@ -1,7 +1,0 @@
-{
-    "nuxt.isNuxtApp": false,
-    "files.associations": {
-        "*.dbclient-js": "javascript",
-        "*.pine": "pine"
-    }
-}
