@@ -10,6 +10,9 @@
 //        lines, session high/low levels (Asia, London, NY AM, NY PM),
 //        previous-cycle C.E. levels, day separator, weekday labels,
 //        previous-day high/low + 50% C.E.
+//        Custom anchored cycles (input "Custom Cycles"): alternative 90/30/10min set whose first
+//        cycle starts at a user-set time (default 18:41 NY) and runs continuously across midnight.
+//        While it is on, the session-based cycle boxes are not drawn — the two are alternatives.
 //
 //    PART 2 — SMT V-4.1 [StoneFace]             (source: SMT_V-4.1.pine)
 //        Multi-symbol SMT divergence detector (90/30/10/3-min + D/W/M/Y
@@ -48,11 +51,19 @@ grp_ol = "Opening Lines"
 grp_col = "Colors"
 grp_day = "Day"
 
-// Cycle settings: toggle 90/30/10min, midnight window, cycle start, auto-adjust
+// Cycle settings: toggle 90/30/10min, midnight window, cycle start, auto-adjust, custom start
+// Custom anchored set: an alternative 90/30/10min set of cycles whose first cycle starts at the
+// time below (New York). Its window spans the whole day, so the sub-period index never resets — the
+// cycles run straight through midnight, with no cycle break and no session reset. While this is on
+// the session-based cycle boxes (Asia / Midnight window / London-NY) are hidden, and only this set
+// is drawn — one set of cycle boxes at a time.
+cx_on = input.bool(false, "Custom Cycles", group=grp_cyc, inline="c5")
+cx_h = input.int(18, "Hr", 0, 23, group=grp_cyc, inline="c5", active=cx_on)
+cx_m = input.int(41, "Min", 0, 59, group=grp_cyc, inline="c5", active=cx_on)
 show_90 = input.bool(true, "90min", group=grp_cyc, inline="c1")
 show_30 = input.bool(true, "30min", group=grp_cyc, inline="c1")
 show_10 = input.bool(false, "10min", group=grp_cyc, inline="c1")
-show_mid_win = input.bool(false, "Midnight Window", group=grp_cyc, inline="c2")
+show_mid_win = input.bool(false, "Midnight Window", group=grp_cyc, inline="c2", active=not cx_on)
 var array<string> cyc_opts = array.from("00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00")
 var array<int> cyc_mins = array.from(0, 30, 60, 90, 120, 150, 180)
 cyc_start_str = input.string("2:00", "Cycle Start (London)", options=["00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00"], group=grp_cyc, inline="c4")
@@ -63,7 +74,7 @@ show_mid = input.bool(true, "Midnight", group=grp_ol, inline="mid")
 c_mid = input.color(#787b86, "", group=grp_ol, inline="mid")
 w_mid = input.int(1, "", 1, 3, group=grp_ol, inline="mid")
 s_mid = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="mid")
-show_90_open = input.bool(false, "90min Cycle Opens", group=grp_ol, inline="90open")
+show_90_open = input.bool(false, "90min Cycle Opens", group=grp_ol, inline="90open", active=not cx_on)
 c_90_open = input.color(color.orange, "", group=grp_ol, inline="90open")
 w_90_open = input.int(1, "", 1, 3, group=grp_ol, inline="90open")
 s_90_open = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="90open")
@@ -138,6 +149,7 @@ ny_h = hour(time, "America/New_York")
 ny_m = minute(time, "America/New_York")
 ny_m_total = ny_h * 60 + ny_m                               // Minute of day in NY time
 var int cyc_start = cyc_mins.get(array.indexof(cyc_opts, cyc_start_str))  // London/NY cycle anchor (minutes of day)
+cx_anchor = cx_h * 60 + cx_m                                 // Custom first-cycle start (minutes of day, NY)
 is_new_d = ta.change(dayofmonth(time, calc_tz)) != 0    // True at calendar midnight in the symbol's timezone
 
 // --- User-Defined Types ---
@@ -185,6 +197,10 @@ var Cycle c_mid_10 = Cycle.new(na, -1, na, na, false)
 var Cycle c_ny_90 = Cycle.new(na, -1, na, na, false)
 var Cycle c_ny_30 = Cycle.new(na, -1, na, na, false)
 var Cycle c_ny_10 = Cycle.new(na, -1, na, na, false)
+// Custom anchored set: one state per size, active over the whole day
+var Cycle c_cx_90 = Cycle.new(na, -1, na, na, false)
+var Cycle c_cx_30 = Cycle.new(na, -1, na, na, false)
+var Cycle c_cx_10 = Cycle.new(na, -1, na, na, false)
 
 // --- Persistent State: Opening Lines ---
 
@@ -196,6 +212,8 @@ var TimeLine tl_930 = TimeLine.new(na, na, false)            // 9:30 line
 
 var CeLevel ce90 = CeLevel.new(na, na)                       // 90min previous-cycle 50% line
 var CeLevel ce30 = CeLevel.new(na, na)                       // 30min previous-cycle 50% line
+var CeLevel ce_cx90 = CeLevel.new(na, na)                    // Custom set: 90min previous-cycle 50% line
+var CeLevel ce_cx30 = CeLevel.new(na, na)                    // Custom set: 30min previous-cycle 50% line
 
 // --- Cleanup State: Track all drawn boxes for session-boundary cleanup ---
 
@@ -299,12 +317,16 @@ update_level(LevelObj o, bool is_start, bool in_sess, bool ext_ok, string name, 
 // Called every bar. Creates a new box when entering a new sub-period (idx change or activation).
 // Extends the box to current bar on subsequent bars within the same sub-period.
 // Closes the box when leaving the cycle time window.
-draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols_fill, CeLevel ce) =>
+draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols_fill, CeLevel ce, int anchor) =>
     // Check if current time is within [start, end); handles wrap-around (e.g. 1440-60)
     in_win = start > end ? (ny_m_total >= start or ny_m_total < end) : (ny_m_total >= start and ny_m_total < end)
     eff = start > end and ny_m_total < end ? ny_m_total + 1440 : ny_m_total   // Wrap-around: shift into next day so idx stays positive
     if in_win
-        idx = math.floor((eff - start) / per)               // Which sub-period are we in (0, 1, 2...)
+        // Sub-period index counted from anchor — the first cycle's start inside the window. Session
+        // windows pass their own start, so their math is unchanged; the custom window passes the user's
+        // time, and the fold keeps the index positive for the hours before it (no midnight break).
+        off = eff - anchor
+        idx = math.floor((off < 0 ? off + 1440 : off) / per)  // Which sub-period are we in (0, 1, 2...)
         col_fill = cols_fill.get(idx % cols_fill.size())
         if idx != c.idx or not c.active                      // New sub-period or just activated
             if not na(c.bx)
@@ -349,33 +371,47 @@ if not na(prev_asia_bar)
         box.delete(all_boxes.shift())
         box_bars.shift()
 
-// --- Cycle Drawing: Asia (18:00-00:00 NY), Midnight (00:00 to cycle start, optional), London/NY (cycle start to 16:00) ---
+// --- Cycle Drawing: Session set — Asia (18:00-00:00 NY), Midnight (00:00 to cycle start, optional),
+// London/NY (cycle start to 16:00). Not drawn while the custom anchored set is on (below). ---
 
-if valid_tf
+if valid_tf and not cx_on
     // Asia session: minutes 1080-1440
     if act_90
-        draw_cycle_box(c_asia_90, 1080, 1440, 90, cols_90_fill, ce90)
+        draw_cycle_box(c_asia_90, 1080, 1440, 90, cols_90_fill, ce90, 1080)
     if act_30
-        draw_cycle_box(c_asia_30, 1080, 1440, 30, cols_30_fill, ce30)
+        draw_cycle_box(c_asia_30, 1080, 1440, 30, cols_30_fill, ce30, 1080)
     if act_10
-        draw_cycle_box(c_asia_10, 1080, 1440, 10, cols_10_fill, ce90)
+        draw_cycle_box(c_asia_10, 1080, 1440, 10, cols_10_fill, ce90, 1080)
 
     // Midnight window (optional, wraps from 1440 back to cycle start)
     if show_mid_win
         if act_90
-            draw_cycle_box(c_mid_90, 1440, cyc_start, 90, cols_90_fill, ce90)
+            draw_cycle_box(c_mid_90, 1440, cyc_start, 90, cols_90_fill, ce90, 1440)
         if act_30
-            draw_cycle_box(c_mid_30, 1440, cyc_start, 30, cols_30_fill, ce30)
+            draw_cycle_box(c_mid_30, 1440, cyc_start, 30, cols_30_fill, ce30, 1440)
         if act_10
-            draw_cycle_box(c_mid_10, 1440, cyc_start, 10, cols_10_fill, ce90)
+            draw_cycle_box(c_mid_10, 1440, cyc_start, 10, cols_10_fill, ce90, 1440)
 
     // London/NY session: minutes cyc_start-960; all cycle sizes anchored at the chosen start
     if act_90
-        draw_cycle_box(c_ny_90, cyc_start, 960, 90, cols_90_fill, ce90)
+        draw_cycle_box(c_ny_90, cyc_start, 960, 90, cols_90_fill, ce90, cyc_start)
     if act_30
-        draw_cycle_box(c_ny_30, cyc_start, 960, 30, cols_30_fill, ce30)
+        draw_cycle_box(c_ny_30, cyc_start, 960, 30, cols_30_fill, ce30, cyc_start)
     if act_10
-        draw_cycle_box(c_ny_10, cyc_start, 960, 10, cols_10_fill, ce90)
+        draw_cycle_box(c_ny_10, cyc_start, 960, 10, cols_10_fill, ce90, cyc_start)
+
+// --- Cycle Drawing: Custom anchored set (the alternative to the session set above) ---
+
+// Full-day window (0-1440) anchored at the user's first-cycle time. The index is measured from that
+// anchor and never resets, so a cycle crossing midnight keeps plotting as one box and the following
+// cycles are counted from the same point.
+if valid_tf and cx_on
+    if act_90
+        draw_cycle_box(c_cx_90, 0, 1440, 90, cols_90_fill, ce_cx90, cx_anchor)
+    if act_30
+        draw_cycle_box(c_cx_30, 0, 1440, 30, cols_30_fill, ce_cx30, cx_anchor)
+    if act_10
+        draw_cycle_box(c_cx_10, 0, 1440, 10, cols_10_fill, ce_cx90, cx_anchor)
 
 // --- Day Separator: Vertical line at midnight ---
 
@@ -409,14 +445,15 @@ if valid_tf
     if show_930
         draw_op_line(tl_930, 9, 30, c_930, w_930, s_930, "9:30", 16)
 
-// --- 90-Minute Cycle Opens: Horizontal lines at each 90min boundary ---
+// --- 90-Minute Cycle Opens: Horizontal lines at each 90min boundary (session set, so also stored
+// away while the custom anchored set is on) ---
 
 var array<line> l90 = array.new_line()                       // Open lines (one per boundary)
 var array<bool> stop90 = array.new_bool()
 var array<int> t90_h = array.new<int>()                      // Boundary hours (built at first bar / 18:00)
 var array<int> t90_m = array.new<int>()                      // Boundary minutes
 
-if valid_tf and show_90_open and act_90
+if valid_tf and show_90_open and act_90 and not cx_on
     if barstate.isfirst or (ny_h == 18 and ny_m == 0)        // Build boundary list for this session
         for i = 0 to array.size(l90) - 1
             line.delete(l90.get(i))
@@ -463,6 +500,8 @@ if valid_tf
     // Previous-cycle C.E. segments follow the live bar (y is fixed at the cycle midpoint)
     extend_ce(ce90)
     extend_ce(ce30)
+    extend_ce(ce_cx90)
+    extend_ce(ce_cx30)
 
     // Asia session: minutes 1080-1440. Reset exactly at the 18:00 NY bar.
     in_asia = ny_m_total >= 1080
@@ -1971,8 +2010,9 @@ buildGbSumLut(array<int> nums) =>
 var array<bool> gbSumLut = buildGbSumLut(gbtNumbers)
 
 // nextMarkOffset[minuteOfDay] = minutes until the next GBT mark exists
-// (wrapping past midnight). Built once on the first bar so nextGbtMark() is O(1)
-// instead of scanning up to 61 candidate minutes per bar.
+// (wrapping past midnight). Built once on the first bar so the next-mark lookup is O(1)
+// instead of scanning up to 61 candidate minutes per bar. This is the HOUR-SHIFTED path,
+// used by the Shift row of the Next table.
 buildNextMarkOffsets(array<bool> sumLut) =>
     minuteLut = array.new<bool>(1440, false)
     for i = 0 to 1439
@@ -1996,6 +2036,23 @@ buildNextMarkOffsets(array<bool> sumLut) =>
     offsets
 
 var array<int> nextMarkOffset = buildNextMarkOffsets(gbSumLut)
+
+// Basic path ("GB minutes that repeat in every hour"): the master-grid numbers that are valid
+// minutes (< 60) form a lattice with no hour term, so the next mark depends on the minute only
+// and a 60-entry table is enough. offs[m] = minutes from minute m to the next lattice minute,
+// wrapping the hour (0 when m itself is a mark). Built once on the first bar.
+buildBasicMinuteOffsets(array<int> nums) =>
+    offs = array.new<int>(60, 60)
+    for k = 0 to array.size(nums) - 1
+        n = array.get(nums, k)
+        if n < 60
+            for i = 0 to 59
+                d = (n - i + 60) % 60
+                if d < array.get(offs, i)
+                    array.set(offs, i, d)
+    offs
+
+var array<int> nextBasicOffset = buildBasicMinuteOffsets(gbtNumbers)
 
 var array<label> swingLabels = array.new<label>()
 maxSwingLabels = input.int(200, "Max Swing Labels", minval=1, maxval=300, group="Swing Detection",
@@ -2151,10 +2208,16 @@ if gbtCandleDivergence and dirIsLow
 //                    NEXT GBT TIME TABLE
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-//  Plain text (top-right, no border): "Next: HH:MM" with the next upcoming
-//  GBT master grid mark as wall-clock time in the session timezone.
-//  Shows the clock time of the next mark - not the GB number.
-//  Optional dynamic dotted vertical line tracks the same next mark; it is
+//  Plain text (top-right, no border), two rows:
+//
+//    Next:  HH:MM -> next mark of the BASIC path: the fixed minute lattice
+//                    (3, 11, 17, 23, 29, 35, 41, 47, 53, 59) that repeats in
+//                    every hour. No hourly shift. Its GB number is the minute.
+//    Shift: HH:MM -> next mark of the hour-shifted path (a mark when hour +
+//                    minute is a master-grid number); its GB number is that sum.
+//                    Informational only - no vertical line is drawn for it.
+//
+//  Optional dynamic dotted vertical line tracks the Next (basic) mark; it is
 //  deleted and redrawn every bar so it always points at the next upcoming time.
 //
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2163,43 +2226,51 @@ if gbtCandleDivergence and dirIsLow
 pad2(int v) =>
     v < 10 ? "0" + str.tostring(v) : str.tostring(v)
 
-// Next GBT mark at or after the current bar time (session timezone clock reading).
-// Returns [nextTs, "HH:MM"]: unix ms of the mark and its wall-clock text.
-// O(1): nextMarkOffset[] holds the minutes to the next mark (wrapping midnight).
+// Mark `off` minutes after the current bar time (session timezone clock reading).
+// Returns [ts, "HH:MM", gbNum]: unix ms of the mark, its wall-clock text and its GB number.
+// O(1): the offset comes from a table built once on the first bar; every minute of the day is
+// covered, so it wraps past the hour and past midnight on its own.
+// gbByMinute: how the GB number is read - true for the basic path (its lattice members are
+// master-grid numbers, so the mark is identified by its minute), false for the hour-shifted
+// path (the mark is identified by hour + minute). Either way the number never has to be
+// worked out by hand.
 // Note: ts = t + off*60000 (real-time delta); on the 2 DST days/year the line
 // may sit one hour off for a single bar - the table text stays correct.
-// Returns [nextTs, "HH:MM", sum]: unix ms of the mark, its wall-clock text, and
-// the hour + minute sum that identifies the mark's GB number, so the number never
-// has to be worked out by hand.
-nextGbtMark(int t, int h, int m) =>
-    int totalMins = h * 60 + m
-    int off = array.get(nextMarkOffset, totalMins)
+gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
     int nextMins = (totalMins + off) % 1440
-    nh = math.floor(nextMins / 60)
-    nm = nextMins % 60
-    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(math.round(nh + nm))]
+    int nh = math.floor(nextMins / 60)
+    int nm = nextMins % 60
+    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
 
 showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
-var table nextGbtTable = table.new(position.top_right, 2, 1)
+var table nextGbtTable = table.new(position.top_right, 2, 2)
 var line nextGbtLine = na
 var string lastNextTxt = ""
+var string lastShiftTxt = ""
 
 if not na(time)
-    [nTs, nTxt, nSum] = nextGbtMark(time, sessH, sessM)
+    int mTot = sessH * 60 + sessM
+    // Top row: basic path (fixed minutes every hour) - this is the "next GB time", and the
+    // vertical line below marks it. Bottom row: hour-shifted path, kept for reference.
+    [bTs, bTxt, bNum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
+    [_, sTxt, sSum] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
     
     // Dynamic vertical line at the next mark: deleted and redrawn every bar
     // so it always points at the next upcoming time (one line, no accumulation)
     if showNextGbtLine
         if not na(nextGbtLine)
             line.delete(nextGbtLine)
-        nextGbtLine := line.new(nTs, 0, nTs, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dotted, color=color.gray, width=1)
+        nextGbtLine := line.new(bTs, 0, bTs, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dotted, color=color.gray, width=1)
     
-    // Table text only changes when the next mark changes. Left cell = the next
-    // GB time, right cell = its hour + minute sum (the GB number).
-    if nTxt != lastNextTxt
-        table.cell(nextGbtTable, 0, 0, "Next: " + nTxt, text_color=color.black, text_size=size.normal)
-        table.cell(nextGbtTable, 1, 0, nSum, text_color=color.black, text_size=size.normal)
-        lastNextTxt := nTxt
+    // Table text only changes when a mark changes. Left cell = the clock time, right cell =
+    // that mark's GB number (basic row: the minute; shift row: hour + minute).
+    if bTxt != lastNextTxt or sTxt != lastShiftTxt
+        table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 0, bNum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 1, sSum, text_color=color.black, text_size=size.normal)
+        lastNextTxt := bTxt
+        lastShiftTxt := sTxt
 
 
 // Final check to reposition labels if any changes occurred
@@ -2284,7 +2355,12 @@ var array<label> rgbtCur = array.new<label>()   // numbers still riding the acti
 var array<label> rgbtOld = array.new<label>()   // numbers of finished cycles (capped)
 
 if act_90
-    if c_ny_90.active
+    // The session boxes are not drawn while the custom set is on, so the numbers ride that
+    // cycle's high instead — otherwise they would have no line to sit on.
+    if cx_on and c_cx_90.active
+        rgbtTop := c_cx_90.h
+        rgbtId := 4000 + c_cx_90.idx
+    else if c_ny_90.active
         rgbtTop := c_ny_90.h
         rgbtId := 1000 + c_ny_90.idx
     else if c_asia_90.active
