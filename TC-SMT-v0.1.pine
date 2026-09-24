@@ -31,7 +31,9 @@
 //    PART 2 — SMT V-4.1 [StoneFace]             (source: SMT_V-4.1.pine)
 //        Multi-symbol SMT divergence detector (90/30/10/3-min + D/W/M/Y
 //        cycles), session SMTs, invalidation, 369 IDs, swing/GB marks,
-//        GB candle SMT, next-GBT-mark table.
+//        GB candle SMT, next-GBT-mark table. Intraday SMTs are measured against
+//        the liquidity level in play (the last completed session's extreme per
+//        instrument), so a two-sided sweep draws nothing.
 //
 //    PART 3 — ADD-ONS (appended at the end of the file)
 //        FVG on regular GB times (group "FVG"): three-candle Fair Value Gap whose
@@ -798,6 +800,11 @@ if valid_tf and show_pdhl
 // what the manual defaults below use. TOTAL is emitted with no exchange, as
 // specified; the crypto pair keeps the chart symbol's own exchange (e.g. MEXC).
 //
+// The chart's own data-feed modifier is carried over to both comparisons: a
+// delayed-feed chart (CME_MINI_DL, CBOT_MINI_DL) stays on its delayed feed instead
+// of asking for the real-time id it has no entitlement to — otherwise
+// request.security() returns na and no SMT is ever detected on such a chart.
+//
 // Any other chart symbol leaves both values na and the manual Symbol 1 / Symbol 2
 // inputs are used instead.
 autoDetectContracts = input.bool(true, "Auto-Detect Contracts", group="Comparison Symbols", tooltip="Sets Symbol 1/2 from the chart symbol: NQ/MNQ -> ES/MES + YM/MYM, ES/MES -> NQ/MNQ + YM/MYM, YM/MYM -> ES/MES + NQ/MNQ, BTCUSDT.P/ETHUSDT.P -> TOTAL + the other one. Contract size class (mini/micro) and contract month are carried over to the comparisons.")
@@ -828,10 +835,26 @@ isContractCode(string s) =>
         ok := true                                           // NQZ2026, MESH2027
     ok
 
-// "<exchange>:<family><code>", using the micro root on micro charts
-compSymbol(string fam, bool micro, string code) =>
+// Data-feed modifier of the chart's own feed. TradingView appends "_DL" / "_DLY" to the
+// exchange id for delayed feeds (their docs cite NYMEX_DL), so CME_MINI becomes
+// CME_MINI_DL. A chart on a delayed feed has no entitlement to the real-time exchange id:
+// request.security() against it returns na, and the comparison symbols silently never
+// produce data — which looks exactly like "SMT is not detected on this chart".
+// na when the chart is not on one of the two futures feeds (non-futures chart).
+feedMod(string exch) =>
+    string m = na
+    if str.startswith(exch, "CME_MINI")
+        m := str.substring(exch, str.length("CME_MINI"))
+    else if str.startswith(exch, "CBOT_MINI")
+        m := str.substring(exch, str.length("CBOT_MINI"))
+    m
+
+// "<exchange><feed modifier>:<family><code>", using the micro root on micro charts.
+// The modifier keeps the comparison on the SAME feed as the chart instead of assuming
+// real-time, so delayed-feed charts work too.
+compSymbol(string fam, bool micro, string code, string mod) =>
     famIdx = array.indexof(compFams, fam)
-    array.get(compExch, famIdx) + ":" + (micro ? array.get(compMicro, famIdx) : fam) + code
+    array.get(compExch, famIdx) + mod + ":" + (micro ? array.get(compMicro, famIdx) : fam) + code
 
 // Returns [symbol1, symbol2]; both na when the chart symbol is not mapped
 detectComparisonSymbols() =>
@@ -839,6 +862,9 @@ detectComparisonSymbols() =>
     base = array.size(tickParts) > 1 ? array.get(tickParts, 1) : array.get(tickParts, 0)
     idParts = str.split(syminfo.tickerid, ":")
     chartExch = array.size(idParts) > 1 ? array.get(idParts, 0) : ""
+    // Same feed as the chart ("_DL"/"_DLY" carried over); "" when the chart is not a futures feed.
+    modRaw = feedMod(chartExch)
+    feedSuffix = na(modRaw) ? "" : modRaw
 
     string sym1 = na
     string sym2 = na
@@ -859,9 +885,9 @@ detectComparisonSymbols() =>
                         cf = array.get(compFams, j)
                         if cf != fam
                             if na(sym1)
-                                sym1 := compSymbol(cf, micro, code)
+                                sym1 := compSymbol(cf, micro, code, feedSuffix)
                             else
-                                sym2 := compSymbol(cf, micro, code)
+                                sym2 := compSymbol(cf, micro, code, feedSuffix)
                     break
 
     // 2) Crypto — TOTAL carries no exchange; the pair keeps the chart's own
@@ -882,11 +908,16 @@ detectComparisonSymbols() =>
 // computed for the previous chart symbol.
 [autoSymbol1, autoSymbol2] = detectComparisonSymbols()
 
-manualSymbol1 = input.symbol("CME_MINI:MES1!", "Symbol 1", confirm=false, group="Comparison Symbols", inline="sym1")
-manualSymbol2 = input.symbol("CBOT_MINI:MYM1!", "Symbol 2", confirm=false, group="Comparison Symbols", inline="sym2")
+// Manual symbols are used ONLY when auto-detection is off. With it on, detection is authoritative:
+// an unmapped chart symbol means no comparison symbol for that side (that half of the detection is
+// simply inactive) — never a silent substitution. Comparing the chart against an unrelated market
+// (whatever the manual fields happen to hold) would manufacture SMTs between instruments that have
+// nothing to do with each other.
+manualSymbol1 = input.symbol("CME_MINI:MES1!", "Symbol 1", confirm=false, group="Comparison Symbols", inline="sym1", tooltip="Used only while Auto-Detect Contracts is OFF.")
+manualSymbol2 = input.symbol("CBOT_MINI:MYM1!", "Symbol 2", confirm=false, group="Comparison Symbols", inline="sym2", tooltip="Used only while Auto-Detect Contracts is OFF.")
 
-symbol1 = autoDetectContracts and not na(autoSymbol1) ? autoSymbol1 : manualSymbol1
-symbol2 = autoDetectContracts and not na(autoSymbol2) ? autoSymbol2 : manualSymbol2
+symbol1 = autoDetectContracts ? autoSymbol1 : manualSymbol1
+symbol2 = autoDetectContracts ? autoSymbol2 : manualSymbol2
 
 enableSymbol1 = input.bool(true, "Enable Symbol 1", group="Comparison Symbols", inline="en1")
 enableSymbol2 = input.bool(true, "Enable Symbol 2", group="Comparison Symbols", inline="en2")
@@ -1010,8 +1041,16 @@ type DailySession
 // FIXED: Use ticker.standard() to normalize ticker IDs and remove session modifiers
 // This ensures compatibility with both continuous contracts (NQ1!) and monthly contracts (MNQZ2024)
 // ticker.standard() strips extended session data, modifiers, etc. that can cause issues
-s1_normalized = ticker.standard(symbol1)
-s2_normalized = ticker.standard(symbol2)
+// A side only exists when it has a symbol AND that side is enabled. With auto-detection on and a
+// chart symbol that is not mapped, there is no comparison symbol — the side stays silent instead of
+// being substituted with an unrelated market. The requests below still run (they carry no data when
+// the side is off), so we point them at the chart's own symbol: a valid target that can never fail,
+// whose values are then ignored by every `s1Enabled` / `s2Enabled` gate.
+s1ReqSym = na(symbol1) ? syminfo.tickerid : symbol1
+s2ReqSym = na(symbol2) ? syminfo.tickerid : symbol2
+
+s1_normalized = ticker.standard(s1ReqSym)
+s2_normalized = ticker.standard(s2ReqSym)
 
 // Use gaps_off to automatically handle missing data (replaces manual latching)
 // `close` is never read from the comparison symbols, so it is not requested
@@ -1043,8 +1082,8 @@ var line_style_90 = line.style_solid
 var line_style_30 = line.style_solid
 var line_style_10 = line.style_solid
 var line_style_3 = line.style_solid
-s1Enabled = enableSymbol1
-s2Enabled = enableSymbol2
+s1Enabled = enableSymbol1 and not na(symbol1)
+s2Enabled = enableSymbol2 and not na(symbol2)
 
 
 
@@ -1254,8 +1293,8 @@ if barstate.isfirst
     array.push(dailySessions, initDailySession("NY-AM", "0700-1130", "America/New_York", showNYSession))
     array.push(dailySessions, initDailySession("NY-PM", "1130-1600", "America/New_York", showNYPMSession))
     
-    s1Abbr := getAbbr(symbol1)
-    s2Abbr := getAbbr(symbol2)
+    s1Abbr := na(symbol1) ? "" : getAbbr(symbol1)
+    s2Abbr := na(symbol2) ? "" : getAbbr(symbol2)
     
     // OPTIMIZATION: Cache line styles once
     line_style_90 := get_style(lineStyle90min)
@@ -1585,21 +1624,27 @@ drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, st
                 // Update existing SMT line for this symbol
                 existing = array.get(lines, mergeIdx)
                 
-                // Always redraw the line with new coordinates (intra-cycle may have different endpoints)
-                line.delete(existing.lineObj)
-                existing.lineObj := line.new(time1, price1, time2, price2, xloc=xloc.bar_time, color=lineColor, width=1, style=lineStyle)
+                // Keep the existing drawing object alive while its realtime endpoint develops.
+                // Recreating the line on every new extreme causes visible flicker in realtime.
+                
+                if na(existing.lineObj)
+                    existing.lineObj := line.new(time1, price1, time2, price2, xloc=xloc.bar_time, color=lineColor, width=1, style=lineStyle)
+                else
+                    line.set_xy1(existing.lineObj, time1, price1)
+                    line.set_xy2(existing.lineObj, time2, price2)
+                
                 existing.mainPrice := price1
                 existing.compPrice := compPrice
-                // Keep the cached geometry mirror in sync with the redrawn line
+                // Keep the cached geometry mirror in sync with the updated line
                 existing.x1 := time1
                 existing.y1 := price1
                 existing.x2 := time2
                 existing.y2 := price2
                 refreshLineKeys(existing)
                 
-                // Symbol already matches, just update coordinates (no label change needed)
+                // Coordinates and cached label geometry are synchronized below.
                 
-                isNew := false
+                isNew := true
             else if shouldAdd
                 // No need to remove old lines here based on length anymore.
                 // Just add the new one and let the FIFO limit handle cleanup.
@@ -1629,6 +1674,8 @@ drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, st
                 meta = LineMetadata.new(l, lab, bearish, typeId, price1, compPrice, symbolStr, cycleLabel, cycleStartBar, true, num369, mgrIdx, getStackOrder(cycleLabel), time1, price1, time2, price2, "", "", txt, midTime, midPrice + totalOffset)
                 refreshLineKeys(meta)
                 array.push(lines, meta)
+                // Keep the just-created signal visible; if the regular cap is full, evict an older line.
+                int newestLineIdx = array.size(lines) - 1
                 
                 // Calculate regular (non-exempt) and 369 line counts separately
                 int regularLineCount = 0
@@ -1644,9 +1691,10 @@ drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, st
                             regularLineCount += 1
 
                 if enableOldSmtDeletion
-                    // Delete excess regular SMTs (lowest priority first = highest cycleOrder)
+                    // Delete excess regular SMTs, but never evict the line created on this bar.
+                    // Among existing lines, lowest priority first = highest cycleOrder.
                     while regularLineCount > maxTotalLines
-                        // Find line with lowest priority to remove (limit search to NON-EXEMPT lines)
+                        // Find the lowest-priority existing line; the new line is protected.
                         idxToRemove = -1
                         maxOrder = -1
                         
@@ -1658,7 +1706,7 @@ drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, st
                                 continue
                             
                             // Strict greater-than keeps the distinct oldest if priorities match (FIFO within priority)
-                            if checkLn.cycleOrder > maxOrder
+                            if i != newestLineIdx and checkLn.cycleOrder > maxOrder
                                 maxOrder := checkLn.cycleOrder
                                 idxToRemove := i
                         
@@ -1668,9 +1716,8 @@ drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, st
                             label.delete(old.labelObj)
                             regularLineCount -= 1
                         else
-                            // If we can't find a regular line to remove (shouldn't happen if regularLineCount > max), break
+                            // If no existing regular line can be removed, keep the new signal visible.
                             break
-                    
                     // Delete excess 369 SMTs (FIFO - oldest first)
                     while line369Count > max369Lines
                         idxToRemove = -1
@@ -1694,27 +1741,73 @@ drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, st
                 isNew := true
             isNew
 
+// The liquidity level intraday SMTs are measured against: the most recently STARTED session that is
+// no longer running. Its extremes are prices the market has already traded — a level — while the
+// session still running only ever holds the live price. Comparing start times keeps yesterday's
+// sessions from winning over today's once today's have run (at the Asia open the level is
+// yesterday's NY-PM low, which is exactly the level being watched at that hour). -1 = none yet.
+getLevelSession() =>
+    int bestStart = na
+    int bestIdx = -1
+    if array.size(dailySessions) > 0
+        for i = 0 to array.size(dailySessions) - 1
+            s = array.get(dailySessions, i)
+            if not s.enabled or s.data.active
+                continue
+            if na(s.data.startTime) or na(s.data.mainPivotLow.price) or na(s.data.mainPivotHigh.price)
+                continue
+            if na(bestStart) or s.data.startTime > bestStart
+                bestStart := s.data.startTime
+                bestIdx := i
+    bestIdx
+
 // Unified SMT Detection Helper
+//
+// An intraday SMT (labels 90/30/10/3) is one market taking a liquidity level while the other holds
+// its own: the live cycle supplies the event window and the live extreme, the LEVEL supplies what is
+// being taken. The level in play comes from getLevelSession(), so the SMT is reported the moment the
+// sweep happens — the live extreme updates tick by tick and the level is frozen when its session
+// ends. This is also why a two-sided sweep cannot produce one: if both markets take their own level
+// neither branch matches, which is the false positive the old previous-cycle reference produced (NQ
+// and ES both under the Asia low, their lows in different cycles, adjacent cycles "diverging" on
+// paper while the market took the level on both sides).
+// Long-term labels (D/W/M/Y) and session labels keep the previous-extreme reference: a weekly or
+// daily extreme, and the previous session, are already levels.
 checkAndDrawSMT(PivotPoint currMain, PivotPoint prevMain, PivotPoint currComp, PivotPoint prevComp, string symStr, string lbl, int startBar, int typeBase, bool isBearish, int currentDay) =>
     detected = false
-    if not na(currMain.price) and not na(prevMain.price) and not na(currComp.price) and not na(prevComp.price)
+    bool isS1 = typeBase == 0
+    bool intraday = lbl == "90" or lbl == "30" or lbl == "10" or lbl == "3"
+    // Reference for the comparison and for the line's first endpoint
+    PivotPoint rMain = prevMain
+    PivotPoint rComp = prevComp
+    bool refsOk = not na(currMain.price) and not na(currComp.price)
+    if intraday
+        int lsi = getLevelSession()
+        refsOk := refsOk and lsi >= 0
+        if refsOk
+            s = array.get(dailySessions, lsi)
+            rMain := isBearish ? s.data.mainPivotHigh : s.data.mainPivotLow
+            rComp := isBearish ? (isS1 ? s.data.s1PivotHigh : s.data.s2PivotHigh) : (isS1 ? s.data.s1PivotLow : s.data.s2PivotLow)
+    else
+        refsOk := refsOk and not na(prevMain.price) and not na(prevComp.price)
+    if refsOk and not na(rMain.price) and not na(rComp.price)
         if isBearish
-            // Bearish Normal: Main Higher High, Comp Lower High
-            if currMain.price > prevMain.price and currComp.price < prevComp.price
-                if drawSMT(prevMain.barIndex, prevMain.time, prevMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 0, prevComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+            // Bearish Normal: main takes the level, comp holds below its own
+            if currMain.price > rMain.price and currComp.price < rComp.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 0, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
                     detected := true
-            // Bearish Inverse: Comp Higher High, Main Lower High
-            if currComp.price > prevComp.price and currMain.price < prevMain.price
-                if drawSMT(prevMain.barIndex, prevMain.time, prevMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 4, prevComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+            // Bearish Inverse: comp takes the level, main holds below its own
+            if currComp.price > rComp.price and currMain.price < rMain.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 4, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
                     detected := true
         else
-            // Bullish Normal: Main Lower Low, Comp Higher Low
-            if currMain.price < prevMain.price and currComp.price > prevComp.price
-                if drawSMT(prevMain.barIndex, prevMain.time, prevMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 1, prevComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+            // Bullish Normal: main takes the low, comp holds above its own
+            if currMain.price < rMain.price and currComp.price > rComp.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 1, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
                     detected := true
-            // Bullish Inverse: Comp Lower Low, Main Higher Low
-            if currComp.price < prevComp.price and currMain.price > prevMain.price
-                if drawSMT(prevMain.barIndex, prevMain.time, prevMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 5, prevComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+            // Bullish Inverse: comp takes the low, main holds above its own
+            if currComp.price < rComp.price and currMain.price > rMain.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 5, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
                     detected := true
     detected
 
@@ -1850,12 +1943,11 @@ compareSessionSMT(curr, prev, int currentDay) =>
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 //  EXECUTION FLOW:
-//      1. Track daily reset - Clear all SMTs at 18:00 NY time (Asia session open)
-//      2. Check invalidation - Remove SMTs broken by new price action
-//      3. Session filter - Only process during active trading session
-//      4. Cycle management - Start, update, or complete cycles
-//      5. SMT detection - Compare current vs previous cycles (current day only)
-//      6. Real-time updates - Move line endpoints as extremes change
+//      1. Track daily reset - Clear non-long-term SMTs at 18:00 NY time
+//      2. Update cycle and session extremes from the current realtime bar
+//      3. Invalidate existing SMTs against those current extremes
+//      4. Detect new SMTs and update existing line endpoints in place
+//      5. Reposition labels once after all SMT processing
 //
 //  TRADING DAY:
 //      • Trading day starts at 18:00 NY time (Asia session open)
@@ -1868,6 +1960,17 @@ compareSessionSMT(curr, prev, int currentDay) =>
 //      Bullish SMT (Normal): Main makes lower low, Comparison makes higher low
 //      Bearish SMT (Inverse): Comparison makes higher high, Main makes lower high
 //      Bullish SMT (Inverse): Comparison makes lower low, Main makes higher low
+//
+//      LEVEL-ANCHORED DETECTION: intraday SMTs (labels 90/30/10/3) are measured against the
+//      liquidity level in play — getLevelSession(), the most recently started session that has
+//      finished, e.g. the Asia low while London runs — not against the previous cycle's extreme.
+//      The live cycle only supplies the event window and the live extreme, so the SMT appears the
+//      moment one market takes the level while the other holds its own. A two-sided sweep, where
+//      both markets are through their own level, matches neither branch and draws nothing: that was
+//      the false positive of the old reference, which compared two cycle windows and reported a
+//      divergence while the market had taken the level on both sides. Long-term (D/W/M/Y) SMTs keep
+//      the previous-extreme reference (a daily/weekly extreme is already a level) and the session
+//      SMTs keep comparing session against session.
 //
 //  LINE DISPLAY:
 //      • Black lines connect previous cycle extreme to current cycle extreme
@@ -1920,8 +2023,6 @@ if currentDay != lastDay and not na(lastDay)
 
 lastDay := currentDay
 
-if checkInvalidation()
-    needReposition := true
 
 // Reposition all labels on every bar to reflect input changes
 // Removed implicit call here, handled at end of script if needed
@@ -2096,6 +2197,11 @@ if enableSessionSMT
                 if prevSess.enabled and not na(prevSess.data.mainPivotHigh.price) and not na(prevSess.data.mainPivotLow.price)
                     compareSessionSMT(sess, prevSess, currentDay)
             needReposition := true
+
+// Invalidation runs after every cycle/session has consumed the current bar.
+// This makes a break visible on the same realtime update that created it.
+if checkInvalidation()
+    needReposition := true
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2273,14 +2379,14 @@ if enableGbtCandleSmt
     
     bool s1StampHigh = false
     bool s1StampLow = false
-    if enableSymbol1 and not na(s1_bar_time[1])
+    if s1Enabled and not na(s1_bar_time[1])
         s1IsGb = isGbHM(hour(s1_bar_time[1], sessionTimezone), minute(s1_bar_time[1], sessionTimezone))
         s1StampHigh := s1IsGb and s1SwingHigh
         s1StampLow := s1IsGb and s1SwingLow
     
     bool s2StampHigh = false
     bool s2StampLow = false
-    if enableSymbol2 and not na(s2_bar_time[1])
+    if s2Enabled and not na(s2_bar_time[1])
         s2IsGb = isGbHM(hour(s2_bar_time[1], sessionTimezone), minute(s2_bar_time[1], sessionTimezone))
         s2StampHigh := s2IsGb and s2SwingHigh
         s2StampLow := s2IsGb and s2SwingLow
@@ -2288,7 +2394,7 @@ if enableGbtCandleSmt
     s1Stamp = s1StampHigh or s1StampLow
     s2Stamp = s2StampHigh or s2StampLow
     
-    comparedCount = 1 + (enableSymbol1 ? 1 : 0) + (enableSymbol2 ? 1 : 0)
+    comparedCount = 1 + (s1Enabled ? 1 : 0) + (s2Enabled ? 1 : 0)
     stampCount = (mainStamp ? 1 : 0) + (s1Stamp ? 1 : 0) + (s2Stamp ? 1 : 0)
     gbtCandleDivergence := stampCount > 0 and stampCount < comparedCount
     
