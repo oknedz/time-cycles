@@ -2635,7 +2635,7 @@ if show53 and not na(time)
 //  candles the window widens with them, so 15m and above stamp every candle.
 //
 //  Each box grows with the live candle until price first trades into the zone — a wick counts —
-//  and then stops there and stays put. No text is drawn inside the box. Appended at the end of the
+//  and then stops there and stays put. The GB number is drawn at the right edge of the box. Appended at the end of the
 //  file on purpose: these inputs are declared after every existing one, so the order TradingView uses
 //  to map saved settings is untouched.
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -2651,6 +2651,7 @@ fvg_max = input.int(200, "Max FVG Boxes", minval=10, maxval=400, group=grp_fvg, 
 // the box stops growing at that candle).
 type Fvg
     box bx
+    label gbLbl
     float top
     float bot
     bool done
@@ -2672,6 +2673,7 @@ isGbCandle(int m, float tfm) => array.get(nextBasicOffset, m) < tfm
 for f in fvgList
     if not f.done
         box.set_right(f.bx, bar_index)
+        label.set_x(f.gbLbl, bar_index)
         if low < f.top and high > f.bot
             f.done := true
 
@@ -2692,7 +2694,12 @@ if show_fvg and not na(time[2]) and fvgGbPattern(sessM[2], sessM[1], sessM, fvg_
         float zTop = fvgBull ? low : c1l                    // bull zone = [c1.high, c3.low]
         float zBot = fvgBull ? c1h : high                   // bear zone = [c3.high, c1.low]
         color fvgCol = fvgBull ? c_fvg_bull : c_fvg_bear
+        int fvgGbM = isGbCandle(sessM[2], fvg_tfm) ? sessM[2] : isGbCandle(sessM[1], fvg_tfm) ? sessM[1] : sessM
+        int fvgGbNum = (fvgGbM + array.get(nextBasicOffset, fvgGbM)) % 60
         box fvgBx = box.new(bar_index - 2, zTop, bar_index, zBot, border_color=c_box_border, border_width=1, bgcolor=color.new(fvgCol, fvg_t))
-        array.push(fvgList, Fvg.new(fvgBx, zTop, zBot, false))
+        label fvgLbl = label.new(bar_index, (zTop + zBot) / 2, str.tostring(fvgGbNum), xloc=xloc.bar_index, yloc=yloc.price, color=color.new(fvgCol, 100), textcolor=fvgCol, style=label.style_label_left, size=size.small)
+        array.push(fvgList, Fvg.new(fvgBx, fvgLbl, zTop, zBot, false))
         while array.size(fvgList) > fvg_max
-            box.delete(array.shift(fvgList).bx)
+            fvgGone = array.shift(fvgList)
+            box.delete(fvgGone.bx)
+            label.delete(fvgGone.gbLbl)
