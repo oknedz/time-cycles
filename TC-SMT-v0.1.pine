@@ -10,9 +10,23 @@
 //        lines, session high/low levels (Asia, London, NY AM, NY PM),
 //        previous-cycle C.E. levels, day separator, weekday labels,
 //        previous-day high/low + 50% C.E.
+//        Cycle dividers (input group "Cycle Dividers"): a vertical line at every cycle
+//        boundary, as an alternative to the filled cycle boxes — the "Vertical Lines
+//        Instead of Boxes" checkbox swaps one for the other, never showing both. Fully
+//        customizable per size (90/30/10) — toggle, color, width, style, transparency —
+//        plus a height mode (full chart / match the cycle box) and a FIFO line cap.
+//        They follow whichever cycle set is active and share the boxes' history trim.
+//        Cycle history (input "Max Cycle Boxes"): drawings are kept by count, not by
+//        date — the oldest box/divider is dropped once the cap is reached, so the
+//        chart carries as much history as TradingView's 500-drawing budget allows
+//        (≈33 days with 90min only, ≈9 days with 90min+30min, ≈3 days with all three).
 //        Custom anchored cycles (input "Custom Cycles"): alternative 90/30/10min set whose first
 //        cycle starts at a user-set time (default 18:41 NY) and runs continuously across midnight.
 //        While it is on, the session-based cycle boxes are not drawn — the two are alternatives.
+//        Asia Session (input group "Asia Session"): a single box spanning the whole session at
+//        start/end times you type in (default 18:00-02:30, so it runs through the early London
+//        hours). Deliberately NOT subdivided into 90/30/10 cycles — the cycle boxes are the other
+//        sets, so the two never double up. Hidden while "Custom Cycles" is on.
 //
 //    PART 2 — SMT V-4.1 [StoneFace]             (source: SMT_V-4.1.pine)
 //        Multi-symbol SMT divergence detector (90/30/10/3-min + D/W/M/Y
@@ -25,9 +39,10 @@
 //      • The only shared helper is get_style() (identical to SMT's former
 //        getLineStyle(), which was removed).
 //      • Drawing limits: 500 lines / 500 labels / 500 boxes shared by both
-//        parts. Cycles never exceed the box budget (history is trimmed at the
-//        18:00 NY boundary); SMT lines are FIFO-capped by Max Total SMT Lines
-//        + Max 369 SMT Lines, and swing labels by Max Swing Labels.
+//        parts. Cycles are FIFO-trimmed to "Max Cycle Boxes" (default 500, the
+//        TradingView maximum) and dividers to "Max Lines"; SMT lines are
+//        FIFO-capped by Max Total SMT Lines + Max 369 SMT Lines, and swing
+//        labels by Max Swing Labels.
 //      • Input group "Display" is shared by both parts (Time Cycles' Fill
 //        Transparency sits with the SMT display settings) — names were not
 //        changed on purpose, to preserve saved input values.
@@ -68,6 +83,19 @@ var array<string> cyc_opts = array.from("00:00", "00:30", "1:00", "1:30", "2:00"
 var array<int> cyc_mins = array.from(0, 30, 60, 90, 120, 150, 180)
 cyc_start_str = input.string("2:00", "Cycle Start (London)", options=["00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00"], group=grp_cyc, inline="c4")
 auto_adj = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
+max_boxes = input.int(500, "Max Cycle Boxes", 10, 500, group=grp_cyc, tooltip="How many cycle boxes stay on the chart — the oldest are removed first once this many exist. TradingView allows a maximum of 500 drawings per type. History this buys with the default windows: ≈33 days with 90min only, ≈9 days with 90min+30min, ≈3 days with all three sizes. Fewer active sizes or a lower cap = less clutter.")
+
+// Asia Session: ONE box around the whole session — no 90/30/10 subdivision, so it never doubles up
+// with the cycle boxes above. It tracks the session's running high and low from the start time to
+// the end time (New York), and the range may cross midnight (start > end), e.g. the default
+// 18:00-02:30 that runs through the early London hours. Start and end must differ.
+grp_asb = "Asia Session"
+show_asb = input.bool(true, "Show Box", group=grp_asb, inline="asb1", tooltip="Draws a single box spanning the whole session below — not cycles. The range may cross midnight (start > end). Start and end must differ.")
+asb_h = input.int(18, "Start Hr", 0, 23, group=grp_asb, inline="asb1", active=show_asb)
+asb_m = input.int(0, "Min", 0, 59, group=grp_asb, inline="asb1", active=show_asb)
+asb_eh = input.int(2, "End Hr", 0, 23, group=grp_asb, inline="asb2", active=show_asb)
+asb_em = input.int(30, "Min", 0, 59, group=grp_asb, inline="asb2", active=show_asb)
+c_asb_fill = input.color(color.purple, "Color", group=grp_asb, inline="asb2", active=show_asb)
 
 // Opening lines: midnight, 8:30, 9:30, and 90min cycle opens
 show_mid = input.bool(true, "Midnight", group=grp_ol, inline="mid")
@@ -136,6 +164,33 @@ c_pce = input.color(color.black, "Color", group=grp_pce, inline="pce")
 w_pce = input.int(1, "", 1, 5, group=grp_pce, inline="pce")
 s_pce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pce, inline="pce")
 
+// Cycle dividers: a vertical line at every cycle boundary, as an ALTERNATIVE to the filled cycle
+// boxes — the two are never shown at the same time. Off: the usual cycle boxes. On: the boxes are
+// hidden (kept, but filled fully transparent) and the cycles are marked by the lines below. Per
+// size (90/30/10) the lines have their own toggle, color, width, style and transparency. They
+// follow whichever cycle set is active (session set or custom anchored set), are FIFO-trimmed to
+// "Max Lines" so they cannot starve the shared 500-line budget the SMT drawings also draw from, and
+// share the cycle boxes' history horizon (see "Max Cycle Boxes" in the Cycles group).
+grp_vl = "Cycle Dividers"
+show_vl = input.bool(false, "Vertical Lines Instead of Boxes", group=grp_vl, tooltip="On: the cycles are marked by vertical lines and the filled cycle boxes are hidden. Off: the usual cycle boxes. The two are never shown together.")
+vl_mode = input.string("Full Chart", "Height", ["Full Chart", "Match Cycle Box"], group=grp_vl, inline="vlm", active=show_vl)
+vl_max = input.int(400, "Max Lines", 10, 400, group=grp_vl, inline="vlm", active=show_vl)
+show_vl_90 = input.bool(true, "90min", group=grp_vl, inline="v90", active=show_vl)
+c_vl_90 = input.color(#787b86, "", group=grp_vl, inline="v90", active=show_vl)
+w_vl_90 = input.int(1, "", 1, 3, group=grp_vl, inline="v90", active=show_vl)
+s_vl_90 = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="v90", active=show_vl)
+t_vl_90 = input.int(0, "", 0, 100, group=grp_vl, inline="v90", active=show_vl)
+show_vl_30 = input.bool(true, "30min", group=grp_vl, inline="v30", active=show_vl)
+c_vl_30 = input.color(#787b86, "", group=grp_vl, inline="v30", active=show_vl)
+w_vl_30 = input.int(1, "", 1, 3, group=grp_vl, inline="v30", active=show_vl)
+s_vl_30 = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="v30", active=show_vl)
+t_vl_30 = input.int(40, "", 0, 100, group=grp_vl, inline="v30", active=show_vl)
+show_vl_10 = input.bool(true, "10min", group=grp_vl, inline="v10", active=show_vl)
+c_vl_10 = input.color(#787b86, "", group=grp_vl, inline="v10", active=show_vl)
+w_vl_10 = input.int(1, "", 1, 3, group=grp_vl, inline="v10", active=show_vl)
+s_vl_10 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="v10", active=show_vl)
+t_vl_10 = input.int(60, "", 0, 100, group=grp_vl, inline="v10", active=show_vl)
+
 // --- Time & Symbol Configuration ---
 
 tf_min = timeframe.in_seconds() / 60
@@ -150,6 +205,9 @@ ny_m = minute(time, "America/New_York")
 ny_m_total = ny_h * 60 + ny_m                               // Minute of day in NY time
 var int cyc_start = cyc_mins.get(array.indexof(cyc_opts, cyc_start_str))  // London/NY cycle anchor (minutes of day)
 cx_anchor = cx_h * 60 + cx_m                                 // Custom first-cycle start (minutes of day, NY)
+asb_s = asb_h * 60 + asb_m                                    // Asia Session: start (minutes of day, NY)
+asb_e = asb_eh * 60 + asb_em                                  // Asia Session: end
+asb_len = (asb_e - asb_s) % 1440                              // Window length (floored modulo) = the box's "period"
 is_new_d = ta.change(dayofmonth(time, calc_tz)) != 0    // True at calendar midnight in the symbol's timezone
 
 // --- User-Defined Types ---
@@ -161,6 +219,7 @@ type Cycle
     float h                                                 // Running high within this cycle box
     float l                                                 // Running low within this cycle box
     bool active                                             // True while inside the cycle time window
+    line vl                                                 // Divider line at this cycle's opening boundary (na when dividers are off)
 
 // LevelObj: session high/low level with center equilibrium line, labels, and its running state
 type LevelObj
@@ -188,19 +247,21 @@ type CeLevel
 
 // --- Persistent State: Cycle Boxes ---
 
-var Cycle c_asia_90 = Cycle.new(na, -1, na, na, false)
-var Cycle c_asia_30 = Cycle.new(na, -1, na, na, false)
-var Cycle c_asia_10 = Cycle.new(na, -1, na, na, false)
-var Cycle c_mid_90 = Cycle.new(na, -1, na, na, false)
-var Cycle c_mid_30 = Cycle.new(na, -1, na, na, false)
-var Cycle c_mid_10 = Cycle.new(na, -1, na, na, false)
-var Cycle c_ny_90 = Cycle.new(na, -1, na, na, false)
-var Cycle c_ny_30 = Cycle.new(na, -1, na, na, false)
-var Cycle c_ny_10 = Cycle.new(na, -1, na, na, false)
+var Cycle c_asia_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_asia_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_asia_10 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_10 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_10 = Cycle.new(na, -1, na, na, false, na)
 // Custom anchored set: one state per size, active over the whole day
-var Cycle c_cx_90 = Cycle.new(na, -1, na, na, false)
-var Cycle c_cx_30 = Cycle.new(na, -1, na, na, false)
-var Cycle c_cx_10 = Cycle.new(na, -1, na, na, false)
+var Cycle c_cx_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_cx_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_cx_10 = Cycle.new(na, -1, na, na, false, na)
+// Asia Session: a single box for the whole session window
+var Cycle c_asb = Cycle.new(na, -1, na, na, false, na)
 
 // --- Persistent State: Opening Lines ---
 
@@ -215,12 +276,10 @@ var CeLevel ce30 = CeLevel.new(na, na)                       // 30min previous-c
 var CeLevel ce_cx90 = CeLevel.new(na, na)                    // Custom set: 90min previous-cycle 50% line
 var CeLevel ce_cx30 = CeLevel.new(na, na)                    // Custom set: 30min previous-cycle 50% line
 
-// --- Cleanup State: Track all drawn boxes for session-boundary cleanup ---
+// --- History State: every box/divider currently on the chart, oldest first (trimmed in "History Trim") ---
 
-var int prev_asia_bar = na
-var int current_asia_bar = na
-var array<box> all_boxes = array.new<box>()                  // Every cycle box drawn since the previous 18:00 boundary
-var array<int> box_bars = array.new<int>()                   // Creation bar of each box (parallel to all_boxes)
+var array<box> all_boxes = array.new<box>()                  // Cycle boxes, oldest first
+var array<line> all_vl = array.new<line>()                   // Divider lines, oldest first
 
 // --- Color Arrays for Cycle Boxes ---
 
@@ -234,6 +293,7 @@ var color c_10_fill = color.new(c_10, fill_transp)
 var array<color> cols_90_fill = array.from(c_90_a_fill, c_90_m_fill, c_90_d_fill)
 var array<color> cols_30_fill = array.from(c_30_a_fill, c_30_m_fill, c_30_d_fill)
 var array<color> cols_10_fill = array.from(c_10_fill)
+var array<color> cols_asb_fill = array.from(color.new(c_asb_fill, fill_transp))  // Asia Session box: one colour, no rotation
 
 var color c_trans = color.new(color.white, 100)              // Fully transparent (used as label background)
 var color c_box_border = color.new(color.white, 100)         // Invisible box border (cycles use fill only)
@@ -311,6 +371,40 @@ update_level(LevelObj o, bool is_start, bool in_sess, bool ext_ok, string name, 
         if ext_ok and (not o.lock_h or not o.lock_l)
             set_level_x(o.m, o.lb_m, bar_index + 5)
 
+// --- Cycle Dividers: vertical lines at cycle boundaries ---
+
+// Per-size divider settings, selected by the cycle period (90 / 30 / 10 minutes). Any other period
+// — the Asia Session box passes its whole window length — draws no divider: one box, no boundaries.
+vl_on(per) => per == 90 ? show_vl_90 : per == 30 ? show_vl_30 : per == 10 ? show_vl_10 : false
+vl_col(per) => per == 90 ? c_vl_90 : per == 30 ? c_vl_30 : c_vl_10
+vl_w(per) => per == 90 ? w_vl_90 : per == 30 ? w_vl_30 : w_vl_10
+vl_s(per) => per == 90 ? s_vl_90 : per == 30 ? s_vl_30 : s_vl_10
+vl_t(per) => per == 90 ? t_vl_90 : per == 30 ? t_vl_30 : t_vl_10
+
+// Register a divider line. Trimming to the cap happens once per bar in the "History Trim" block,
+// together with the cycle boxes, so the divider set can never eat the whole shared line budget
+// (SMT lines and dividers both draw from the 500 line IDs a script is allowed).
+reg_vl(line l) =>
+    array.push(all_vl, l)
+
+// Draw the divider for the cycle currently opening at this bar, styled for its size. "Full Chart"
+// spans the visible price range via extend.both; "Match Cycle Box" spans the cycle's own high/low
+// and is later stretched as the cycle makes new extremes.
+vl_new(Cycle c, int per) =>
+    col = color.new(vl_col(per), vl_t(per))
+    if vl_mode == "Full Chart"
+        c.vl := line.new(bar_index, low, bar_index, high == low ? high + syminfo.mintick : high, color=col, width=vl_w(per), style=get_style(vl_s(per)), extend=extend.both)
+    else
+        c.vl := line.new(bar_index, c.l, bar_index, c.h == c.l ? c.h + syminfo.mintick : c.h, color=col, width=vl_w(per), style=get_style(vl_s(per)))
+    reg_vl(c.vl)
+    c.vl
+
+// Stretch the current cycle's divider to the cycle's running high/low ("Match Cycle Box" mode only).
+vl_stretch(Cycle c) =>
+    if not na(c.vl) and vl_mode != "Full Chart"
+        line.set_y1(c.vl, c.l)
+        line.set_y2(c.vl, c.h)
+
 // --- Cycle Box Drawing ---
 
 // Draw/update a cycle bounding box. Creates a box from bar high to bar low filled with the cycle color.
@@ -327,7 +421,10 @@ draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols_fill, CeL
         // time, and the fold keeps the index positive for the hours before it (no midnight break).
         off = eff - anchor
         idx = math.floor((off < 0 ? off + 1440 : off) / per)  // Which sub-period are we in (0, 1, 2...)
-        col_fill = cols_fill.get(idx % cols_fill.size())
+        // "Vertical Lines Instead of Boxes": keep the box (it carries the cycle's running high/low,
+        // the Prev Cycle C.E. anchor and the cleanup entry) but fill it fully transparent, so the
+        // cycles show as divider lines only. Boxes and dividers are never visible at the same time.
+        col_fill = show_vl ? c_trans : cols_fill.get(idx % cols_fill.size())
         if idx != c.idx or not c.active                      // New sub-period or just activated
             if not na(c.bx)
                 box.set_right(c.bx, bar_index - 1)           // Close previous box
@@ -346,30 +443,21 @@ draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols_fill, CeL
             c.active := true
             c.bx := box.new(left=bar_index, top=c.h, right=bar_index, bottom=c.l, border_color=c_box_border, border_width=1, bgcolor=col_fill)
             array.push(all_boxes, c.bx)
-            array.push(box_bars, bar_index)
+            if show_vl and vl_on(per)                        // Separate this cycle from the previous one
+                vl_new(c, per)
         else                                                 // Same sub-period: extend box to new high/low
             c.h := math.max(c.h, high)
             c.l := math.min(c.l, low)
             box.set_top(c.bx, c.h)
             box.set_bottom(c.bx, c.l)
             box.set_right(c.bx, bar_index)
+            vl_stretch(c)                                    // Keep a box-height divider on the cycle range
     if not in_win and c.active                               // Left the cycle window: close box
         c.active := false
         if not na(c.bx)
             box.set_right(c.bx, bar_index - 1)
             c.bx := na
             c.idx := -1
-
-// --- Session Cleanup: Delete old boxes at 18:00 (Asia session boundary) ---
-
-if ny_h == 18 and ny_m == 0
-    prev_asia_bar := current_asia_bar
-    current_asia_bar := bar_index
-
-if not na(prev_asia_bar)
-    while array.size(all_boxes) > 0 and box_bars.get(0) < prev_asia_bar
-        box.delete(all_boxes.shift())
-        box_bars.shift()
 
 // --- Cycle Drawing: Session set — Asia (18:00-00:00 NY), Midnight (00:00 to cycle start, optional),
 // London/NY (cycle start to 16:00). Not drawn while the custom anchored set is on (below). ---
@@ -400,6 +488,14 @@ if valid_tf and not cx_on
     if act_10
         draw_cycle_box(c_ny_10, cyc_start, 960, 10, cols_10_fill, ce90, cyc_start)
 
+    // Asia Session: a single box for the whole window, anchored at its own start. Passing the window
+    // length as the period keeps the sub-period index at 0 for every minute inside it, so exactly one
+    // box is built from the start time to the end time. No cycle rollovers, so the C.E. branch of
+    // draw_cycle_box never fires for it (it needs an index change). Start == end is an empty window:
+    // nothing is drawn (and the index math is never reached, so the zero length is never divided by).
+    if show_asb
+        draw_cycle_box(c_asb, asb_s, asb_e, asb_len, cols_asb_fill, ce90, asb_s)
+
 // --- Cycle Drawing: Custom anchored set (the alternative to the session set above) ---
 
 // Full-day window (0-1440) anchored at the user's first-cycle time. The index is measured from that
@@ -412,6 +508,19 @@ if valid_tf and cx_on
         draw_cycle_box(c_cx_30, 0, 1440, 30, cols_30_fill, ce_cx30, cx_anchor)
     if act_10
         draw_cycle_box(c_cx_10, 0, 1440, 10, cols_10_fill, ce_cx90, cx_anchor)
+
+// --- History Trim: keep only the newest boxes/dividers, drop the oldest (FIFO) ---
+
+// TradingView keeps at most 500 box and 500 line IDs per script (newest first) and silently drops
+// the rest, so the drawing budget — not the calendar — is the real limit on how far back cycles go.
+// Trimming to a user-set count instead of to the 18:00 boundary is what lets the chart carry weeks
+// of history: fewer active cycle sizes = more days for the same 500 drawings (≈33 days with 90min
+// only, ≈9 days with 90min+30min, ≈3 days with all three, default windows). Runs after the drawing
+// calls above.
+while array.size(all_boxes) > max_boxes
+    box.delete(all_boxes.shift())
+while array.size(all_vl) > vl_max
+    line.delete(all_vl.shift())
 
 // --- Day Separator: Vertical line at midnight ---
 
@@ -2243,7 +2352,7 @@ gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
     [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
 
 showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
-var table nextGbtTable = table.new(position.top_right, 2, 2)
+var table nextGbtTable = table.new(position.top_right, 2, 3)
 var line nextGbtLine = na
 var string lastNextTxt = ""
 var string lastShiftTxt = ""
@@ -2456,3 +2565,43 @@ if showAlgoTable and na(algoTable)
             table.cell(algoTable, c + 1, 0, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
         if c < array.size(algoCells2)
             table.cell(algoTable, c + 1, 1, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  NEXT THREE 53-MINUTE LINES                                 (new, additive) ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//
+//  A regular 53-minute grid: a mark every 53 minutes from the anchor clock time,
+//  wrapping at midnight and landing on the same clock grid every day (minute-of-day
+//  arithmetic, like the cycles). The checkbox draws the next three marks ahead of
+//  the live bar - 53, 106 and 159 minutes out, so always inside the next three
+//  hours - and lists their clock times in the top-right table.
+//
+//  Appended at the end of the file on purpose: these inputs are declared after every
+//  existing one, so the order TradingView uses to map saved settings is untouched.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+grp_53 = "53min Lines"
+show53 = input.bool(false, "Show Next Three 53min Lines", group=grp_53, tooltip="Draws the next three marks of a regular 53-minute grid in advance, and lists their clock times in the top-right table.")
+h53 = input.int(18, "Hr", 0, 23, group=grp_53, inline="53", tooltip="First 53-minute mark of the grid, session time zone.")
+m53 = input.int(41, "Min", 0, 59, group=grp_53, inline="53")
+c53 = input.color(color.orange, "", group=grp_53, inline="53")
+
+var array<line> lines53 = array.new<line>(3)
+var string last53Txt = ""
+
+if show53 and not na(time)
+    int t53 = sessH * 60 + sessM                        // now, minutes of day (session time zone)
+    int a53 = h53 * 60 + m53                            // grid anchor, minutes of day
+    int off53 = (a53 - t53) % 53                        // minutes to the next mark (floored modulo: 0 on a mark)
+    string txt53 = ""
+    for k = 0 to 2
+        [ts53, hm53, _] = gbtMark(time, t53, off53 + 53 * k, false)
+        txt53 += (k > 0 ? " " : "") + hm53
+        ln53 = array.get(lines53, k)
+        if not na(ln53)
+            line.delete(ln53)                           // rollback clears objects made on the open bar
+        array.set(lines53, k, line.new(ts53, 0, ts53, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dashed, color=c53, width=1))
+    if txt53 != last53Txt
+        table.cell(nextGbtTable, 0, 2, "53m:", text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 2, txt53, text_color=color.black, text_size=size.normal)
+        last53Txt := txt53
