@@ -33,6 +33,12 @@
 //        cycles), session SMTs, invalidation, 369 IDs, swing/GB marks,
 //        GB candle SMT, next-GBT-mark table.
 //
+//    PART 3 — ADD-ONS (appended at the end of the file)
+//        FVG on regular GB times (group "FVG"): three-candle Fair Value Gap whose
+//        candles touch a basic GB minute — blue bullish / red bearish boxes that
+//        extend until price trades into them.
+//        Next three 53min lines (group "53min Lines"), Next-GBT and Algo tables.
+//
 //  Merge notes:
 //      • Every input title, group and default is carried over verbatim, so
 //        saved settings from both originals still map to the same widgets.
@@ -2605,3 +2611,88 @@ if show53 and not na(time)
         table.cell(nextGbtTable, 0, 2, "53m:", text_color=color.black, text_size=size.normal)
         table.cell(nextGbtTable, 1, 2, txt53, text_color=color.black, text_size=size.normal)
         last53Txt := txt53
+
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  FVG ON REGULAR (BASIC) GB TIMES                              (new, additive) ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//
+//  Three-candle Fair Value Gap, kept when ANY of the three candles it is built from carries a
+//  regular GB stamp. Requiring the middle candle specifically (the old rule) dropped two of every
+//  three GB-touching patterns on a 1-minute chart — every FVG whose gap candle sat a minute or two
+//  off a GB minute, even when the confirming candle was on one. No shifted times: the check is the
+//  basic minute lattice alone (3, 11, 17, 23, 29, 35, 41, 47, 53, 59 past the hour, the same minutes
+//  in every hour — the same set as realGbtMinutes). The hour-shifted HH+MM rule (isGbHM) is
+//  deliberately not involved.
+//
+//    Bullish FVG: candle 1 high < candle 3 low   -> zone = [candle1.high, candle3.low]
+//    Bearish FVG: candle 1 low  > candle 3 high  -> zone = [candle3.high, candle1.low]
+//
+//  Works from 1h down to 1 second. A candle carries the GB stamp when a regular GB
+//  minute falls INSIDE its span (nextBasicOffset[minute] < candle length), not when its
+//  opening minute equals one: candles that open on :00 / :15 / :30 / :45 would otherwise
+//  never match, which is why a strict minute test only ever fires below 5 minutes. On
+//  1-minute candles this is exactly the strict match (10 candles an hour); on wider
+//  candles the window widens with them, so 15m and above stamp every candle.
+//
+//  Each box grows with the live candle until price first trades into the zone — a wick counts —
+//  and then stops there and stays put. No text is drawn inside the box. Appended at the end of the
+//  file on purpose: these inputs are declared after every existing one, so the order TradingView uses
+//  to map saved settings is untouched.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+grp_fvg = "FVG"
+show_fvg = input.bool(false, "FVG on GB Times", group=grp_fvg, tooltip="Three-candle Fair Value Gaps kept when any of the three candles carries a regular GB minute (3, 11, 17, 23, 29, 35, 41, 47, 53, 59 past the hour — no shifted times). A candle is stamped when a GB minute falls inside it, so the same rule works on 1h and every lower timeframe.")
+c_fvg_bull = input.color(color.blue, "Bullish", group=grp_fvg, inline="fvg1")
+c_fvg_bear = input.color(color.red, "Bearish", group=grp_fvg, inline="fvg1")
+fvg_t = input.int(80, "Transparency", 0, 100, group=grp_fvg, inline="fvg1")
+fvg_max = input.int(200, "Max FVG Boxes", minval=10, maxval=400, group=grp_fvg, tooltip="FIFO cap — the oldest FVG boxes are deleted first. Cycle and FVG boxes share TradingView's hard limit of 500 boxes per script, so the cycles get 500 minus this while FVGs are on (TradingView evicts the oldest boxes of either kind beyond that). Lower Max Cycle Boxes to shift the budget towards FVGs.")
+
+// One live FVG: its box, the two zone edges, and whether price has already traded into it (once true,
+// the box stops growing at that candle).
+type Fvg
+    box bx
+    float top
+    float bot
+    bool done
+
+var array<Fvg> fvgList = array.new<Fvg>()
+
+// Candle length in minutes, forced to float: int division floors a 30s chart to 0.
+fvg_tfm = timeframe.in_seconds() / 60.0
+
+// True when a regular GB minute falls inside a candle opening on minute `m`. nextBasicOffset[m] is
+// the distance to the next lattice minute (0 when m is one), built from the master-grid numbers that
+// are valid minutes — the same set as realGbtMinutes. The hour wrap is already baked into the table.
+isGbCandle(int m, float tfm) => array.get(nextBasicOffset, m) < tfm
+
+// Extension pass: every FVG price has not traded into yet grows with the live candle, and freezes on
+// the candle that first penetrates its zone. The test is strictly inside on both edges, because the
+// zone's near edge is the confirming candle's own extreme (bull: top = candle 3 low, bear: bottom =
+// candle 3 high) — a non-strict overlap test would mark a brand-new FVG as already traded into.
+for f in fvgList
+    if not f.done
+        box.set_right(f.bx, bar_index)
+        if low < f.top and high > f.bot
+            f.done := true
+
+// Does the three-candle pattern carry a regular GB stamp? True when any of its three candles is a GB
+// candle — not just the middle one, which would drop two of every three GB-touching patterns on a
+// 1-minute chart. sessM[2], sessM[1] and sessM are the session-timezone minutes of candle 1, the
+// middle candle and candle 3.
+fvgGbPattern(int m1, int m2, int m3, float tfm) =>
+    isGbCandle(m1, tfm) or isGbCandle(m2, tfm) or isGbCandle(m3, tfm)
+
+// Evaluated as candle 3 closes: candle 1 = [2], the middle candle = [1], candle 3 = now.
+if show_fvg and not na(time[2]) and fvgGbPattern(sessM[2], sessM[1], sessM, fvg_tfm)
+    float c1h = high[2]
+    float c1l = low[2]
+    bool fvgBull = c1h < low                                // gap up: candle 1 high under candle 3 low
+    bool fvgBear = c1l > high                               // gap down: candle 1 low over candle 3 high
+    if fvgBull or fvgBear
+        float zTop = fvgBull ? low : c1l                    // bull zone = [c1.high, c3.low]
+        float zBot = fvgBull ? c1h : high                   // bear zone = [c3.high, c1.low]
+        color fvgCol = fvgBull ? c_fvg_bull : c_fvg_bear
+        box fvgBx = box.new(bar_index - 2, zTop, bar_index, zBot, border_color=c_box_border, border_width=1, bgcolor=color.new(fvgCol, fvg_t))
+        array.push(fvgList, Fvg.new(fvgBx, zTop, zBot, false))
+        while array.size(fvgList) > fvg_max
+            box.delete(array.shift(fvgList).bx)
