@@ -2,13 +2,30 @@
 
 ## Project Overview
 This is a Pine Script v6 TradingView indicator for visualizing time-based cycles (90min, 30min, 10min) across trading sessions (Asia, London, NY AM/PM). Main file: `Time-Cycles-V4.pine`.
+Active working file: `TC-SMT-v0.1.pine` (Time Cycles V4.0 + SMT V-4.1 merged into one script).
+
+## Division of labour — HARD RULE
+**You edit the `.pine` file. The user drives TradingView.**
+
+- NEVER launch TradingView Desktop or touch its GUI/editor/chart: no `tv_launch`, `pine_set_source`,
+  `pine_compile` / `pine_smart_compile`, `capture_screenshot`, chart/data/UI/replay/alert tools.
+  The user compiles, loads and looks at the chart himself; he reports back what he sees.
+- Do not ask for a chart screenshot and do not wait on one. Code the change, state what it does,
+  hand it over.
+- Correctness comes from reading the code and the docs. The deliverable is the `.pine` edit —
+  never block on, or claim, chart verification.
 
 ## Build / Validation Commands
 
 ### Pine Script
-- **Validation**: TradingView compiles Pine Script on save automatically
-- **Manual Check**: Use `tradingview_pine_check` tool or paste into TradingView Pine Editor
-- **Static Analysis**: Use `tradingview_pine_analyze` tool (offline, no chart needed)
+- **The user validates**: TradingView compiles on save; the user owns that step.
+- **Optional pre-flight** (non-interactive, no app, no chart, takes source as an argument):
+  - `tradingview_pine_check` — server-side compile, returns errors/warnings.
+  - `tradingview_pine_analyze` — offline static analysis.
+  Use them only when a syntax/compile signal is genuinely useful (e.g. a new UDT field or input
+  group). Never treat them as required, and never let them delay the edit.
+- **Reasoning checks** (preferred when they can answer the question): simulate the Pine math in a
+  scratch script — minute-of-day indices, wrap-around windows, array bounds, line budgets.
 
 ### Python Scripts (project utility)
 ```bash
@@ -78,8 +95,11 @@ show_90 = input.bool(true, "90min", group=grp_cyc, inline="c1")
 - Session windows: Asia (1080-1440), London (150-420), NY AM (420-690)
 
 ### Drawing Cleanup
-- Track all lines/fills in arrays: `all_lines`, `all_fills`, `line_bars`, `fill_bars`
-- Delete old objects when `prev_asia_bar` moves forward
+- Track every drawing in arrays (`all_boxes`, `all_vl`), oldest first
+- Trim by COUNT, not by date: drop from the front once the array exceeds the cap
+  (`Max Cycle Boxes`, `Max Lines`). The old "delete everything before `prev_asia_bar`"
+  age-purge is gone — TradingView allows only 500 drawings per type, so the count is
+  the real horizon and the user tunes history with the cap
 - Use O(1) shift operations, avoid O(n²) reverse loops
 
 ### Error Handling
@@ -134,7 +154,9 @@ style = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp, inli
 - Futures (NQ, ES, YM, RTY): 18:00 open
 
 ## No Build/Test Infrastructure
-Pine Script is interpreted by TradingView. There are no traditional test commands. Code is validated by:
-1. TradingView compiler on save
-2. `tradingview_pine_check` tool
-3. `tradingview_pine_analyze` tool (offline static analysis)
+Pine Script is interpreted by TradingView. There are no traditional test commands and no local
+runner. The user compiles and inspects on the chart; agent-side signals are limited to:
+1. `tradingview_pine_check` (server compile) — optional pre-flight
+2. `tradingview_pine_analyze` (offline static analysis) — optional pre-flight
+3. A scratch simulation of the time/index math when the question is arithmetic, not syntax
+Never drive TradingView Desktop itself (see "Division of labour" above).
