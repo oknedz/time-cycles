@@ -1073,7 +1073,6 @@ var float labelBaseOffset = labelOffset * syminfo.mintick  // User-defined base 
 var float labelStackSpacing = (labelOffset * 0.3) * syminfo.mintick  // 30% of base for stack spacing
 var array<LineMetadata> lines = array.new<LineMetadata>()
 var array<DailySession> dailySessions = array.new<DailySession>()
-var int lastDay = na
 var string s1Abbr = ""
 var string s2Abbr = ""
 
@@ -1800,27 +1799,23 @@ checkInvalidation() =>
                 inverse = m.smtTypeId >= 4
                 enabled = isS1 ? s1Enabled : s2Enabled
                 
-                if enabled
-                    // Default to current bar values
+                // Only the cycle that is still open can invalidate its own SMT. Once a cycle has
+                // rolled over, its recorded extremes are history; and a session SMT (mgrIdx -1) is
+                // final the moment its session closes. Neither is broken by later price action -
+                // without this gate every finished line was erased within a bar or two of being
+                // drawn, by a comparison price that had nothing to do with the cycle it came from.
+                if enabled and m.mgrIdx >= 0 and m.isForCurrentCycle
                     currMain = isHigh ? high : low
                     currComp = isS1 ? (isHigh ? s1_high : s1_low) : (isHigh ? s2_high : s2_low)
-                    
-                    // ROBUSTNESS FIX: Attempt to use Cycle Extremes if available
-                    // This catches cases where price spiked (invalidating SMT) and came back
-                    // (mgrIdx was resolved when the line was created; label <-> manager is 1:1,
-                    // so this is the same manager the old manager-label scan found)
-                    if m.mgrIdx >= 0
-                        mgr = array.get(managers, m.mgrIdx)
-                        if mgr.current.active
-                            // Found matching manager, use its accumulated extremes
-                            cMain = isHigh ? mgr.current.mainPivotHigh.price : mgr.current.mainPivotLow.price
-                            cComp = isS1 ? (isHigh ? mgr.current.s1PivotHigh.price : mgr.current.s1PivotLow.price) : (isHigh ? mgr.current.s2PivotHigh.price : mgr.current.s2PivotLow.price)
-                            
-                            // If cycle extremes are valid, use them as they represent the "widest" excursion
-                            if not na(cMain)
-                                currMain := cMain
-                            if not na(cComp)
-                                currComp := cComp
+
+                    mgr = array.get(managers, m.mgrIdx)
+                    if mgr.current.active
+                        cMain = isHigh ? mgr.current.mainPivotHigh.price : mgr.current.mainPivotLow.price
+                        cComp = isS1 ? (isHigh ? mgr.current.s1PivotHigh.price : mgr.current.s1PivotLow.price) : (isHigh ? mgr.current.s2PivotHigh.price : mgr.current.s2PivotLow.price)
+                        if not na(cMain)
+                            currMain := cMain
+                        if not na(cComp)
+                            currComp := cComp
 
                     if not na(currMain) and not na(currComp)
                         // Checks all SMTs (including 369s) for invalidation/sync
@@ -1916,17 +1911,22 @@ compareSessionSMT(curr, prev, int currentDay) =>
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 //  EXECUTION FLOW:
-//      1. Track daily reset - Clear non-long-term SMTs at 18:00 NY time
-//      2. Update cycle and session extremes from the current realtime bar
-//      3. Invalidate existing SMTs against those current extremes
-//      4. Detect new SMTs and update existing line endpoints in place
-//      5. Reposition labels once after all SMT processing
+//      1. Update cycle and session extremes from the current realtime bar
+//      2. Invalidate the SMTs of still-open cycles against those current extremes
+//      3. Detect new SMTs and update existing line endpoints in place
+//      4. Reposition labels once after all SMT processing
 //
 //  TRADING DAY:
 //      • Trading day starts at 18:00 NY time (Asia session open)
-//      • All SMT history is cleared at 18:00 each day
-//      • Only cycles from current trading day (18:00 onwards) are compared
-//      • This aligns with futures market day boundaries
+//      • Nothing is cleared at the boundary. Cycle history, session data and the drawn SMTs all
+//        carry across, so the first cycle of a new day still has the previous day's last cycle to
+//        measure against, and yesterday's SMTs stay on the chart. The count is bounded by the
+//        "Max Total SMT Lines" and "Max 369 SMT Lines" FIFO caps, not by a daily wipe.
+//      • Cycle and session state self-resets, so no boundary bookkeeping is needed: startDailySession()
+//        wipes a session's pivots when it opens, and an intraday cycle rolls over on its own
+//        because 18:00 is one of its slot boundaries.
+//      • Only a still-open cycle can invalidate its own SMT. A line whose cycle has rolled over,
+//        and every session SMT, keeps the extremes it was drawn with.
 //
 //  SMT DETECTION LOGIC:
 //      Bearish SMT (Normal): Main makes higher high, Comparison makes lower high
@@ -1963,43 +1963,6 @@ compareSessionSMT(curr, prev, int currentDay) =>
 // Track day changes - Use 18:00 as day boundary (futures true day open)
 // currentDay / nyHour / nyYear / nyMonth / nyDay are computed once per bar in the
 // global-state block at the top of the script (per-bar timezone cache).
-
-
-// Daily reset logic - reset ALL cycles at 18:00 NY time (Asia session open)
-if currentDay != lastDay and not na(lastDay)
-    // 1. Reset all Cycle Managers (history and active state)
-    // 1. Reset all Cycle Managers (history and active state) - SKIP Long Term Cycles
-    for i = 0 to array.size(managers) - 1
-        m = array.get(managers, i)
-        // Only reset Intraday cycles (duration > 0). Calendar cycles (-1 to -4) persist.
-        if m.duration > 0
-            array.clear(m.history)
-            m.current.active := false
-    
-    // 2. Reset all Daily Sessions
-    for i = 0 to array.size(dailySessions) - 1
-        sess = array.get(dailySessions, i)
-        // Reset all sessions at new day boundary (18:00)
-        sess.data.active := false
-
-    // 3. NUCLEAR LINE WIPE: Delete ALL lines and labels from the previous day/history
-    // This ensures NO SMTs (including 369s) persist across the 18:00 boundary
-    // 3. PARTIAL LINE WIPE: Delete only Intraday lines/labels from previous day
-    // Keep Long Term SMT lines (D, W, M, Y)
-    if array.size(lines) > 0
-        // Iterate backwards to safely remove
-        for j = array.size(lines) - 1 to 0
-            l = array.get(lines, j)
-            // Check if it is a Long Term line
-            isLongTerm = l.cycleLabel == "D" or l.cycleLabel == "W" or l.cycleLabel == "M" or l.cycleLabel == "Y"
-            
-            if not isLongTerm
-                // Delete intraday line
-                line.delete(l.lineObj)
-                label.delete(l.labelObj)
-                array.remove(lines, j)
-
-lastDay := currentDay
 
 
 // Reposition all labels on every bar to reflect input changes
@@ -2169,11 +2132,15 @@ if enableSessionSMT
         if not inSession and sess.data.active and not na(sess.data.mainPivotHigh.price) and not na(sess.data.mainPivotLow.price)
             sess.data.active := false
             
-            // Compare current session to all previous sessions that happened today
-            for j = 0 to i - 1
-                prevSess = array.get(dailySessions, j)
-                if prevSess.enabled and not na(prevSess.data.mainPivotHigh.price) and not na(prevSess.data.mainPivotLow.price)
-                    compareSessionSMT(sess, prevSess, currentDay)
+            // Sequential: the session that just closed is measured against the one immediately
+            // before it and nothing else, so a session SMT is one step back exactly the way the
+            // cycle SMTs are. Sessions switched off in the panel are stepped over, not compared to.
+            if i > 0
+                for j = i - 1 to 0
+                    prevSess = array.get(dailySessions, j)
+                    if prevSess.enabled and not na(prevSess.data.mainPivotHigh.price) and not na(prevSess.data.mainPivotLow.price)
+                        compareSessionSMT(sess, prevSess, currentDay)
+                        break
             needReposition := true
 
 // Invalidation runs after every cycle/session has consumed the current bar.
