@@ -477,38 +477,53 @@ var line pd_line_ce = na
 var label pd_lbl_h = na
 var label pd_lbl_l = na
 var label pd_lbl_ce = na
+var bool pd_stale = true                                     // A previous-day range is available but not on the chart yet
 
+// The day's range is accumulated on EVERY intraday bar, whether or not the lines are on. Gating
+// this on "Show PDH/PDL" froze the running extremes the moment the box was unticked: a midnight
+// inside that window was then missed outright, the day never reset, and the stale partial range
+// was carried into every later PDH/PDL.
+if valid_tf
+    if is_new_d
+        if not na(pd_h) and not na(pd_l)                     // Roll over: completed day becomes "previous day"
+            pd_ph := pd_h
+            pd_pl := pd_l
+            pd_stale := true                                  // A new previous-day range is waiting to be drawn
+        pd_h := high                                         // Reset running extremes for the day just starting
+        pd_l := low
+    else
+        pd_h := na(pd_h) ? high : math.max(pd_h, high)
+        pd_l := na(pd_l) ? low  : math.min(pd_l, low)
+else
+    pd_stale := true                                          // Not intraday: nothing to keep on the chart
+
+// Drawing. Rebuilt from scratch whenever a new previous-day range arrives, and taken down again
+// when the box is unticked, so the toggle really hides the lines and re-ticking redraws the
+// current day straight away instead of waiting for the next midnight.
 if valid_tf and show_pdhl
-    new_day = is_new_d
-
-    if new_day and not na(pd_h) and not na(pd_l)             // Roll over: completed day becomes "previous day"
-        pd_ph := pd_h
-        pd_pl := pd_l
-        pd_ce = (pd_ph + pd_pl) / 2                          // 50% equilibrium of previous day's range
+    if pd_stale and not na(pd_ph) and not na(pd_pl)
+        pd_stale := false
         // Delete prior day's lines/labels — only the current day's PDH/PDL/C.E. stays visible
         if not na(pd_line_h)
             line.delete(pd_line_h),  label.delete(pd_lbl_h)
             line.delete(pd_line_l),  label.delete(pd_lbl_l)
+            pd_line_h := na, pd_line_l := na
+            pd_lbl_h := na,  pd_lbl_l := na
         if not na(pd_line_ce)
             line.delete(pd_line_ce), label.delete(pd_lbl_ce)
+            pd_line_ce := na
+            pd_lbl_ce := na
         // Start fresh lines anchored at this midnight bar
         pd_line_h := line.new(bar_index, pd_ph, bar_index, pd_ph, color=c_pdh, width=w_pdh, style=get_style(s_pdh))
         pd_line_l := line.new(bar_index, pd_pl, bar_index, pd_pl, color=c_pdl, width=w_pdl, style=get_style(s_pdl))
         pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PDH" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
         pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PDL" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
-        if show_pdce
-            pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
-            pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
-        else
-            pd_line_ce := na                                 // C.E. disabled: stop extending prior line (leaves it frozen)
-            pd_lbl_ce := na
 
-    if new_day                                               // Reset running extremes for the day just starting
-        pd_h := high
-        pd_l := low
-    else
-        pd_h := na(pd_h) ? high : math.max(pd_h, high)
-        pd_l := na(pd_l) ? low  : math.min(pd_l, low)
+    // The 50% C.E. rides the PDH/PDL lines, so it follows the same toggle in both directions
+    if show_pdce and na(pd_line_ce) and not na(pd_line_h)
+        pd_ce = (pd_ph + pd_pl) / 2                          // 50% equilibrium of previous day's range
+        pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
+        pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
 
     if not na(pd_line_h)                                     // Extend lines/labels to the live bar
         line.set_x2(pd_line_h, bar_index), line.set_x2(pd_line_l, bar_index)
@@ -516,3 +531,14 @@ if valid_tf and show_pdhl
     if not na(pd_line_ce)
         line.set_x2(pd_line_ce, bar_index)
         label.set_x(pd_lbl_ce, bar_index)
+else
+    if not na(pd_line_h)                                     // Unticked: take the lines down
+        line.delete(pd_line_h), line.delete(pd_line_l)
+        label.delete(pd_lbl_h), label.delete(pd_lbl_l)
+        pd_line_h := na, pd_line_l := na
+        pd_lbl_h := na,  pd_lbl_l := na
+    if not na(pd_line_ce)
+        line.delete(pd_line_ce), label.delete(pd_lbl_ce)
+        pd_line_ce := na
+        pd_lbl_ce := na
+    pd_stale := true                                          // Redraw the current day if it is ticked back on
