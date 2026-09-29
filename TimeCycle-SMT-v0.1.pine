@@ -735,6 +735,17 @@ if valid_tf and show_pdh and pd_s != pd_e                 // Start == End would 
         if show_pdc_lbl
             pd_lb_c := label.new(bar_index + 5, last_mid, "Daily C.E.", color=c_trans, textcolor=c_pdc, style=label.style_label_left, size=hl_ts)
 
+// Data Window values: the three levels as selectable series, drawn on NOTHING - the lines above are
+// the visuals. The Data Window prints the exact number behind each line, which is the number a
+// price alert has to be given. Being plotted values they are also offered in the alert dialog's
+// value list when an indicator condition is selected. pd_ce is the same midpoint the "Daily C.E."
+// line is drawn at, hoisted out of the trigger block where it was a local, and na until the first
+// window closes.
+pd_ce = not na(last_h) and not na(last_l) ? (last_h + last_l) / 2 : na
+plot(last_h, "PD High", display=display.data_window)
+plot(last_l, "PD Low", display=display.data_window)
+plot(pd_ce, "Daily C.E.", display=display.data_window)
+
 // --- Weekday Labels: Display day name at 12:00 (midday) ---
 
 wd_loc = loc_wd == "Top" ? location.top : location.bottom
