@@ -9,7 +9,6 @@
 //        Time-based cycle boxes (Asia / Midnight window / London-NY), opening
 //        lines, session high/low levels (Asia, London, NY AM, NY PM),
 //        previous-cycle C.E. levels, day separator, weekday labels,
-//        previous-day high/low + 50% C.E.
 //        Cycle dividers (input group "Cycle Dividers"): a vertical line at every cycle
 //        boundary, as an alternative to the filled cycle boxes — the "Vertical Lines
 //        Instead of Boxes" checkbox swaps one for the other, never showing both. Fully
@@ -27,6 +26,16 @@
 //        start/end times you type in (default 18:00-02:30, so it runs through the early London
 //        hours). Deliberately NOT subdivided into 90/30/10 cycles — the cycle boxes are the other
 //        sets, so the two never double up. Hidden while "Custom Cycles" is on.
+//        Previous Day H/L (input group "Prev Day H/L"): the high and low of the
+//        previous day's 00:00-16:59 window (New York; both ends editable) — the 17
+//        hours a session covers, deliberately excluding the 17:00-18:00 break and
+//        the 18:00-00:00 Asia session. The pair is (re)drawn at 18:00 and 06:00 NY,
+//        always from the last window that has CLOSED: at 18:00 that is the same day's
+//        00:00-16:59 (closed two hours earlier), at 06:00 it is the previous day's,
+//        because the current day's is still forming. Levels can therefore never mix
+//        two days. A third line at 50% of the range, labelled "Daily C.E.", comes with
+//        them and is styled on its own. One set is on the chart at a time; the next
+//        trigger replaces it.
 //
 //    PART 2 — SMT V-4.1 [StoneFace]             (source: SMT_V-4.1.pine)
 //        Multi-symbol SMT divergence detector (90/30/10/3-min + D/W/M/Y
@@ -149,28 +158,35 @@ loc_wd = input.string("Bottom", "", ["Top", "Bottom"], group=grp_day, inline="wd
 fmt_wd = input.string("Short", "Format", ["Short", "Long"], group=grp_day, inline="wd2")
 off_wd = input.int(0, "Offset (min)", group=grp_day, inline="wd2")
 
-// Previous Day High/Low: horizontal lines at prior calendar-day (NY midnight-to-midnight) high & low
-grp_pdhl = "Prev Day H/L"
-show_pdhl = input.bool(true, "Show PDH/PDL", group=grp_pdhl)
-c_pdh = input.color(color.black, "PDH", group=grp_pdhl, inline="pdh")
-w_pdh = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdh")
-s_pdh = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdh")
-c_pdl = input.color(color.black, "PDL", group=grp_pdhl, inline="pdl")
-w_pdl = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdl")
-s_pdl = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdl")
-show_pdce = input.bool(true, "50% C.E.", group=grp_pdhl, inline="pdce")
-c_pdce = input.color(color.black, "", group=grp_pdhl, inline="pdce")
-w_pdce = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdce")
-s_pdce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdce")
-show_pdhl_lbl = input.bool(true, "Show Labels", group=grp_pdhl, inline="pdlbl")
-pdhl_ts = input.string(size.small, "Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_pdhl, inline="pdlbl")
-
 // Previous Cycle C.E.: horizontal line at the 50% midpoint of the most recent completed 90min/30min cycle
 grp_pce = "Cycle C.E."
 show_pce = input.bool(false, "Show Prev Cycle C.E.", group=grp_pce)
 c_pce = input.color(color.black, "Color", group=grp_pce, inline="pce")
 w_pce = input.int(1, "", 1, 5, group=grp_pce, inline="pce")
 s_pce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pce, inline="pce")
+// Previous Day High/Low: the high and low of the previous day's Start-End window (New York), i.e.
+// the 17 hours of a session measured 00:00-16:59 by default. The window is measured strictly
+// between those two times — the 17:00-18:00 break and the 18:00-00:00 Asia session are not part
+// of it — and Start/End may be moved, but the window must not cross midnight. The pair is drawn
+// at 18:00 and at 06:00, always from the last window that has CLOSED, so it is never a blend of
+// two days: at 18:00 that is the same day's 00:00-16:59 (closed two hours earlier), at 06:00 it
+// is the previous day's, the current one still being formed. One pair is on the chart at a time
+// and the next trigger replaces it.
+grp_pdh = "Prev Day H/L"
+show_pdh = input.bool(true, "Show Prev Day H/L", group=grp_pdh, tooltip="High and low of the previous day's Start-End window (New York), plus a 50% midpoint line labelled 'Daily C.E.' styled on its own. The window covers the 17:00-18:00 break and the 18:00-00:00 Asia session only if you move Start/End that far. The set is redrawn at 18:00 and 06:00 NY from the last window that has closed: at 18:00 it is the same day's window, at 06:00 the previous day's, because today's is still forming. Levels never mix two days. Every line starts at the first bar of the measured window and runs to the live bar. The first window after the script loads is measured only from that point, so give it one day to settle.")
+pd_h = input.int(0, "Start Hr", 0, 23, group=grp_pdh, inline="pdw1", active=show_pdh)
+pd_m = input.int(0, "Min", 0, 59, group=grp_pdh, inline="pdw1", active=show_pdh)
+pd_eh = input.int(16, "End Hr", 0, 23, group=grp_pdh, inline="pdw2", active=show_pdh)
+pd_em = input.int(59, "Min", 0, 59, group=grp_pdh, inline="pdw2", active=show_pdh)
+c_pdh = input.color(color.fuchsia, "High Color", group=grp_pdh, inline="pdc", active=show_pdh)
+c_pdl = input.color(color.aqua, "Low Color", group=grp_pdh, inline="pdc", active=show_pdh)
+w_pd = input.int(2, "Width", 1, 4, group=grp_pdh, inline="pds", active=show_pdh)
+s_pd = input.string("Solid", "Style", ["Solid", "Dashed", "Dotted"], group=grp_pdh, inline="pds", active=show_pdh)
+show_pd_lbl = input.bool(true, "Labels", group=grp_pdh, inline="pdl", active=show_pdh)
+c_pdc = input.color(color.gray, "C.E. Color", group=grp_pdh, inline="pdce", active=show_pdh)
+w_pdc = input.int(1, "Width", 1, 4, group=grp_pdh, inline="pdce", active=show_pdh)
+s_pdc = input.string("Dashed", "Style", ["Solid", "Dashed", "Dotted"], group=grp_pdh, inline="pdce", active=show_pdh)
+show_pdc_lbl = input.bool(true, "C.E. Label", group=grp_pdh, inline="pdce", active=show_pdh)
 
 // Cycle dividers: a vertical line at every cycle boundary, as an ALTERNATIVE to the filled cycle
 // boxes — the two are never shown at the same time. Off: the usual cycle boxes. On: the boxes are
@@ -216,7 +232,6 @@ cx_anchor = cx_h * 60 + cx_m                                 // Custom first-cyc
 asb_s = asb_h * 60 + asb_m                                    // Asia Session: start (minutes of day, NY)
 asb_e = asb_eh * 60 + asb_em                                  // Asia Session: end
 asb_len = (asb_e - asb_s) % 1440                              // Window length (floored modulo) = the box's "period"
-is_new_d = ta.change(dayofmonth(time, calc_tz)) != 0    // True at calendar midnight in the symbol's timezone
 
 // --- User-Defined Types ---
 
@@ -638,6 +653,75 @@ if valid_tf
     in_ny_pm = ny_m_total >= 690 and ny_m_total < 960
     update_level(o_ny_pm, in_ny_pm and not in_ny_pm[1], in_ny_pm, false, "NY PM", c_ny_pm)
 
+// --- Previous Day High/Low: the previous day's 00:00-16:59 window (New York) ---
+//
+// Two pieces of state. pdw_* is the window of the calendar day currently forming and whether it
+// has closed; last_* is the last window that closed, and it is the ONLY source the drawn levels
+// ever read. A day closes on the first bar past the window end (17:00 with the default 16:59),
+// so the 18:00 trigger finds today's window already frozen and the 06:00 trigger only
+// yesterday's — the current day's is still forming then and is never mixed in.
+// Three lines come out of it, each spanning the measured window through the live bar: the high,
+// the low, and the 50% midpoint labelled "Daily C.E." — the midpoint styled on its own row.
+pd_s = pd_h * 60 + pd_m                                    // Window start (minutes of day, NY)
+pd_e = pd_eh * 60 + pd_em                                  // Window end
+pd_day_id = year(time, "America/New_York") * 10000 + month(time, "America/New_York") * 100 + dayofmonth(time, "America/New_York")   // Calendar day (NY) the window belongs to — NOT the 18:00 futures trading day
+var float pdw_h = na                                       // Running high of the forming window
+var float pdw_l = na
+var int pdw_first = na                                     // bar_index of the window's first bar (line anchor)
+var int pdw_day = na                                       // Calendar day the forming window belongs to
+var bool pdw_closed = false
+var float last_h = na                                      // Last CLOSED window: high / low / first bar
+var float last_l = na
+var int last_first = na
+var line pd_ln_h = na                                      // Drawn previous-day levels
+var line pd_ln_l = na
+var label pd_lb_h = na
+var label pd_lb_l = na
+var line pd_ln_c = na                                      // 50% midpoint ("Daily C.E.")
+var label pd_lb_c = na
+
+if valid_tf and show_pdh and pd_s != pd_e                 // Start == End would measure nothing
+    if not na(pdw_day) and pd_day_id != pdw_day            // Past midnight: a new window begins
+        pdw_h := na
+        pdw_l := na
+        pdw_first := na
+        pdw_closed := false
+    pdw_day := pd_day_id
+    in_pd_win = ny_m_total >= pd_s and ny_m_total <= pd_e
+    if in_pd_win                                           // Track the forming window
+        pdw_h := na(pdw_h) ? high : math.max(pdw_h, high)
+        pdw_l := na(pdw_l) ? low : math.min(pdw_l, low)
+        if na(pdw_first)
+            pdw_first := bar_index
+    else if ny_m_total > pd_e and not pdw_closed           // First bar past the end: the window closed
+        pdw_closed := true
+        if not na(pdw_h)                                   // A day with no bars in the window is not published
+            last_h := pdw_h
+            last_l := pdw_l
+            last_first := pdw_first
+    // Triggers: the first bar at or after 06:00 and at or after 18:00 NY. A coarse chart (4h) has
+    // no 06:00/18:00 bar, so the crossing test fires on the first bar past the hour instead and
+    // the levels appear at 08:00 / 20:00 rather than not at all.
+    if not na(pd_ln_h)                                     // Levels ride the live bar (y frozen)
+        line.set_x2(pd_ln_h, bar_index + 5)
+        line.set_x2(pd_ln_l, bar_index + 5)
+        label.set_x(pd_lb_h, bar_index + 5)
+        label.set_x(pd_lb_l, bar_index + 5)
+        line.set_x2(pd_ln_c, bar_index + 5)
+        label.set_x(pd_lb_c, bar_index + 5)
+    if not na(last_h) and (ny_m_total >= 360 and ny_m_total[1] < 360 or ny_m_total >= 1080 and ny_m_total[1] < 1080)
+        line.delete(pd_ln_h), line.delete(pd_ln_l), line.delete(pd_ln_c)   // One set at a time: this trigger replaces it
+        label.delete(pd_lb_h), label.delete(pd_lb_l), label.delete(pd_lb_c)
+        last_mid = (last_h + last_l) / 2
+        pd_ln_h := line.new(last_first, last_h, bar_index + 5, last_h, color=c_pdh, width=w_pd, style=get_style(s_pd))
+        pd_ln_l := line.new(last_first, last_l, bar_index + 5, last_l, color=c_pdl, width=w_pd, style=get_style(s_pd))
+        pd_ln_c := line.new(last_first, last_mid, bar_index + 5, last_mid, color=c_pdc, width=w_pdc, style=get_style(s_pdc))
+        if show_pd_lbl
+            pd_lb_h := label.new(bar_index + 5, last_h, "PD High", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=hl_ts)
+            pd_lb_l := label.new(bar_index + 5, last_l, "PD Low", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=hl_ts)
+        if show_pdc_lbl
+            pd_lb_c := label.new(bar_index + 5, last_mid, "Daily C.E.", color=c_trans, textcolor=c_pdc, style=label.style_label_left, size=hl_ts)
+
 // --- Weekday Labels: Display day name at 12:00 (midday) ---
 
 wd_loc = loc_wd == "Top" ? location.top : location.bottom
@@ -657,61 +741,6 @@ plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.tuesday
 plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.wednesday, "Wednesday", shape.labelup, wd_loc, c_inv, wd_off, "Wednesday", c_wd, size=size.small)
 plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.thursday, "Thursday", shape.labelup, wd_loc, c_inv, wd_off, "Thursday", c_wd, size=size.small)
 plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.friday, "Friday", shape.labelup, wd_loc, c_inv, wd_off, "Friday", c_wd, size=size.small)
-
-// --- Previous Day High/Low ---
-// Track calendar-day (midnight-to-midnight in the symbol's timezone) high/low manually — request.security("D") uses the
-// exchange session, not calendar midnight. At each new day, capture the just-completed day's range
-// into pd_ph/pd_pl and draw fresh horizontal lines across the new day, extending to the live bar.
-
-var float pd_h = na                                          // Running high of current forming day
-var float pd_l = na                                          // Running low of current forming day
-var float pd_ph = na                                         // Previous day's high (displayed)
-var float pd_pl = na                                         // Previous day's low (displayed)
-var line pd_line_h = na
-var line pd_line_l = na
-var line pd_line_ce = na
-var label pd_lbl_h = na
-var label pd_lbl_l = na
-var label pd_lbl_ce = na
-
-if valid_tf and show_pdhl
-    new_day = is_new_d
-
-    if new_day and not na(pd_h) and not na(pd_l)             // Roll over: completed day becomes "previous day"
-        pd_ph := pd_h
-        pd_pl := pd_l
-        pd_ce = (pd_ph + pd_pl) / 2                          // 50% equilibrium of previous day's range
-        // Delete prior day's lines/labels — only the current day's PDH/PDL/C.E. stays visible
-        if not na(pd_line_h)
-            line.delete(pd_line_h),  label.delete(pd_lbl_h)
-            line.delete(pd_line_l),  label.delete(pd_lbl_l)
-        if not na(pd_line_ce)
-            line.delete(pd_line_ce), label.delete(pd_lbl_ce)
-        // Start fresh lines anchored at this midnight bar
-        pd_line_h := line.new(bar_index, pd_ph, bar_index, pd_ph, color=c_pdh, width=w_pdh, style=get_style(s_pdh))
-        pd_line_l := line.new(bar_index, pd_pl, bar_index, pd_pl, color=c_pdl, width=w_pdl, style=get_style(s_pdl))
-        pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PDH" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
-        pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PDL" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
-        if show_pdce
-            pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
-            pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
-        else
-            pd_line_ce := na                                 // C.E. disabled: stop extending prior line (leaves it frozen)
-            pd_lbl_ce := na
-
-    if new_day                                               // Reset running extremes for the day just starting
-        pd_h := high
-        pd_l := low
-    else
-        pd_h := na(pd_h) ? high : math.max(pd_h, high)
-        pd_l := na(pd_l) ? low  : math.min(pd_l, low)
-
-    if not na(pd_line_h)                                     // Extend lines/labels to the live bar
-        line.set_x2(pd_line_h, bar_index), line.set_x2(pd_line_l, bar_index)
-        label.set_x(pd_lbl_h, bar_index), label.set_x(pd_lbl_l, bar_index)
-    if not na(pd_line_ce)
-        line.set_x2(pd_line_ce, bar_index)
-        label.set_x(pd_lbl_ce, bar_index)
 
 // ╔═════════════════════════════════════════════════════════════════════════════╗
 // ║  PART 2 — SMT V-4.1                            (SMT_V-4.1.pine)             ║
@@ -2591,12 +2620,12 @@ if realGbtHit and not na(rgbtTop)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 grp_algo = "Algo Table"
-showAlgoTable = input.bool(true, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
+showAlgoTable = input.bool(false, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
 algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
 algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
 algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
 algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
-algoPos = input.string("Middle Right", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
+algoPos = input.string("Bottom Center", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
 algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
 algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
 algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
