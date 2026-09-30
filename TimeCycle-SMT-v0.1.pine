@@ -485,8 +485,8 @@ if valid_tf and show_pdhl
             pd_lbl_ce := na
         pd_line_h := line.new(bar_index, pd_ph, bar_index, pd_ph, color=c_pdh, width=w_pdh, style=get_style(s_pdh))
         pd_line_l := line.new(bar_index, pd_pl, bar_index, pd_pl, color=c_pdl, width=w_pdl, style=get_style(s_pdl))
-        pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PDH" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
-        pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PDL" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PD High" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PD Low" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
     if show_pdce and na(pd_line_ce) and not na(pd_line_h)
         pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
         pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
