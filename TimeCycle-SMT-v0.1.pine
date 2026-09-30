@@ -31,11 +31,14 @@
 //        session covers, which excludes the 17:00-18:00 break and the 18:00-00:00
 //        Asia session. Start and End are typed in directly and read as the first and
 //        the second time of the window: End later on the clock extends it into the
-//        evening, End earlier than Start runs it past midnight (18:00 → 02:00 is a
-//        full session). The set is (re)drawn at 18:00 and 06:00 NY, always from the last
-//        window that has CLOSED, so levels can never mix two days or show a partial
-//        range. The midpoint line is labelled "Daily C.E." and styled on its own. One
-//        set is on the chart at a time; the next trigger replaces it.
+//        evening (00:00-22:00 rides the level through the evening session), End
+//        earlier than Start runs it past midnight (18:00 → 02:00 is a full session),
+//        and End may be anything up to 23:59. The level drawn is the window
+//        measuring right now: while the window is open the lines ride the running
+//        high/low, moving with price and anchored at the window's first bar, so they
+//        always walk forward and never reach back to an older window. At End they stop
+//        and hold that value for the rest of the day. The midpoint line is labelled
+//        "Daily C.E." and styled on its own.
 //
 //    PART 2 — SMT V-4.1 [StoneFace]             (source: SMT_V-4.1.pine)
 //        Multi-symbol SMT divergence detector (90/30/10/3-min + D/W/M/Y
@@ -167,13 +170,15 @@ s_pce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pce,
 // Previous Day High/Low: the high, low and 50% C.E. of one repeating window (New York), 00:00-16:59
 // by default. Start and End are typed in directly and read as the FIRST and the SECOND time of the
 // window, in that order — so an End later on the clock than Start simply extends the window into the
-// evening (00:00 → 22:00 takes in the 18:00-00:00 Asia session), and an End earlier than Start runs
-// it past midnight into the next morning (18:00 → 02:00 is one whole session). High, low and the
-// midpoint are measured strictly between those two times and nowhere else. The set is drawn at 18:00
-// and at 06:00, always from the last window that has CLOSED, so it is never a blend of two days.
-// One set is on the chart at a time and the next trigger replaces it.
+// evening (00:00 → 22:00 takes in the 18:00-00:00 Asia session), an End earlier than Start runs it
+// past midnight into the next morning (18:00 → 02:00 is one whole session), and End may be anything
+// up to 23:59. High, low and the midpoint are measured strictly between those two times and nowhere
+// else. The level drawn is the window measuring right now: while it is open the lines ride the
+// running extremes, anchored at the window's first bar, and at End they stop moving and hold that
+// value for the rest of the day. One set is on the chart at a time and it is only ever moved, never
+// rebuilt.
 grp_pdh = "Prev Day H/L"
-show_pdh = input.bool(true, "Show Prev Day H/L", group=grp_pdh, tooltip="High, low and 50% midpoint of one repeating window (New York), plus the 'Daily C.E.' label. Start and End are typed in directly: Start is always the FIRST time and End the SECOND, so an End later on the clock just extends the window into the evening (00:00-22:00 takes in the 18:00-00:00 Asia session), and an End earlier than Start runs it past midnight into the next morning (18:00-02:00 is a full session). High, low and the midpoint are measured strictly inside that window. The set is redrawn at 18:00 and 06:00 NY from the last window that has closed, so two days never mix and a partial range is never shown. Every line starts at the window's first bar and runs to the live bar. The first window after the script loads is measured only from that point, so give it one cycle to settle.")
+show_pdh = input.bool(true, "Show Prev Day H/L", group=grp_pdh, tooltip="High, low and 50% midpoint of one repeating window (New York), plus the 'Daily C.E.' label. Start and End are typed in directly: Start is always the FIRST time and End the SECOND, so an End later on the clock extends the window into the evening (00:00-22:00 takes in the 18:00-00:00 Asia session), an End earlier than Start runs it past midnight into the next morning (18:00-02:00 is a full session), and End may be anything up to 23:59. The level drawn is the window measuring RIGHT NOW, not a copy of a finished one: while the window is open the high and low lines ride the running extremes, moving with price, starting at the window's first bar and running to the live bar, so they always walk forward and never reach back to an older window. At End they stop moving and hold that value for the rest of the day — the level is fixed from then until the next window opens. That is why an End past 18:00 works: the level keeps updating through the evening instead of snapping back to yesterday at a fixed hour. The midpoint is the 50% of the same pair. The first window after the script loads is measured only from that point, so give it one cycle to settle.")
 pd_h = input.int(0, "Start Hr", 0, 23, group=grp_pdh, inline="pdw1", active=show_pdh)
 pd_m = input.int(0, "Min", 0, 59, group=grp_pdh, inline="pdw1", active=show_pdh)
 pd_eh = input.int(16, "End Hr", 0, 23, group=grp_pdh, inline="pdw2", active=show_pdh)
@@ -653,7 +658,7 @@ if valid_tf
     in_ny_pm = ny_m_total >= 690 and ny_m_total < 960
     update_level(o_ny_pm, in_ny_pm and not in_ny_pm[1], in_ny_pm, false, "NY PM", c_ny_pm)
 
-// --- Previous Day High/Low: one repeating Start→End window (New York), 00:00-16:59 by default ---
+// --- Previous Day High/Low: one repeating Start→End window (New York) ---
 //
 // Start is the first time and End the second, and the window runs FORWARD from Start to End,
 // crossing midnight when End is the earlier time. So the window is identified by the calendar day
@@ -661,14 +666,18 @@ if valid_tf
 // yesterday is still running it reads as yesterday's date. A change of pd_start_day is the roll
 // that resets the running high/low — midnight is not, since a window may straddle it.
 //
-// Two pieces of state. pdw_* is the window currently forming and whether it has closed; last_* is
-// the last window that closed and is the ONLY source the drawn levels ever read. A window closes on
-// the first bar past its end — 17:00 for the default 16:59, 22:01 for a 22:00 end, 02:01 for a
-// window running to 02:00 — or when the next one opens, whichever comes first. The levels are
-// therefore always one COMPLETE window: never partial, never a mix of two.
+// The level drawn is the window measuring RIGHT NOW, not a copy of a finished one. While the
+// window is open the lines ride the running extreme: they move up on a new high, down on a new low,
+// and their left edge is the window's first bar, so the set walks forward with the day and never
+// reaches back for an older window. At End they stop moving and hold that value for the rest of
+// the day, so the level is fixed from then until the next window opens. That is what makes an End
+// past 18:00 work: 00:00-22:00 simply keeps the level moving through the evening session instead
+// of snapping back to yesterday's range at some fixed hour, and End may be anything up to 23:59.
 //
-// Three lines come out of it, each spanning the measured window through the live bar: the high,
-// the low, and the 50% midpoint labelled "Daily C.E." — the midpoint styled on its own row.
+// There is no clock trigger and no rebuild. The set is created the first time a window has bars and
+// from then on is only ever moved, so it costs three lines for the whole chart. Three lines come
+// out of it, each spanning the measured window through the live bar: the high, the low, and the
+// 50% midpoint labelled "Daily C.E." — the midpoint styled on its own row.
 pd_s = pd_h * 60 + pd_m                                    // Window start (minutes of day, NY)
 pd_e = pd_eh * 60 + pd_em                                  // Window end
 pd_day_id = year(time, "America/New_York") * 10000 + month(time, "America/New_York") * 100 + dayofmonth(time, "America/New_York")   // Calendar day (NY) the window belongs to — NOT the 18:00 futures trading day
@@ -678,8 +687,7 @@ var float pdw_h = na                                       // Running high of th
 var float pdw_l = na
 var int pdw_first = na                                     // bar_index of the window's first bar (line anchor)
 var int pdw_day = na                                       // pd_start_day of the window being tracked
-var bool pdw_closed = false
-var float last_h = na                                      // Last CLOSED window: high / low / first bar
+var float last_h = na                                      // The drawn level: the window itself, live while it is open
 var float last_l = na
 var int last_first = na
 var line pd_ln_h = na                                      // Drawn previous-day levels
@@ -688,17 +696,17 @@ var label pd_lb_h = na
 var label pd_lb_l = na
 var line pd_ln_c = na                                      // 50% midpoint ("Daily C.E.")
 var label pd_lb_c = na
+float pd_ce = na                                           // Midpoint behind the "Daily C.E." line, assigned below as the level rides
 
 if valid_tf and show_pdh and pd_s != pd_e                 // Start == End would measure nothing
     if not na(pdw_day) and pd_start_day != pdw_day         // A new window has begun
-        if not pdw_closed and not na(pdw_h)                // Never got to close itself (a 23:59 end spans the whole day): publish on the roll
+        if not na(pdw_h)                                   // Hand the finished window over; a window with no bars is not published
             last_h := pdw_h
             last_l := pdw_l
             last_first := pdw_first
         pdw_h := na
         pdw_l := na
         pdw_first := na
-        pdw_closed := false
     pdw_day := pd_start_day
     in_pd_win = pd_wraps ? (ny_m_total >= pd_s or ny_m_total <= pd_e) : (ny_m_total >= pd_s and ny_m_total <= pd_e)
     if in_pd_win                                           // Track the forming window
@@ -706,42 +714,35 @@ if valid_tf and show_pdh and pd_s != pd_e                 // Start == End would 
         pdw_l := na(pdw_l) ? low : math.min(pdw_l, low)
         if na(pdw_first)
             pdw_first := bar_index
-    else if (pd_wraps ? ny_m_total > pd_e and ny_m_total < pd_s : ny_m_total > pd_e) and not pdw_closed    // First bar past the end: the window closed
-        pdw_closed := true
-        if not na(pdw_h)                                   // A day with no bars in the window is not published
-            last_h := pdw_h
-            last_l := pdw_l
-            last_first := pdw_first
-    // Triggers: the first bar at or after 06:00 and at or after 18:00 NY. A coarse chart (4h) has
-    // no 06:00/18:00 bar, so the crossing test fires on the first bar past the hour instead and
-    // the levels appear at 08:00 / 20:00 rather than not at all.
-    if not na(pd_ln_h)                                     // Levels ride the live bar (y frozen)
-        line.set_x2(pd_ln_h, bar_index + 5)
-        line.set_x2(pd_ln_l, bar_index + 5)
-        label.set_x(pd_lb_h, bar_index + 5)
-        label.set_x(pd_lb_l, bar_index + 5)
-        line.set_x2(pd_ln_c, bar_index + 5)
-        label.set_x(pd_lb_c, bar_index + 5)
-    if not na(last_h) and (ny_m_total >= 360 and ny_m_total[1] < 360 or ny_m_total >= 1080 and ny_m_total[1] < 1080)
-        line.delete(pd_ln_h), line.delete(pd_ln_l), line.delete(pd_ln_c)   // One set at a time: this trigger replaces it
-        label.delete(pd_lb_h), label.delete(pd_lb_l), label.delete(pd_lb_c)
-        last_mid = (last_h + last_l) / 2
-        pd_ln_h := line.new(last_first, last_h, bar_index + 5, last_h, color=c_pdh, width=w_pd, style=get_style(s_pd))
-        pd_ln_l := line.new(last_first, last_l, bar_index + 5, last_l, color=c_pdl, width=w_pd, style=get_style(s_pd))
-        pd_ln_c := line.new(last_first, last_mid, bar_index + 5, last_mid, color=c_pdc, width=w_pdc, style=get_style(s_pdc))
-        if show_pd_lbl
-            pd_lb_h := label.new(bar_index + 5, last_h, "PD High", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=hl_ts)
-            pd_lb_l := label.new(bar_index + 5, last_l, "PD Low", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=hl_ts)
-        if show_pdc_lbl
-            pd_lb_c := label.new(bar_index + 5, last_mid, "Daily C.E.", color=c_trans, textcolor=c_pdc, style=label.style_label_left, size=hl_ts)
+        last_h := pdw_h                                    // The drawn level IS this window, as of this bar
+        last_l := pdw_l
+        last_first := pdw_first
+    pd_ce := not na(last_h) and not na(last_l) ? (last_h + last_l) / 2 : na
+    if na(pd_ln_h)                                         // First window with bars: create the set, once
+        if not na(last_h)
+            pd_ln_h := line.new(last_first, last_h, bar_index + 5, last_h, color=c_pdh, width=w_pd, style=get_style(s_pd))
+            pd_ln_l := line.new(last_first, last_l, bar_index + 5, last_l, color=c_pdl, width=w_pd, style=get_style(s_pd))
+            pd_ln_c := line.new(last_first, pd_ce, bar_index + 5, pd_ce, color=c_pdc, width=w_pdc, style=get_style(s_pdc))
+            if show_pd_lbl
+                pd_lb_h := label.new(bar_index + 5, last_h, "PD High", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=hl_ts)
+                pd_lb_l := label.new(bar_index + 5, last_l, "PD Low", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=hl_ts)
+            if show_pdc_lbl
+                pd_lb_c := label.new(bar_index + 5, pd_ce, "Daily C.E.", color=c_trans, textcolor=c_pdc, style=label.style_label_left, size=hl_ts)
+    else                                                   // Every later bar: move the set forward, never rebuild it
+        line.set_xy1(pd_ln_h, last_first, last_h), line.set_xy2(pd_ln_h, bar_index + 5, last_h)
+        line.set_xy1(pd_ln_l, last_first, last_l), line.set_xy2(pd_ln_l, bar_index + 5, last_l)
+        line.set_xy1(pd_ln_c, last_first, pd_ce), line.set_xy2(pd_ln_c, bar_index + 5, pd_ce)
+        if not na(pd_lb_h)
+            label.set_xy(pd_lb_h, bar_index + 5, last_h)
+            label.set_xy(pd_lb_l, bar_index + 5, last_l)
+        if not na(pd_lb_c)
+            label.set_xy(pd_lb_c, bar_index + 5, pd_ce)
 
 // Data Window values: the three levels as selectable series, drawn on NOTHING - the lines above are
 // the visuals. The Data Window prints the exact number behind each line, which is the number a
 // price alert has to be given. Being plotted values they are also offered in the alert dialog's
 // value list when an indicator condition is selected. pd_ce is the same midpoint the "Daily C.E."
-// line is drawn at, hoisted out of the trigger block where it was a local, and na until the first
-// window closes.
-pd_ce = not na(last_h) and not na(last_l) ? (last_h + last_l) / 2 : na
+// line is drawn at.
 plot(last_h, "PD High", display=display.data_window)
 plot(last_l, "PD Low", display=display.data_window)
 plot(pd_ce, "Daily C.E.", display=display.data_window)
