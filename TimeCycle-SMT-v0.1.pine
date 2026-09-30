@@ -1,6 +1,6 @@
 //@version=6
 
-indicator("TC-SMT v0.1 [StoneFace]", shorttitle="TimeCycle + SMT v0.1 [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, calc_bars_count=20000)
+indicator("TC-SMT v0.1 [StoneFace]", shorttitle="TimeCycle + SMT v0.1 [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, calc_bars_count=6000)
 
 grp_cyc = "Cycles"
 grp_ol = "Opening Lines"
@@ -45,17 +45,17 @@ c_930 = input.color(#787b86, "", group=grp_ol, inline="930")
 w_930 = input.int(1, "", 1, 3, group=grp_ol, inline="930")
 s_930 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
 
-c_90_a = input.color(color.red, "90min A", group=grp_col, inline="90")
-c_90_m = input.color(color.blue, "M", group=grp_col, inline="90")
+c_90_a = input.color(color.blue, "90min A", group=grp_col, inline="90")
+c_90_m = input.color(color.red, "M", group=grp_col, inline="90")
 c_90_d = input.color(color.green, "D", group=grp_col, inline="90")
-c_30_a = input.color(color.red, "30min A", group=grp_col, inline="30")
-c_30_m = input.color(color.blue, "M", group=grp_col, inline="30")
+c_30_a = input.color(color.blue, "30min A", group=grp_col, inline="30")
+c_30_m = input.color(color.red, "M", group=grp_col, inline="30")
 c_30_d = input.color(color.green, "D", group=grp_col, inline="30")
 c_10 = input.color(color.gray, "10min", group=grp_col)
 c_asia = input.color(color.purple, "Asia H/L", group=grp_col)
-c_london = input.color(color.red, "London H/L", group=grp_col)
-c_ny_am = input.color(color.blue, "NY AM H/L", group=grp_col)
-c_ny_pm = input.color(color.teal, "NY PM H/L", group=grp_col)
+c_london = input.color(color.blue, "London H/L", group=grp_col)
+c_ny_am = input.color(color.red, "NY AM H/L", group=grp_col)
+c_ny_pm = input.color(color.green, "NY PM H/L", group=grp_col)
 hl_ts = input.string(size.small, "H/L Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_col)
 fill_transp = input.int(93, "Fill Transparency", 0, 100, group="Display")
 
