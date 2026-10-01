@@ -2363,10 +2363,10 @@ gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
     int nextMins = (totalMins + off) % 1440
     int nh = math.floor(nextMins / 60)
     int nm = nextMins % 60
-    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
+    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm), str.tostring(nh + nm)]
 
 showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
-var table nextGbtTable = table.new(position.top_right, 2, 2)
+var table nextGbtTable = table.new(position.top_right, 3, 2)
 var line nextGbtLine = na
 var string lastNextTxt = ""
 var string lastShiftTxt = ""
@@ -2375,8 +2375,8 @@ if not na(time)
     int mTot = sessH * 60 + sessM
     // Top row: basic path (fixed minutes every hour) - this is the "next GB time", and the
     // vertical line below marks it. Bottom row: hour-shifted path, kept for reference.
-    [bTs, bTxt, bNum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
-    [_, sTxt, sSum] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
+    [bTs, bTxt, bNum, bSum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
+    [_, sTxt, sSum, _] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
 
     // Dynamic vertical line at the next mark: deleted and redrawn every bar
     // so it always points at the next upcoming time (one line, no accumulation)
@@ -2390,8 +2390,10 @@ if not na(time)
     if bTxt != lastNextTxt or sTxt != lastShiftTxt
         table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=color.black, text_size=size.normal)
         table.cell(nextGbtTable, 1, 0, bNum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 2, 0, "(" + bSum + ")", text_color=color.black, text_size=size.normal)
         table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=color.black, text_size=size.normal)
         table.cell(nextGbtTable, 1, 1, sSum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 2, 1, "", text_color=color.black, text_size=size.normal)
         lastNextTxt := bTxt
         lastShiftTxt := sTxt
 
