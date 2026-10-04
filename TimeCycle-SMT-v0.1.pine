@@ -1544,27 +1544,63 @@ gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
     int nextMins = (totalMins + off) % 1440
     int nh = math.floor(nextMins / 60)
     int nm = nextMins % 60
-    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
+    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm), str.tostring(nh + nm)]
+
+grp_algo = "Algo Table"
+showAlgoTable = input.bool(true, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
+algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
+algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
+algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
+algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
+algoPos = input.string("Bottom Center", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
+algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
+algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
+algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
+algoLblCol = input.color(color.black, "Row Labels", group=grp_algo)
+algoBorderCol = input.color(color.gray, "Border", group=grp_algo)
+algoBorderW = input.int(1, "Border Width", 0, 3, group=grp_algo)
+
+algoAnchor = algoPos == "Top Right" ? position.top_right : algoPos == "Top Center" ? position.top_center : algoPos == "Top Left" ? position.top_left : algoPos == "Middle Right" ? position.middle_right : algoPos == "Middle Center" ? position.middle_center : algoPos == "Middle Left" ? position.middle_left : algoPos == "Bottom Right" ? position.bottom_right : algoPos == "Bottom Center" ? position.bottom_center : position.bottom_left
+
+algoCells1 = str.split(algoRow1Txt, "|")
+algoCells2 = str.split(algoRow2Txt, "|")
+algoCols = math.max(array.size(algoCells1), array.size(algoCells2))
 
 showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
-var table nextGbtTable = table.new(position.top_right, 2, 2)
+var int tCols = showAlgoTable ? math.max(3, algoCols + 1) : 3
+var int tRows = showAlgoTable ? 4 : 2
+var table nextGbtTable = na
+if na(nextGbtTable)
+    nextGbtTable := table.new(algoAnchor, tCols, tRows, frame_color=algoBorderCol, frame_width=algoBorderW, border_color=algoBorderCol, border_width=algoBorderW)
+
 var line nextGbtLine = na
 var string lastNextTxt = ""
 var string lastShiftTxt = ""
 
+
 if not na(time)
     int mTot = sessH * 60 + sessM
-    [bTs, bTxt, bNum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
-    [_, sTxt, sSum] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
+    [bTs, bTxt, bNum, bSum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
+    [_, sTxt, sNum, sSum] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
     if showNextGbtLine
         if not na(nextGbtLine)
             line.delete(nextGbtLine)
         nextGbtLine := line.new(bTs, 0, bTs, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dotted, color=color.gray, width=1)
     if bTxt != lastNextTxt or sTxt != lastShiftTxt
-        table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=color.black, text_size=size.normal)
-        table.cell(nextGbtTable, 1, 0, bNum, text_color=color.black, text_size=size.normal)
-        table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=color.black, text_size=size.normal)
-        table.cell(nextGbtTable, 1, 1, sSum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(nextGbtTable, 1, 0, bNum, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(nextGbtTable, 2, 0, bSum, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(nextGbtTable, 1, 1, sNum, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(nextGbtTable, 2, 1, sSum, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        if showAlgoTable
+            table.cell(nextGbtTable, 0, 2, algoRow1Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+            table.cell(nextGbtTable, 0, 3, algoRow2Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+            for c = 0 to algoCols - 1
+                if c < array.size(algoCells1)
+                    table.cell(nextGbtTable, c + 1, 2, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+                if c < array.size(algoCells2)
+                    table.cell(nextGbtTable, c + 1, 3, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
         lastNextTxt := bTxt
         lastShiftTxt := sTxt
 
@@ -1646,36 +1682,7 @@ if realGbtHit and not na(rgbtTop)
         rgbtGoneCur = array.shift(rgbtCur)
         label.delete(rgbtGoneCur)
 
-grp_algo = "Algo Table"
-showAlgoTable = input.bool(false, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
-algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
-algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
-algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
-algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
-algoPos = input.string("Bottom Center", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
-algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
-algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
-algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
-algoLblCol = input.color(color.black, "Row Labels", group=grp_algo)
-algoBorderCol = input.color(color.gray, "Border", group=grp_algo)
-algoBorderW = input.int(1, "Border Width", 0, 3, group=grp_algo)
 
-algoAnchor = algoPos == "Top Right" ? position.top_right : algoPos == "Top Center" ? position.top_center : algoPos == "Top Left" ? position.top_left : algoPos == "Middle Right" ? position.middle_right : algoPos == "Middle Center" ? position.middle_center : algoPos == "Middle Left" ? position.middle_left : algoPos == "Bottom Right" ? position.bottom_right : algoPos == "Bottom Center" ? position.bottom_center : position.bottom_left
-
-algoCells1 = str.split(algoRow1Txt, "|")
-algoCells2 = str.split(algoRow2Txt, "|")
-algoCols = math.max(array.size(algoCells1), array.size(algoCells2))
-
-var table algoTable = na
-if showAlgoTable and na(algoTable)
-    algoTable := table.new(algoAnchor, algoCols + 1, 2, frame_color=algoBorderCol, frame_width=algoBorderW, border_color=algoBorderCol, border_width=algoBorderW)
-    table.cell(algoTable, 0, 0, algoRow1Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
-    table.cell(algoTable, 0, 1, algoRow2Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
-    for c = 0 to algoCols - 1
-        if c < array.size(algoCells1)
-            table.cell(algoTable, c + 1, 0, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
-        if c < array.size(algoCells2)
-            table.cell(algoTable, c + 1, 1, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
 
 grp_fvg = "FVG"
 show_fvg = input.bool(false, "FVG on GB Times", group=grp_fvg, tooltip="Three-candle Fair Value Gaps kept when any of the three candles carries a regular GB minute (3, 11, 17, 23, 29, 35, 41, 47, 53, 59 past the hour — no shifted times). A candle is stamped when a GB minute falls inside it, so the same rule works on 1h and every lower timeframe.")

@@ -1,0 +1,4 @@
+1. Modified `gbtMark` in `TimeCycle-SMT-v0.1.pine` to return the `sum time` calculation `nh + nm` directly alongside other outputs.
+2. Moved the `Algo Table` input groups directly above `nextGbtTable` instantiation.
+3. Created one combined `nextGbtTable` dynamic array based on `showAlgoTable` to encapsulate the small basic "Next" and "H-Shift" table along with the "Algo Table" into one single full-bordered object.
+4. Added logic to dynamically populate columns for both basic timing limits and configurable algo inputs.
