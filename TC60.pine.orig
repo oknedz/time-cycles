@@ -1,0 +1,2668 @@
+//@version=6
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TC60 [StoneFace] — 60-minute time cycles with fractalized sub-cycles
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  Rebuilt from TimeCycle-SMT-v0.1.pine. Base cycle is 60 minutes (was 90).
+//  Every 60min cycle is fractalized into sub-cycles, with a checkbox for each of
+//  the two sub-division logics:
+//
+//      • 3-Way Fractal  — the 60min parent splits into 3 x 20min children
+//      • 4-Way Fractal  — the 60min parent splits into 4 x 15min children
+//
+//  Both children divide 60 exactly, so the fractal grid always re-aligns on the
+//  parent boundary — no drift, and no box straddling two parents. The checkboxes
+//  are independent: on, off, or both at once (4 x 15min overlays 3 x 20min).
+//
+//  The SMT detector runs its own ladder: 60min base plus the fractal children
+//  (2-way 30min, 3-way 20min, 4-way 15min) and the 10min/3min sizes, each with
+//  its own check-box, plus D/W/M/Y. Every one of them detects SEQUENTIALLY —
+//  live cycle against the previous CLOSED cycle of the same size.
+//
+//  Everything that referenced a 90-minute or 30-minute cycle has been re-pointed
+//  at the 60/20/15 set: cycle boxes, cycle dividers, session divisions, session
+//  high/low blocks, previous-cycle C.E., 60min cycle opens, the Real GBT carrier
+//  line, the alert conditions and the data window.
+//
+//  PART 1 — TIME CYCLES: 60/20/15 cycle boxes, opening lines, session high/low
+//           levels, previous-cycle C.E., day separator, weekday labels, previous
+//           day high/low + 50% C.E., cycle dividers, anchored custom cycles,
+//           Asia session box.
+//  PART 2 — SMT V-4.1: multi-symbol SMT divergence detector, session SMTs,
+//           invalidation, 369 IDs, swing/GB marks, GB candle SMT, Next-GBT table.
+//  PART 3 — ADD-ONS: FVG on regular GB times, Algo table, Real GBT numbers.
+//
+//  Fractal cycle table (NY):
+//      60min anchors   0:00 / 1:00 / 2:00 ... 23:00        (24 windows)
+//      3-way fractal   60 / 120 / 180 ... 1020             (15 x 20min)
+//      4-way fractal   60 / 120 / 180 ... 900              (12 x 15min)
+//
+//      Asia   18:00-00:00 -> 6 cycles of 60 / 18 of 20 / 24 of 15
+//      London  2:00- 6:00 -> 4 cycles of 60 / 12 of 20 / 16 of 15
+//      NY AM   6:00-10:00 -> 4 cycles of 60 / 12 of 20 / 16 of 15
+//      NY PM  10:00-16:00 -> 6 cycles of 60 / 18 of 20 / 24 of 15
+//
+//  The three post-Asia session high/low blocks are 4/4/6 cycles: 4+4+6 = 14, and
+//  14 x 60min is exactly the 02:00-16:00 window, so they tile it with no gap and no
+//  overlap — every 60min parent in the London/NY window carries a session H/L.
+//
+//  History the default windows buy (TradingView allows 500 drawings per type):
+//      ≈25 days with 60min only, ≈6 with 60min+3-way, ≈3 with 60min+3-way+4-way
+//      (20 / 80 / 160 cycle boxes per trading day against the 500-box cap).
+//
+//  © 2025-2026. Stoneface. All rights reserved.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+indicator("TC60 [StoneFace]", shorttitle="Time-Cycle-60-SMT [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, calc_bars_count=20000)
+
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  PART 1 — TIME CYCLES (60 min base + fractal sub-cycles)                   ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+
+// --- Input Groups ---
+
+grp_cyc = "Cycles"
+grp_ol = "Opening Lines"
+grp_col = "Colors"
+grp_day = "Day"
+
+// Cycle settings. The base is always 60min; the two fractal children are optional.
+// Custom anchored set: an alternative cycle set whose first cycle starts at the time
+// below (New York) and runs continuously across midnight. Its window spans the whole
+// day, so the sub-period index never resets — the cycles run straight through
+// midnight, with no cycle break and no session reset. While this is on the
+// session-based cycle boxes are hidden, and only this set is drawn — one set of
+// cycle boxes at a time.
+cx_on = input.bool(false, "Custom Cycles", group=grp_cyc, inline="c5")
+cx_h = input.int(18, "Hr", 0, 23, group=grp_cyc, inline="c5", active=cx_on)
+cx_m = input.int(41, "Min", 0, 59, group=grp_cyc, inline="c5", active=cx_on)
+show_60 = input.bool(true, "60min", group=grp_cyc, inline="c1")
+show_f3 = input.bool(false, "3-Way (20min)", group=grp_cyc, inline="c1", tooltip="Fractal check-box 1. Each 60min parent splits into 3 x 20min. Off by default so the chart is not flooded.")
+show_f4 = input.bool(false, "4-Way (15min)", group=grp_cyc, inline="c1", tooltip="Fractal check-box 2. Each 60min parent splits into 4 x 15min. Off by default so the chart is not flooded. Both fractal boxes can be on at the same time.")
+show_mid_win = input.bool(false, "Midnight Window", group=grp_cyc, inline="c2", active=not cx_on)
+var array<string> cyc_opts = array.from("00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00")
+var array<int> cyc_mins = array.from(0, 30, 60, 90, 120, 150, 180)
+cyc_start_str = input.string("2:00", "Cycle Start (London)", options=["00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00"], group=grp_cyc, inline="c4")
+auto_adj = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
+max_boxes = input.int(500, "Max Cycle Boxes", 10, 500, group=grp_cyc, tooltip="How many cycle boxes stay on the chart — the oldest are removed first once this many exist. TradingView allows a maximum of 500 drawings per type. History this buys with the default windows: ≈25 days with 60min only, ≈6 with 60min+3-way, ≈3 with 60min+3-way+4-way. Fewer active sizes or a lower cap = less clutter.")
+
+// Asia Session: ONE box around the whole session — no 60/20/15 subdivision, so it never
+// doubles up with the cycle boxes above. It tracks the session's running high and low from
+// the start time to the end time (New York), and the range may cross midnight
+// (start > end), e.g. the default 18:00-02:30 that runs through the early London hours.
+// Start and end must differ.
+grp_asb = "Asia Session"
+show_asb = input.bool(true, "Show Box", group=grp_asb, inline="asb1", tooltip="Draws a single box spanning the whole session below — not cycles. The range may cross midnight (start > end). Start and end must differ.")
+asb_h = input.int(18, "Start Hr", 0, 23, group=grp_asb, inline="asb1", active=show_asb)
+asb_m = input.int(0, "Min", 0, 59, group=grp_asb, inline="asb1", active=show_asb)
+asb_eh = input.int(2, "End Hr", 0, 23, group=grp_asb, inline="asb2", active=show_asb)
+asb_em = input.int(30, "Min", 0, 59, group=grp_asb, inline="asb2", active=show_asb)
+c_asb_fill = input.color(color.purple, "Color", group=grp_asb, inline="asb2", active=show_asb)
+
+// Opening lines: midnight, 8:30, 9:30, and 60min cycle opens
+show_mid = input.bool(true, "Midnight", group=grp_ol, inline="mid")
+c_mid = input.color(#787b86, "", group=grp_ol, inline="mid")
+w_mid = input.int(1, "", 1, 3, group=grp_ol, inline="mid")
+s_mid = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="mid")
+show_60_open = input.bool(false, "60min Cycle Opens", group=grp_ol, inline="60open", active=not cx_on)
+c_60_open = input.color(color.orange, "", group=grp_ol, inline="60open")
+w_60_open = input.int(1, "", 1, 3, group=grp_ol, inline="60open")
+s_60_open = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="60open")
+show_830 = input.bool(true, "8:30", group=grp_ol, inline="830")
+c_830 = input.color(#787b86, "", group=grp_ol, inline="830")
+w_830 = input.int(1, "", 1, 3, group=grp_ol, inline="830")
+s_830 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="830")
+show_930 = input.bool(true, "9:30", group=grp_ol, inline="930")
+c_930 = input.color(#787b86, "", group=grp_ol, inline="930")
+w_930 = input.int(1, "", 1, 3, group=grp_ol, inline="930")
+s_930 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
+
+// Cycle box colors: A=red, M=blue, D=green per cycle size
+c_60_a = input.color(color.red, "60min A", group=grp_col, inline="60")
+c_60_m = input.color(color.blue, "M", group=grp_col, inline="60")
+c_60_d = input.color(color.green, "D", group=grp_col, inline="60")
+c_f3 = input.color(color.gray, "3-Way 20min", group=grp_col)
+c_f4 = input.color(color.silver, "4-Way 15min", group=grp_col)
+// Session high/low line colors
+c_asia = input.color(color.purple, "Asia H/L", group=grp_col)
+c_london = input.color(color.red, "London H/L", group=grp_col)
+c_ny_am = input.color(color.blue, "NY AM H/L", group=grp_col)
+c_ny_pm = input.color(color.teal, "NY PM H/L", group=grp_col)
+hl_ts = input.string(size.small, "H/L Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_col)
+fill_transp = input.int(93, "Fill Transparency", 0, 100, group="Display")
+
+// Day display: day separator and weekday labels
+show_dsep = input.bool(true, "Day Sep", group=grp_day, inline="ds")
+c_dsep = input.color(color.gray, "", group=grp_day, inline="ds")
+s_dsep = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_day, inline="ds")
+show_wd = input.bool(true, "Weekdays", group=grp_day, inline="wd")
+c_wd = input.color(color.gray, "", group=grp_day, inline="wd")
+loc_wd = input.string("Bottom", "", ["Top", "Bottom"], group=grp_day, inline="wd")
+fmt_wd = input.string("Short", "Format", ["Short", "Long"], group=grp_day, inline="wd2")
+off_wd = input.int(0, "Offset (min)", group=grp_day, inline="wd2")
+
+// Previous Day High/Low: horizontal lines at prior calendar-day (NY midnight-to-midnight) high & low
+grp_pdhl = "Prev Day H/L"
+show_pdhl = input.bool(true, "Show PDH/PDL", group=grp_pdhl)
+c_pdh = input.color(color.black, "PDH", group=grp_pdhl, inline="pdh")
+w_pdh = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdh")
+s_pdh = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdh")
+c_pdl = input.color(color.black, "PDL", group=grp_pdhl, inline="pdl")
+w_pdl = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdl")
+s_pdl = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdl")
+show_pdce = input.bool(true, "50% C.E.", group=grp_pdhl, inline="pdce")
+c_pdce = input.color(color.black, "", group=grp_pdhl, inline="pdce")
+w_pdce = input.int(1, "", 1, 5, group=grp_pdhl, inline="pdce")
+s_pdce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pdhl, inline="pdce")
+show_pdhl_lbl = input.bool(true, "Show Labels", group=grp_pdhl, inline="pdlbl")
+pdhl_ts = input.string(size.small, "Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_pdhl, inline="pdlbl")
+
+// Previous Cycle C.E.: horizontal line at the 50% midpoint of the most recent completed
+// 60min / 3-way / 4-way cycle
+grp_pce = "Cycle C.E."
+show_pce = input.bool(false, "Show Prev Cycle C.E.", group=grp_pce)
+c_pce = input.color(color.black, "Color", group=grp_pce, inline="pce")
+w_pce = input.int(1, "", 1, 5, group=grp_pce, inline="pce")
+s_pce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pce, inline="pce")
+
+// Cycle dividers: a vertical line at every cycle boundary, as an ALTERNATIVE to the filled
+// cycle boxes — the two are never shown at the same time. Off: the usual cycle boxes. On:
+// the boxes are hidden (kept, but filled fully transparent) and the cycles are marked by the
+// lines below. Per size (60/20/15) the lines have their own toggle, color, width, style and
+// transparency. They follow whichever cycle set is active (session set or custom anchored
+// set), are FIFO-trimmed to "Max Lines" so they cannot starve the shared 500-line budget the
+// SMT drawings also draw from, and share the cycle boxes' history horizon.
+grp_vl = "Cycle Dividers"
+show_vl = input.bool(false, "Vertical Lines Instead of Boxes", group=grp_vl, tooltip="On: the cycles are marked by vertical lines and the filled cycle boxes are hidden. Off: the usual cycle boxes. The two are never shown together.")
+vl_mode = input.string("Full Chart", "Height", ["Full Chart", "Match Cycle Box"], group=grp_vl, inline="vlm", active=show_vl)
+vl_max = input.int(400, "Max Lines", 10, 400, group=grp_vl, inline="vlm", active=show_vl)
+show_vl_60 = input.bool(true, "60min", group=grp_vl, inline="v60", active=show_vl)
+c_vl_60 = input.color(#787b86, "", group=grp_vl, inline="v60", active=show_vl)
+w_vl_60 = input.int(1, "", 1, 3, group=grp_vl, inline="v60", active=show_vl)
+s_vl_60 = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="v60", active=show_vl)
+t_vl_60 = input.int(0, "", 0, 100, group=grp_vl, inline="v60", active=show_vl)
+show_vl_f3 = input.bool(true, "3-Way 20min", group=grp_vl, inline="vf3", active=show_vl)
+c_vl_f3 = input.color(#787b86, "", group=grp_vl, inline="vf3", active=show_vl)
+w_vl_f3 = input.int(1, "", 1, 3, group=grp_vl, inline="vf3", active=show_vl)
+s_vl_f3 = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="vf3", active=show_vl)
+t_vl_f3 = input.int(40, "", 0, 100, group=grp_vl, inline="vf3", active=show_vl)
+show_vl_f4 = input.bool(true, "4-Way 15min", group=grp_vl, inline="vf4", active=show_vl)
+c_vl_f4 = input.color(#787b86, "", group=grp_vl, inline="vf4", active=show_vl)
+w_vl_f4 = input.int(1, "", 1, 3, group=grp_vl, inline="vf4", active=show_vl)
+s_vl_f4 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="vf4", active=show_vl)
+t_vl_f4 = input.int(60, "", 0, 100, group=grp_vl, inline="vf4", active=show_vl)
+
+// --- Time & Symbol Configuration ---
+
+tf_min = timeframe.in_seconds() / 60
+valid_tf = tf_min <= 240                                    // Only draw cycles on intraday TFs <= 4h
+// Auto-adjust: a cycle is only worth drawing when the chart bars can resolve it. The
+// fractal children are stricter than the parent — 20min needs <= 20min bars, 15min <= 15min.
+act_60 = auto_adj ? (tf_min <= 60 and show_60) : show_60
+act_f3 = auto_adj ? (tf_min <= 20 and show_f3) : show_f3
+act_f4 = auto_adj ? (tf_min <= 15 and show_f4) : show_f4
+is_crypto = syminfo.type == "crypto"
+calc_tz = is_crypto ? "UTC" : "America/New_York"
+ny_h = hour(time, "America/New_York")
+ny_m = minute(time, "America/New_York")
+ny_m_total = ny_h * 60 + ny_m                               // Minute of day in NY time
+var int cyc_start = cyc_mins.get(array.indexof(cyc_opts, cyc_start_str))  // London/NY cycle anchor (minutes of day)
+cx_anchor = cx_h * 60 + cx_m                                 // Custom first-cycle start (minutes of day, NY)
+asb_s = asb_h * 60 + asb_m                                    // Asia Session: start (minutes of day, NY)
+asb_e = asb_eh * 60 + asb_em                                  // Asia Session: end
+asb_len = (asb_e - asb_s) % 1440                              // Window length (floored modulo) = the box's "period"
+is_new_d = ta.change(dayofmonth(time, calc_tz)) != 0    // True at calendar midnight in the symbol's timezone
+
+// --- User-Defined Types ---
+
+// Cycle: bounding box for one cycle period (top=cycle high, bottom=cycle low, fill+border from one box)
+type Cycle
+    box bx                                                  // Bounding box: top=cycle high, bottom=cycle low
+    int idx                                                 // Current sub-period index within the cycle
+    float h                                                 // Running high within this cycle box
+    float l                                                 // Running low within this cycle box
+    bool active                                             // True while inside the cycle time window
+    line vl                                                 // Divider line at this cycle's opening boundary (na when dividers are off)
+
+// LevelObj: session high/low level with center equilibrium line, labels, and its running state
+type LevelObj
+    line h                                                  // High level line
+    line l                                                  // Low level line
+    line m                                                  // Midpoint (C.E.) line
+    label lb_h                                              // High label
+    label lb_l                                              // Low label
+    label lb_m                                              // Mid label
+    float hv                                                // Running high of the session
+    float lv                                                // Running low of the session
+    bool lock_h                                             // True after price breaks above the high
+    bool lock_l                                             // True after price breaks below the low
+
+// TimeLine: a horizontal line drawn at a specific time with a label, extends forward
+type TimeLine
+    line l
+    label lb
+    bool stopped                                            // True after stop time, line stops extending
+
+// CeLevel: single "previous cycle" C.E. line + label, replaced on each cycle rollover
+type CeLevel
+    line l
+    label lb
+
+// --- Persistent State: Cycle Boxes ---
+
+var Cycle c_asia_60 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_asia_f3 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_asia_f4 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_60 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_f3 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_f4 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_60 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_f3 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_f4 = Cycle.new(na, -1, na, na, false, na)
+// Custom anchored set: one state per size, active over the whole day
+var Cycle c_cx_60 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_cx_f3 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_cx_f4 = Cycle.new(na, -1, na, na, false, na)
+// Asia Session: a single box for the whole session window
+var Cycle c_asb = Cycle.new(na, -1, na, na, false, na)
+
+// --- Persistent State: Opening Lines ---
+
+var TimeLine tl_mid = TimeLine.new(na, na, false)            // Midnight line
+var TimeLine tl_830 = TimeLine.new(na, na, false)            // 8:30 line
+var TimeLine tl_930 = TimeLine.new(na, na, false)            // 9:30 line
+
+// --- Persistent State: Previous Cycle C.E. ---
+
+var CeLevel ce60 = CeLevel.new(na, na)                        // 60min previous-cycle 50% line
+var CeLevel cef3 = CeLevel.new(na, na)                        // 3-way (20min) previous-cycle 50% line
+var CeLevel cef4 = CeLevel.new(na, na)                        // 4-way (15min) previous-cycle 50% line
+var CeLevel ce_cx60 = CeLevel.new(na, na)                     // Custom set: 60min previous-cycle 50% line
+var CeLevel ce_cxf3 = CeLevel.new(na, na)                     // Custom set: 3-way previous-cycle 50% line
+var CeLevel ce_cxf4 = CeLevel.new(na, na)                     // Custom set: 4-way previous-cycle 50% line
+
+// --- History State: every box/divider currently on the chart, oldest first (trimmed in "History Trim") ---
+
+var array<box> all_boxes = array.new<box>()                  // Cycle boxes, oldest first
+var array<line> all_vl = array.new<line>()                   // Divider lines, oldest first
+
+// --- Color Arrays for Cycle Boxes ---
+
+var color c_60_a_fill = color.new(c_60_a, fill_transp)
+var color c_60_m_fill = color.new(c_60_m, fill_transp)
+var color c_60_d_fill = color.new(c_60_d, fill_transp)
+var color c_f3_fill = color.new(c_f3, fill_transp)
+var color c_f4_fill = color.new(c_f4, fill_transp)
+var array<color> cols_60_fill = array.from(c_60_a_fill, c_60_m_fill, c_60_d_fill)
+var array<color> cols_f3_fill = array.from(c_f3_fill)
+var array<color> cols_f4_fill = array.from(c_f4_fill)
+var array<color> cols_asb_fill = array.from(color.new(c_asb_fill, fill_transp))  // Asia Session box: one colour, no rotation
+
+var color c_trans = color.new(color.white, 100)              // Fully transparent (used as label background)
+var color c_box_border = color.new(color.white, 100)         // Invisible box border (cycles use fill only)
+
+// --- Utility ---
+
+// Convert style string to line.style_* constant
+get_style(s) => s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
+
+// Place the three level drawings at a given y and x. Returns x so the call is value-returning.
+set_level(line ln, label lb, float y, int x) =>
+    line.set_y1(ln, y)
+    line.set_y2(ln, y)
+    line.set_x2(ln, x)
+    label.set_xy(lb, x, y)
+    x
+
+// Post-session path: only the x coordinate moves — y is frozen at the session value.
+set_level_x(line ln, label lb, int x) =>
+    line.set_x2(ln, x)
+    label.set_x(lb, x)
+    x
+
+// Extend a previous-cycle C.E. segment to the live bar. Only the right x endpoint moves — y is
+// written once at creation, so the segment stays horizontal for its whole life.
+extend_ce(CeLevel ce) =>
+    if not na(ce.l)
+        line.set_x2(ce.l, bar_index + 5)
+        label.set_x(ce.lb, bar_index + 5)
+
+// Track a session's running high/low, then extend or lock its three levels after the session.
+// is_start: reset trigger for this session. in_sess: inside the session window.
+// ext_ok: inside the post-session extension window (session end through 16:00 NY); pass false for
+// a session that itself ends at the 16:00 close (NY PM), which then freezes at the close.
+update_level(LevelObj o, bool is_start, bool in_sess, bool ext_ok, string name, color col) =>
+    if is_start                                             // Session start: reset
+        line.delete(o.h)
+        label.delete(o.lb_h)
+        line.delete(o.l)
+        label.delete(o.lb_l)
+        line.delete(o.m)
+        label.delete(o.lb_m)
+        o.h := na
+        o.l := na
+        o.m := na
+        o.hv := na
+        o.lv := na
+        o.lock_h := false
+        o.lock_l := false
+    if in_sess                                              // During session: track running H/L
+        o.hv := na(o.hv) ? high : math.max(o.hv, high)
+        o.lv := na(o.lv) ? low : math.min(o.lv, low)
+        if na(o.h)
+            o.h := line.new(bar_index, o.hv, bar_index, o.hv, color=col)
+            o.lb_h := label.new(bar_index, o.hv, name + " High", color=c_trans, textcolor=col, style=label.style_label_lower_right, size=hl_ts)
+            o.l := line.new(bar_index, o.lv, bar_index, o.lv, color=col)
+            o.lb_l := label.new(bar_index, o.lv, name + " Low", color=c_trans, textcolor=col, style=label.style_label_upper_right, size=hl_ts)
+            o.m := line.new(bar_index, (o.hv + o.lv) / 2, bar_index, (o.hv + o.lv) / 2, color=col, style=line.style_dashed)
+            o.lb_m := label.new(bar_index, (o.hv + o.lv) / 2, "C.E.", color=c_trans, textcolor=col, style=label.style_label_left, size=hl_ts)
+        else
+            set_level(o.h, o.lb_h, o.hv, bar_index)
+            set_level(o.l, o.lb_l, o.lv, bar_index)
+            set_level(o.m, o.lb_m, (o.hv + o.lv) / 2, bar_index)
+    if not in_sess and not na(o.h)                          // After session: lock on a break, else extend
+        if not o.lock_h and high >= o.hv
+            o.lock_h := true
+            set_level_x(o.h, o.lb_h, bar_index)
+        if not o.lock_l and low <= o.lv
+            o.lock_l := true
+            set_level_x(o.l, o.lb_l, bar_index)
+        if ext_ok and not o.lock_h
+            set_level_x(o.h, o.lb_h, bar_index + 5)
+        if ext_ok and not o.lock_l
+            set_level_x(o.l, o.lb_l, bar_index + 5)
+        if ext_ok and (not o.lock_h or not o.lock_l)
+            set_level_x(o.m, o.lb_m, bar_index + 5)
+
+// --- Cycle Dividers: vertical lines at cycle boundaries ---
+
+// Per-size divider settings, selected by the cycle period (60 / 20 / 15 minutes). Any other
+// period — the Asia Session box passes its whole window length — draws no divider: one box,
+// no boundaries.
+vl_on(per) => per == 60 ? show_vl_60 : per == 20 ? show_vl_f3 : per == 15 ? show_vl_f4 : false
+vl_col(per) => per == 60 ? c_vl_60 : per == 20 ? c_vl_f3 : c_vl_f4
+vl_w(per) => per == 60 ? w_vl_60 : per == 20 ? w_vl_f3 : w_vl_f4
+vl_s(per) => per == 60 ? s_vl_60 : per == 20 ? s_vl_f3 : s_vl_f4
+vl_t(per) => per == 60 ? t_vl_60 : per == 20 ? t_vl_f3 : t_vl_f4
+
+// Register a divider line. Trimming to the cap happens once per bar in the "History Trim" block,
+// together with the cycle boxes, so the divider set can never eat the whole shared line budget
+// (SMT lines and dividers both draw from the 500 line IDs a script is allowed).
+reg_vl(line l) =>
+    array.push(all_vl, l)
+
+// Draw the divider for the cycle currently opening at this bar, styled for its size. "Full Chart"
+// spans the visible price range via extend.both; "Match Cycle Box" spans the cycle's own high/low
+// and is later stretched as the cycle makes new extremes.
+vl_new(Cycle c, int per) =>
+    col = color.new(vl_col(per), vl_t(per))
+    if vl_mode == "Full Chart"
+        c.vl := line.new(bar_index, low, bar_index, high == low ? high + syminfo.mintick : high, color=col, width=vl_w(per), style=get_style(vl_s(per)), extend=extend.both)
+    else
+        c.vl := line.new(bar_index, c.l, bar_index, c.h == c.l ? c.h + syminfo.mintick : c.h, color=col, width=vl_w(per), style=get_style(vl_s(per)))
+    reg_vl(c.vl)
+    c.vl
+
+// Stretch the current cycle's divider to the cycle's running high/low ("Match Cycle Box" mode only).
+vl_stretch(Cycle c) =>
+    if not na(c.vl) and vl_mode != "Full Chart"
+        line.set_y1(c.vl, c.l)
+        line.set_y2(c.vl, c.h)
+
+// --- Cycle Box Drawing ---
+
+// Draw/update a cycle bounding box. Creates a box from bar high to bar low filled with the cycle color.
+// Called every bar. Creates a new box when entering a new sub-period (idx change or activation).
+// Extends the box to current bar on subsequent bars within the same sub-period.
+// Closes the box when leaving the cycle time window.
+draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols_fill, CeLevel ce, int anchor) =>
+    // Check if current time is within [start, end); handles wrap-around (e.g. 1440-60)
+    in_win = start > end ? (ny_m_total >= start or ny_m_total < end) : (ny_m_total >= start and ny_m_total < end)
+    eff = start > end and ny_m_total < end ? ny_m_total + 1440 : ny_m_total   // Wrap-around: shift into next day so idx stays positive
+    if in_win
+        // Sub-period index counted from anchor — the first cycle's start inside the window. Session
+        // windows pass their own start, so their math is unchanged; the custom window passes the user's
+        // time, and the fold keeps the index positive for the hours before it (no midnight break).
+        off = eff - anchor
+        idx = math.floor((off < 0 ? off + 1440 : off) / per)  // Which sub-period are we in (0, 1, 2...)
+        // "Vertical Lines Instead of Boxes": keep the box (it carries the cycle's running high/low,
+        // the Prev Cycle C.E. anchor and the cleanup entry) but fill it fully transparent, so the
+        // cycles show as divider lines only. Boxes and dividers are never visible at the same time.
+        col_fill = show_vl ? c_trans : cols_fill.get(idx % cols_fill.size())
+        if idx != c.idx or not c.active                      // New sub-period or just activated
+            if not na(c.bx)
+                box.set_right(c.bx, bar_index - 1)           // Close previous box
+            // Previous-cycle C.E.: horizontal segment at the just-completed cycle's 50% level,
+            // spanning that cycle's bars through the live bar. y1 = y2 = mid and x1 < x2 always.
+            if show_pce and c.active and idx != c.idx and not na(c.h) and not na(c.l)
+                mid = (c.h + c.l) / 2
+                x0 = na(c.bx) ? bar_index : box.get_left(c.bx)
+                line.delete(ce.l)
+                label.delete(ce.lb)
+                ce.l := line.new(x0, mid, bar_index, mid, color=c_pce, width=w_pce, style=get_style(s_pce))
+                ce.lb := label.new(bar_index, mid, str.tostring(per) + " C.E.", color=c_trans, textcolor=c_pce, style=label.style_label_left, size=hl_ts)
+            c.idx := idx
+            c.h := high
+            c.l := low
+            c.active := true
+            c.bx := box.new(left=bar_index, top=c.h, right=bar_index, bottom=c.l, border_color=c_box_border, border_width=1, bgcolor=col_fill)
+            array.push(all_boxes, c.bx)
+            if show_vl and vl_on(per)                        // Separate this cycle from the previous one
+                vl_new(c, per)
+        else                                                 // Same sub-period: extend box to new high/low
+            c.h := math.max(c.h, high)
+            c.l := math.min(c.l, low)
+            box.set_top(c.bx, c.h)
+            box.set_bottom(c.bx, c.l)
+            box.set_right(c.bx, bar_index)
+            vl_stretch(c)                                    // Keep a box-height divider on the cycle range
+    if not in_win and c.active                               // Left the cycle window: close box
+        c.active := false
+        if not na(c.bx)
+            box.set_right(c.bx, bar_index - 1)
+            c.bx := na
+            c.idx := -1
+
+// --- Cycle Drawing: Session set — Asia (18:00-00:00 NY), Midnight (00:00 to cycle start, optional),
+// London/NY (cycle start to 16:00). Not drawn while the custom anchored set is on (below). ---
+
+if valid_tf and not cx_on
+    // Asia session: minutes 1080-1440
+    if act_60
+        draw_cycle_box(c_asia_60, 1080, 1440, 60, cols_60_fill, ce60, 1080)
+    if act_f3
+        draw_cycle_box(c_asia_f3, 1080, 1440, 20, cols_f3_fill, cef3, 1080)
+    if act_f4
+        draw_cycle_box(c_asia_f4, 1080, 1440, 15, cols_f4_fill, cef4, 1080)
+
+    // Midnight window (optional, wraps from 1440 back to cycle start)
+    if show_mid_win
+        if act_60
+            draw_cycle_box(c_mid_60, 1440, cyc_start, 60, cols_60_fill, ce60, 1440)
+        if act_f3
+            draw_cycle_box(c_mid_f3, 1440, cyc_start, 20, cols_f3_fill, cef3, 1440)
+        if act_f4
+            draw_cycle_box(c_mid_f4, 1440, cyc_start, 15, cols_f4_fill, cef4, 1440)
+
+    // London/NY session: minutes cyc_start-960; all cycle sizes anchored at the chosen start
+    if act_60
+        draw_cycle_box(c_ny_60, cyc_start, 960, 60, cols_60_fill, ce60, cyc_start)
+    if act_f3
+        draw_cycle_box(c_ny_f3, cyc_start, 960, 20, cols_f3_fill, cef3, cyc_start)
+    if act_f4
+        draw_cycle_box(c_ny_f4, cyc_start, 960, 15, cols_f4_fill, cef4, cyc_start)
+
+    // Asia Session: a single box for the whole window, anchored at its own start. Passing the window
+    // length as the period keeps the sub-period index at 0 for every minute inside it, so exactly one
+    // box is built from the start time to the end time. No cycle rollovers, so the C.E. branch of
+    // draw_cycle_box never fires for it (it needs an index change). Start == end is an empty window:
+    // nothing is drawn (and the index math is never reached, so the zero length is never divided by).
+    if show_asb
+        draw_cycle_box(c_asb, asb_s, asb_e, asb_len, cols_asb_fill, ce60, asb_s)
+
+// --- Cycle Drawing: Custom anchored set (the alternative to the session set above) ---
+
+// Full-day window (0-1440) anchored at the user's first-cycle time. The index is measured from that
+// anchor and never resets, so a cycle crossing midnight keeps plotting as one box and the following
+// cycles are counted from the same point.
+if valid_tf and cx_on
+    if act_60
+        draw_cycle_box(c_cx_60, 0, 1440, 60, cols_60_fill, ce_cx60, cx_anchor)
+    if act_f3
+        draw_cycle_box(c_cx_f3, 0, 1440, 20, cols_f3_fill, ce_cxf3, cx_anchor)
+    if act_f4
+        draw_cycle_box(c_cx_f4, 0, 1440, 15, cols_f4_fill, ce_cxf4, cx_anchor)
+
+// --- History Trim: keep only the newest boxes/dividers, drop the oldest (FIFO) ---
+
+// TradingView keeps at most 500 box and 500 line IDs per script (newest first) and silently drops
+// the rest, so the drawing budget — not the calendar — is the real limit on how far back cycles go.
+// Trimming to a user-set count instead of to the 18:00 boundary is what lets the chart carry weeks
+// of history: fewer active cycle sizes = more days for the same 500 drawings (20 boxes/day with
+// 60min only, 80 with 60min+3-way, 160 with 60min+3-way+4-way, default windows — ≈25 / ≈6 / ≈3
+// days). Runs after the drawing calls above.
+while array.size(all_boxes) > max_boxes
+    box.delete(all_boxes.shift())
+while array.size(all_vl) > vl_max
+    line.delete(all_vl.shift())
+
+// --- Day Separator: Vertical line at midnight ---
+
+if valid_tf and (ny_h == 0 and ny_m == 0) and show_dsep
+    line.new(bar_index, low, bar_index, high == low ? high + syminfo.mintick : high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
+
+// --- Opening Line Drawing ---
+
+// Draw a horizontal line at the open price when a specific time is reached.
+// The line extends forward each bar until the stop hour.
+draw_op_line(TimeLine tl, int h, int m, color c, int w, string s, string txt, int stop_h) =>
+    if ny_h == h and ny_m == m                               // Time reached: create new line at current open
+        line.delete(tl.l)
+        label.delete(tl.lb)
+        tl.l := line.new(bar_index, open, bar_index, open, color=c, width=w, style=get_style(s))
+        tl.lb := label.new(bar_index, open, txt, color=c_trans, textcolor=c, style=label.style_label_left, size=size.small)
+        tl.stopped := false
+    if ny_h == stop_h and ny_m == 0                          // Stop time reached: stop extending
+        tl.stopped := true
+    if not na(tl.l) and not tl.stopped                       // Active: extend line forward
+        line.set_x2(tl.l, bar_index)
+        label.set_x(tl.lb, bar_index)
+        label.set_y(tl.lb, line.get_y1(tl.l))
+
+// Draw opening lines
+if valid_tf
+    if show_mid
+        draw_op_line(tl_mid, 0, 0, c_mid, w_mid, s_mid, "00:00", 24)
+    if show_830
+        draw_op_line(tl_830, 8, 30, c_830, w_830, s_830, "8:30", 16)
+    if show_930
+        draw_op_line(tl_930, 9, 30, c_930, w_930, s_930, "9:30", 16)
+
+// --- 60-Minute Cycle Opens: Horizontal lines at each 60min boundary (session set, so also stored
+// away while the custom anchored set is on) ---
+
+var array<line> l60 = array.new_line()                       // Open lines (one per boundary)
+var array<bool> stop60 = array.new_bool()
+var array<int> t60_h = array.new<int>()                      // Boundary hours (built at first bar / 18:00)
+var array<int> t60_m = array.new<int>()                      // Boundary minutes
+
+if valid_tf and show_60_open and act_60 and not cx_on
+    if barstate.isfirst or (ny_h == 18 and ny_m == 0)        // Build boundary list for this session
+        for i = 0 to array.size(l60) - 1
+            line.delete(l60.get(i))
+        array.clear(l60), array.clear(stop60)
+        array.clear(t60_h), array.clear(t60_m)
+        // Asia boundaries: every 60min from 18:00 to 23:00
+        for k = 0 to 5
+            array.push(t60_h, 18 + k)
+            array.push(t60_m, 0)
+        // London/NY boundaries: anchored at chosen cycle start, every 60min until 16:00
+        nb = cyc_start
+        while nb < 960
+            array.push(t60_h, math.floor(nb / 60))
+            array.push(t60_m, nb % 60)
+            nb += 60
+        for i = 0 to array.size(t60_h) - 1
+            array.push(l60, na)
+            array.push(stop60, false)
+    for i = 0 to array.size(t60_h) - 1                       // At each boundary: draw new line at open
+        if ny_h == t60_h.get(i) and ny_m == t60_m.get(i)
+            line.delete(l60.get(i))
+            l60.set(i, line.new(bar_index, open, bar_index, open, color=c_60_open, width=w_60_open, style=get_style(s_60_open)))
+            stop60.set(i, false)
+            if i > 0
+                stop60.set(i-1, true)                        // Stop previous line
+    if ny_h == 16 and ny_m == 0 and array.size(stop60) > 0   // 16:00: stop last line
+        stop60.set(array.size(stop60) - 1, true)
+    for i = 0 to array.size(l60) - 1                         // Extend all active lines
+        ln = l60.get(i)
+        if not na(ln) and not stop60.get(i)
+            line.set_x2(ln, bar_index)
+
+// --- Session High/Low: Asia (18:00-00:00 NY), London (cycle start to +4h), NY AM (+4h to +8h),
+// NY PM (+8h to 16:00 — the final block, which runs into the close) ---
+// Re-pointed at 60min parents: the three post-Asia blocks are 4/4/6 sixty-minute cycles instead
+// of 3/3/3 ninety-minute ones, so the boundaries are start / +240 / +480 / 960. 4+4+6 = 14 cycles
+// and 14 x 60min = 840min, which is exactly the cycle_start..16:00 window — the blocks tile it
+// with no gap and no overlap, so every 60min parent in the London/NY window has a session H/L.
+// One routine for all four: track H/L during the session, then extend/lock after it.
+
+var LevelObj o_asia = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_london = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_ny_am = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_ny_pm = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+
+if valid_tf
+    // Previous-cycle C.E. segments follow the live bar (y is fixed at the cycle midpoint)
+    extend_ce(ce60)
+    extend_ce(cef3)
+    extend_ce(cef4)
+    extend_ce(ce_cx60)
+    extend_ce(ce_cxf3)
+    extend_ce(ce_cxf4)
+
+    // Asia session: minutes 1080-1440. Reset exactly at the 18:00 NY bar.
+    in_asia = ny_m_total >= 1080
+    update_level(o_asia, ny_h == 18 and ny_m == 0, in_asia, ny_m_total <= 960, "Asia", c_asia)
+
+    // London session: cycle start through +4h NY (four 60min cycles).
+    in_london = ny_m_total >= cyc_start and ny_m_total < cyc_start + 240
+    update_level(o_london, in_london and not in_london[1], in_london, ny_m_total >= cyc_start + 240 and ny_m_total <= 960, "London", c_london)
+
+    // NY AM session: cycle start +4h through +8h NY (four 60min cycles).
+    in_ny_am = ny_m_total >= cyc_start + 240 and ny_m_total < cyc_start + 480
+    update_level(o_ny_am, in_ny_am and not in_ny_am[1], in_ny_am, ny_m_total >= cyc_start + 240 and ny_m_total <= 960, "NY AM", c_ny_am)
+
+    // NY PM session: +8h through the 16:00 close (six 60min cycles). Nothing follows the
+    // close, so there is no post-session extension window: the levels are anchored at 16:00 and
+    // only move afterwards if price breaks them.
+    in_ny_pm = ny_m_total >= cyc_start + 480 and ny_m_total < 960
+
+// --- Weekday Labels: Display day name at 12:00 (midday) ---
+
+wd_loc = loc_wd == "Top" ? location.top : location.bottom
+wd_off = off_wd == 0 ? 0 : math.round(off_wd / tf_min)
+c_inv = color.new(color.white, 100)                          // Invisible plotshape background
+is_mid_day = ny_h == 12 and ny_m == 0
+dow = dayofweek(time, calc_tz)
+show_days = valid_tf and show_wd
+is_short = fmt_wd == "Short"
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.monday, "Mon", shape.labelup, wd_loc, c_inv, wd_off, "Mon", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.tuesday, "Tue", shape.labelup, wd_loc, c_inv, wd_off, "Tue", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.wednesday, "Wed", shape.labelup, wd_loc, c_inv, wd_off, "Wed", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.thursday, "Thu", shape.labelup, wd_loc, c_inv, wd_off, "Thu", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.friday, "Fri", shape.labelup, wd_loc, c_inv, wd_off, "Fri", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.monday, "Monday", shape.labelup, wd_loc, c_inv, wd_off, "Monday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.tuesday, "Tuesday", shape.labelup, wd_loc, c_inv, wd_off, "Tuesday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.wednesday, "Wednesday", shape.labelup, wd_loc, c_inv, wd_off, "Wednesday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.thursday, "Thursday", shape.labelup, wd_loc, c_inv, wd_off, "Thursday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.friday, "Friday", shape.labelup, wd_loc, c_inv, wd_off, "Friday", c_wd, size=size.small)
+
+// --- Previous Day High/Low ---
+// Track calendar-day (midnight-to-midnight in the symbol's timezone) high/low manually — request.security("D") uses the
+// exchange session, not calendar midnight. At each new day, capture the just-completed day's range
+// into pd_ph/pd_pl and draw fresh horizontal lines across the new day, extending to the live bar.
+
+var float pd_h = na                                          // Running high of current forming day
+var float pd_l = na                                          // Running low of current forming day
+var float pd_ph = na                                         // Previous day's high (displayed)
+var float pd_pl = na                                         // Previous day's low (displayed)
+var line pd_line_h = na
+var line pd_line_l = na
+var line pd_line_ce = na
+var label pd_lbl_h = na
+var label pd_lbl_l = na
+var label pd_lbl_ce = na
+
+if valid_tf and show_pdhl
+    new_day = is_new_d
+
+    if new_day and not na(pd_h) and not na(pd_l)             // Roll over: completed day becomes "previous day"
+        pd_ph := pd_h
+        pd_pl := pd_l
+        pd_ce = (pd_ph + pd_pl) / 2                          // 50% equilibrium of previous day's range
+        // Delete prior day's lines/labels — only the current day's PDH/PDL/C.E. stays visible
+        if not na(pd_line_h)
+            line.delete(pd_line_h),  label.delete(pd_lbl_h)
+            line.delete(pd_line_l),  label.delete(pd_lbl_l)
+        if not na(pd_line_ce)
+            line.delete(pd_line_ce), label.delete(pd_lbl_ce)
+        // Start fresh lines anchored at this midnight bar
+        pd_line_h := line.new(bar_index, pd_ph, bar_index, pd_ph, color=c_pdh, width=w_pdh, style=get_style(s_pdh))
+        pd_line_l := line.new(bar_index, pd_pl, bar_index, pd_pl, color=c_pdl, width=w_pdl, style=get_style(s_pdl))
+        pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PDH" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PDL" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
+        if show_pdce
+            pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
+            pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
+        else
+            pd_line_ce := na                                 // C.E. disabled: stop extending prior line (leaves it frozen)
+            pd_lbl_ce := na
+
+    if new_day                                               // Reset running extremes for the day just starting
+        pd_h := high
+        pd_l := low
+    else
+        pd_h := na(pd_h) ? high : math.max(pd_h, high)
+        pd_l := na(pd_l) ? low  : math.min(pd_l, low)
+
+    if not na(pd_line_h)                                     // Extend lines/labels to the live bar
+        line.set_x2(pd_line_h, bar_index), line.set_x2(pd_line_l, bar_index)
+        label.set_x(pd_lbl_h, bar_index), label.set_x(pd_lbl_l, bar_index)
+    if not na(pd_line_ce)
+        line.set_x2(pd_line_ce, bar_index)
+        label.set_x(pd_lbl_ce, bar_index)
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  PART 2 — SMT V-4.1                                    (SMT_V-4.1.pine)     ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//  SMT V-4.0 - SMT Divergence Detector
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  Description:
+//      Advanced SMT divergence detector that tracks and
+//      compares price action across multiple correlated symbols in real-time.
+//      Identifies divergences between main chart and comparison symbols across
+//      multiple time cycles (60min, 10min & 3min) to spot potential reversal points.
+//
+//  Key Features:
+//      • Real-time cycle high/low tracking with dynamic line updates
+//      • Multi-symbol comparison (up to 2 additional symbols)
+//      • 6 independent time cycles (60/30/20/15/10/3min) + D/W/M/Y, each with its own check-box
+//      • 8 SMT detection types (Normal & Inverse for Bullish/Bearish)
+//      • Combined symbol labels when multiple SMTs align
+//      • Session-based filtering with timezone support
+//      • Automatic invalidation of broken SMT patterns
+//      • Smart symbol abbreviation for clean chart display
+//
+//  Use Cases:
+//      • Identify divergences between correlated futures (ES, NQ, BTC, EUR, JPY, GBP, etc)
+//      • Spot institutional order flow differences
+//      • Find high-probability reversal zones
+//      • Confirm trend strength across multiple timeframes
+//      • Detect smart money vs retail money positioning
+//
+//  Version: 4.0  (cycle set re-pointed at 60/10/3)
+//  Author: StoneFace / StoneFace_Trading
+//  Release Date: Jan. 23. 2026
+//
+//  © 2025. Stoneface. All rights reserved.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              INPUTS & SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  COMPARISON SYMBOLS:
+//      Select up to 2 symbols to compare against your main chart.
+//      Best results with correlated assets (e.g., ES vs NQ, BTC vs ETH).
+//      Use continuous contracts (ES1!, NQ1!) or specific contract months.
+//
+//  CYCLE TIMEFRAMES:
+//      Enable cycles based on your trading timeframe:
+//      • 60-min: The base cycle. Swing trading, higher timeframe confirmation
+//      • 30-min: 2-way child of the 60min parent
+//      • 20-min: 3-way child of the 60min parent
+//      • 15-min: 4-way child of the 60min parent
+//      • 10-min: Intraday trends, session-based setups
+//      • 3-min: Ultra-short-term, quick reversals (1-min chart recommended)
+//      Each has a check-box: untick one and that cycle produces no SMT at all.
+//
+//  SESSION FILTER:
+//      Limit detection to specific trading sessions (e.g., NYSE hours).
+//      Helps avoid low-volume periods and reduces false signals.
+//
+//  DISPLAY:
+//      Max Total SMT Lines controls chart clutter. Higher values show more
+//      historical SMTs but may make chart harder to read.
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Comparison-symbol auto-detection ─────────────────────────────────────────
+// Maps the chart's own symbol onto Symbol 1 / Symbol 2:
+//
+//     NQ / MNQ   ->  ES / MES  +  YM / MYM
+//     ES / MES   ->  NQ / MNQ  +  YM / MYM
+//     YM / MYM   ->  ES / MES  +  NQ / MNQ
+//     BTCUSDT.P  ->  TOTAL     +  ETHUSDT.P
+//     ETHUSDT.P  ->  TOTAL     +  BTCUSDT.P
+//
+// Both properties of the chart symbol carry over to the comparisons:
+//   • size class — a mini chart compares against minis (NQ1! -> ES1! + YM1!),
+//     a micro chart against micros (MNQZ2026 -> MESZ2026 + MYMZ2026)
+//   • contract code — continuous stays continuous ("1!", "2!"), dated stays
+//     dated with the same month/year (NQZ2026 -> ESZ2026 + MYMZ2026)
+//
+// Exchange ids (TradingView): CME_MINI for the NQ and ES families, CBOT_MINI for
+// the YM family — the mini/micro Dow is listed on CBOT, not CME, which is also
+// what the manual defaults below use. TOTAL is emitted with no exchange, as
+// specified; the crypto pair keeps the chart symbol's own exchange (e.g. MEXC).
+//
+// The chart's own data-feed modifier is carried over to both comparisons: a
+// delayed-feed chart (CME_MINI_DL, CBOT_MINI_DL) stays on its delayed feed instead
+// of asking for the real-time id it has no entitlement to — otherwise
+// request.security() returns na and no SMT is ever detected on such a chart.
+//
+// Any other chart symbol leaves both values na and the manual Symbol 1 / Symbol 2
+// inputs are used instead.
+autoDetectContracts = input.bool(true, "Auto-Detect Contracts", group="Comparison Symbols", tooltip="Sets Symbol 1/2 from the chart symbol: NQ/MNQ -> ES/MES + YM/MYM, ES/MES -> NQ/MNQ + YM/MYM, YM/MYM -> ES/MES + NQ/MNQ, BTCUSDT.P/ETHUSDT.P -> TOTAL + the other one. Contract size class (mini/micro) and contract month are carried over to the comparisons.")
+
+// Comparison families in output order (Symbol 1 first), their micro roots and
+// their exchanges. The chart's own family is skipped when building the pair.
+// Constant tables — built once, unlike the detection itself.
+var compFams  = array.from("ES", "NQ", "YM")
+var compMicro = array.from("MES", "MNQ", "MYM")
+var compExch  = array.from("CME_MINI", "CME_MINI", "CBOT_MINI")
+
+// Chart-symbol roots, longest first so MNQ is never matched as NQ
+var mainRoots = array.from("MNQ", "MES", "MYM", "NQ", "ES", "YM")
+var mainFams  = array.from("NQ",  "ES",  "YM",  "NQ", "ES", "YM")
+var mainMicro = array.from(true,  true,  true,  false, false, false)
+
+monthCodeChars = "FGHJKMNQUVXZ"                              // futures month codes
+
+// Contract code of a futures ticker: "1!"/"2!"/"3!" (continuous), or a month code
+// followed by a 4-digit year ("Z2026"). Anything else is rejected, which keeps
+// lookalikes such as ESGD or ESTX50 from being read as ES/NQ/YM futures.
+isContractCode(string s) =>
+    n = str.length(s)
+    ok = false
+    if n == 2 and str.substring(s, 1, 2) == "!" and not na(str.tonumber(str.substring(s, 0, 1)))
+        ok := true                                           // NQ1!, ES2!, YM3!
+    else if n == 5 and str.contains(monthCodeChars, str.substring(s, 0, 1)) and not na(str.tonumber(str.substring(s, 1, 5)))
+        ok := true                                           // NQZ2026, MESH2027
+    ok
+
+// Data-feed modifier of the chart's own feed. TradingView appends "_DL" / "_DLY" to the
+// exchange id for delayed feeds (their docs cite NYMEX_DL), so CME_MINI becomes
+// CME_MINI_DL. A chart on a delayed feed has no entitlement to the real-time exchange id:
+// request.security() against it returns na, and the comparison symbols silently never
+// produce data — which looks exactly like "SMT is not detected on this chart".
+// na when the chart is not on one of the two futures feeds (non-futures chart).
+feedMod(string exch) =>
+    string m = na
+    if str.startswith(exch, "CME_MINI")
+        m := str.substring(exch, str.length("CME_MINI"))
+    else if str.startswith(exch, "CBOT_MINI")
+        m := str.substring(exch, str.length("CBOT_MINI"))
+    m
+
+// "<exchange><feed modifier>:<family><code>", using the micro root on micro charts.
+// The modifier keeps the comparison on the SAME feed as the chart instead of assuming
+// real-time, so delayed-feed charts work too.
+compSymbol(string fam, bool micro, string code, string mod) =>
+    famIdx = array.indexof(compFams, fam)
+    array.get(compExch, famIdx) + mod + ":" + (micro ? array.get(compMicro, famIdx) : fam) + code
+
+// Returns [symbol1, symbol2]; both na when the chart symbol is not mapped
+detectComparisonSymbols() =>
+    tickParts = str.split(syminfo.ticker, ":")
+    base = array.size(tickParts) > 1 ? array.get(tickParts, 1) : array.get(tickParts, 0)
+    idParts = str.split(syminfo.tickerid, ":")
+    chartExch = array.size(idParts) > 1 ? array.get(idParts, 0) : ""
+    // Same feed as the chart ("_DL"/"_DLY" carried over); "" when the chart is not a futures feed.
+    modRaw = feedMod(chartExch)
+    feedSuffix = na(modRaw) ? "" : modRaw
+
+    string sym1 = na
+    string sym2 = na
+
+    // 1) Index futures — known root plus a valid contract code. The futures /
+    //    CME-CBOT test keeps chart symbols that merely start with those letters
+    //    (equities, funds) out of the mapping.
+    futuresLike = syminfo.type == "futures" or str.contains(chartExch, "CME") or str.contains(chartExch, "CBOT")
+    if futuresLike
+        for i = 0 to array.size(mainRoots) - 1
+            root = array.get(mainRoots, i)
+            if str.startswith(base, root)
+                code = str.substring(base, str.length(root))
+                if isContractCode(code)
+                    fam = array.get(mainFams, i)
+                    micro = array.get(mainMicro, i)
+                    for j = 0 to array.size(compFams) - 1
+                        cf = array.get(compFams, j)
+                        if cf != fam
+                            if na(sym1)
+                                sym1 := compSymbol(cf, micro, code, feedSuffix)
+                            else
+                                sym2 := compSymbol(cf, micro, code, feedSuffix)
+                    break
+
+    // 2) Crypto — TOTAL carries no exchange; the pair keeps the chart's own
+    //    exchange and its spot/perpetual form ("BTCUSDT" vs "BTCUSDT.P").
+    if na(sym1)
+        clen = str.length(base)
+        perp = clen > 2 and str.substring(base, clen - 2, clen) == ".P"
+        cryptRoot = perp ? str.substring(base, 0, clen - 2) : base
+        if cryptRoot == "BTCUSDT" or cryptRoot == "ETHUSDT"
+            other = (cryptRoot == "BTCUSDT" ? "ETHUSDT" : "BTCUSDT") + (perp ? ".P" : "")
+            sym1 := "TOTAL"
+            sym2 := chartExch == "" ? other : chartExch + ":" + other
+
+    [sym1, sym2]
+
+// Re-derived on every bar from syminfo, exactly like the original SMT code, so
+// changing the chart symbol re-detects immediately instead of keeping the pair
+// computed for the previous chart symbol.
+[autoSymbol1, autoSymbol2] = detectComparisonSymbols()
+
+// Manual symbols are used ONLY when auto-detection is off. With it on, detection is authoritative:
+// an unmapped chart symbol means no comparison symbol for that side (that half of the detection is
+// simply inactive) — never a silent substitution. Comparing the chart against an unrelated market
+// (whatever the manual fields happen to hold) would manufacture SMTs between instruments that have
+// nothing to do with each other.
+manualSymbol1 = input.symbol("CME_MINI:MES1!", "Symbol 1", confirm=false, group="Comparison Symbols", inline="sym1", tooltip="Used only while Auto-Detect Contracts is OFF.")
+manualSymbol2 = input.symbol("CBOT_MINI:MYM1!", "Symbol 2", confirm=false, group="Comparison Symbols", inline="sym2", tooltip="Used only while Auto-Detect Contracts is OFF.")
+
+symbol1 = autoDetectContracts ? autoSymbol1 : manualSymbol1
+symbol2 = autoDetectContracts ? autoSymbol2 : manualSymbol2
+
+enableSymbol1 = input.bool(true, "Enable Symbol 1", group="Comparison Symbols", inline="en1")
+enableSymbol2 = input.bool(true, "Enable Symbol 2", group="Comparison Symbols", inline="en2")
+
+// Every SMT cycle has its own check-box. Un-tick one and its CycleManager is never
+// created, so that cycle produces no SMT at all — there is no separate master switch needed
+// to silence one size. The ladder is the 60min base, the three fractal children of that parent
+// (2-way 30min, 3-way 20min, 4-way 15min), then the SMT-specific 10min and 3min.
+//
+// Every cycle is measured SEQUENTIALLY: the live cycle against the previous CLOSED cycle of the
+// same size (see checkAndDrawSMT), never against a session extreme. That holds for all six
+// sizes, including the fractal children.
+//
+// Note the lattice offset: cycleIdFromMins anchors the SMT cycles at 02:30 NY, not the wall
+// clock, so a 60min SMT cycle runs 02:30-03:30, 03:30-04:30 and so on. The Time-Cycles 60min
+// boxes are on 02:00/03:00/04:00. This 30-minute offset is inherited from SMT unchanged, and it
+// is uniform across the whole SMT ladder, which is what keeps every size's sequential
+// comparison valid against its own previous closed cycle.
+enable60min = input.bool(true, "60-Minute Cycle", group="Cycle Timeframes", inline="c60", tooltip="The base cycle. Live 60min cycle vs the previous closed 60min cycle.")
+lineStyle60min = input.string("Dashed", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c60")
+enable30min = input.bool(true, "2-Way (30min)", group="Cycle Timeframes", inline="c30", tooltip="Fractal child of the 60min parent: 2 x 30min. Off means no 30min SMT at all.")
+lineStyle30min = input.string("Dashed", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c30")
+enable20min = input.bool(false, "3-Way (20min)", group="Cycle Timeframes", inline="c20", tooltip="Fractal child of the 60min parent: 3 x 20min — the same children as the 3-Way cycle boxes. Off by default; 20min is dense.")
+lineStyle20min = input.string("Solid", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c20")
+enable15min = input.bool(false, "4-Way (15min)", group="Cycle Timeframes", inline="c15", tooltip="Fractal child of the 60min parent: 4 x 15min — the same children as the 4-Way cycle boxes. Off by default; 15min is the densest size here.")
+lineStyle15min = input.string("Solid", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c15")
+enable10min = input.bool(true, "10-Minute Cycle", group="Cycle Timeframes", inline="c10", tooltip="SMT-specific size, carried over from the original ladder.")
+lineStyle10min = input.string("Solid", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c10")
+enable3min = input.bool(true, "3-Minute Cycle", group="Cycle Timeframes", inline="c3", tooltip="SMT-specific size. Only active on charts of 1 minute or less.")
+lineStyle3min = input.string("Solid", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c3")
+
+enableDaily = input.bool(true, "Daily Cycle (D)", group="Long Term Cycles", inline="cD")
+enableWeekly = input.bool(true, "Weekly Cycle (W)", group="Long Term Cycles", inline="cW")
+enableMonthly = input.bool(true, "Monthly Cycle (M)", group="Long Term Cycles", inline="cM")
+enableYearly = input.bool(true, "Yearly Cycle (Y)", group="Long Term Cycles", inline="cY")
+
+enableSession = input.bool(true, "Enable Session Filter", group="Session Filter")
+sessionStart = input.session("0230-1600", "Session Time", group="Session Filter")
+sessionTimezone = input.string("America/New_York", "Timezone", options=["America/New_York", "America/Chicago", "Europe/London"], group="Session Filter")
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                            SESSION SMT DETECTION
+// ═══════════════════════════════════════════════════════════════════════════════
+enableSessionSMT = input.bool(true, "Enable Session SMT Detection", group="Session SMT")
+showAsiaSession = input.bool(true, "Show Asia Session SMTs", group="Session SMT")
+showLondonSession = input.bool(true, "Show London Session SMTs", group="Session SMT")
+showNYSession = input.bool(true, "Show NY Session SMTs", group="Session SMT")
+showNYPMSession = input.bool(true, "Show NY PM Session SMTs", group="Session SMT")
+maxSessionSMTs = input.int(3, "Max Session SMTs per Session", minval=1, maxval=10, group="Session SMT")
+
+maxTotalLines = input.int(4, "Max Total SMT Lines", minval=1, maxval=20, group="Display")
+enableOldSmtDeletion = input.bool(true, "Delete Old SMTs", group="Display")
+enable369Ids = input.bool(true, "Enable 369 SMTs", group="Display")
+max369Lines = input.int(10, "Max 369 SMT Lines", minval=1, maxval=50, tooltip="Maximum number of 369 SMT lines to display. 369 SMTs are tracked separately from regular SMTs.", group="Display")
+labelOffset = input.int(25, "Label Offset (Pips/Points)", minval=5, maxval=500, tooltip="Distance of labels from SMT lines. Uses mintick multiplication (25 = 2.5 pips for forex, ~6.25 pts for NQ/ES)", group="Display")
+bullishSmtColor = input.color(color.rgb(74, 150, 98), "Bullish SMT", group="Display")
+bearishSmtColor = input.color(color.rgb(148, 43, 43), "Bearish SMT", group="Display")
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                    SWING HIGH / LOW DETECTION SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+enableSwingDetection = input.bool(false, "Enable Swing Detection", group="Swing Detection",
+  tooltip="Detect 3-candle swing highs/lows on target minutes with colored dots")
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              TYPE DEFINITIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+type IntArray
+    array<int> values
+
+type PivotPoint
+    float price
+    int barIndex
+    int time
+    int dayId            // trading-day id of the bar that produced `time` (== getDayId(time))
+    int num369           // 369 numerology of that bar in the session timezone (== get369(time))
+
+type CycleData
+    int startTime
+    int startBar
+    PivotPoint mainPivotHigh
+    PivotPoint mainPivotLow
+    PivotPoint s1PivotHigh
+    PivotPoint s1PivotLow
+    PivotPoint s2PivotHigh
+    PivotPoint s2PivotLow
+    bool active
+    int startCycleId     // cycleIdFromMins(start bar) - constant for the life of the cycle
+    int startDayId       // NY y*10000+m*100+d of the start bar (calendar cycles)
+    int startWeekId      // NY y*100+w of the start bar
+    int startMonthId     // NY y*100+m of the start bar
+    int startYear        // NY year of the start bar
+
+type CycleManager
+    int duration
+    string label
+    CycleData current
+    array<CycleData> history
+
+type LineMetadata
+    line lineObj
+    label labelObj
+    bool isBearish
+    int smtTypeId
+    float mainPrice
+    float compPrice
+    string symbols
+    string cycleLabel
+    int historyCycleStart
+    bool isForCurrentCycle
+    int num369
+    int mgrIdx           // index into `managers`; -1 for session SMTs
+    int cycleOrder       // cached getStackOrder(cycleLabel)
+    int x1               // mirror of the line's x1 (xloc.bar_time)
+    float y1
+    int x2               // mirror of the line's x2
+    float y2
+    string key1          // cached repositionAllLabels() pass-1 key
+    string x2Str         // cached str.tostring(x2)
+    string labTxt        // last text written to labelObj
+    float labX           // last x written to labelObj
+    float labY           // last y written to labelObj
+
+type DailySession
+    string name
+    string sessionTime
+    string timezone
+    bool enabled
+    CycleData data
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              GLOBAL STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// FIXED: Use ticker.standard() to normalize ticker IDs and remove session modifiers
+// This ensures compatibility with both continuous contracts (NQ1!) and monthly contracts (MNQZ2024)
+// ticker.standard() strips extended session data, modifiers, etc. that can cause issues
+// A side only exists when it has a symbol AND that side is enabled. With auto-detection on and a
+// chart symbol that is not mapped, there is no comparison symbol — the side stays silent instead
+// of being substituted with an unrelated market. The requests below still run (they carry no data when
+// the side is off), so we point them at the chart's own symbol: a valid target that can never fail,
+// whose values are then ignored by every `s1Enabled` / `s2Enabled` gate.
+s1ReqSym = na(symbol1) ? syminfo.tickerid : symbol1
+s2ReqSym = na(symbol2) ? syminfo.tickerid : symbol2
+
+s1_normalized = ticker.standard(s1ReqSym)
+s2_normalized = ticker.standard(s2ReqSym)
+
+// Use gaps_off to automatically handle missing data (replaces manual latching)
+// `close` is never read from the comparison symbols, so it is not requested
+[s1_high, s1_low] = request.security(s1_normalized, timeframe.period, [high, low], barmerge.gaps_off, barmerge.lookahead_off)
+[s2_high, s2_low] = request.security(s2_normalized, timeframe.period, [high, low], barmerge.gaps_off, barmerge.lookahead_off)
+
+// Bar times with gaps_on: na when the comparison symbol has no candle at this bar
+s1_bar_time = request.security(s1_normalized, timeframe.period, time, barmerge.gaps_on, barmerge.lookahead_off)
+s2_bar_time = request.security(s2_normalized, timeframe.period, time, barmerge.gaps_on, barmerge.lookahead_off)
+
+var array<CycleManager> managers = array.new<CycleManager>()
+// Manager label -> index in `managers` (1:1; built once on the first bar)
+var map<string, int> mgrIdxByLabel = map.new<string, int>()
+
+// Label spacing using fixed points/pips based on user input
+// For forex (5-digit brokers): syminfo.mintick = 0.00001, so 50 = 5 pips
+// For indices/crypto: syminfo.mintick varies, this adapts automatically
+// Both are constant for the life of the run (input x mintick), so they are cached
+var float labelBaseOffset = labelOffset * syminfo.mintick  // User-defined base offset from line
+var float labelStackSpacing = (labelOffset * 0.3) * syminfo.mintick  // 30% of base for stack spacing
+var array<LineMetadata> lines = array.new<LineMetadata>()
+var array<DailySession> dailySessions = array.new<DailySession>()
+var string s1Abbr = ""
+var string s2Abbr = ""
+
+// OPTIMIZATION: Pre-cache line styles and constants
+var line_style_60 = line.style_solid
+var line_style_30 = line.style_solid
+var line_style_20 = line.style_solid
+var line_style_15 = line.style_solid
+var line_style_10 = line.style_solid
+var line_style_3 = line.style_solid
+s1Enabled = enableSymbol1 and not na(symbol1)
+s2Enabled = enableSymbol2 and not na(symbol2)
+
+// Reposition flag. Functions cannot assign script globals in Pine, so every
+// mutating function reports through its return value and this flag is set at the
+// call site. (Replaces the single-element `stateFlags` array.)
+bool needReposition = false
+
+// ── Per-bar time cache ────────────────────────────────────────────────────────
+// Timezone conversions are the dominant per-bar cost of this script. Every
+// cycle/calendar/369/GBT decision reads these instead of calling
+// hour()/minute()/year()/… again.
+nyH   = hour(time, "America/New_York")
+nyMin = minute(time, "America/New_York")
+nyY   = year(time, "America/New_York")
+nyMo  = month(time, "America/New_York")
+nyD   = dayofmonth(time, "America/New_York")
+nyTotalMins = nyH * 60 + nyMin
+
+// Session-timezone clock reading. When the input already is New York the NY
+// values are reused instead of paying two more conversions.
+var int sessH = 0
+var int sessM = 0
+if sessionTimezone == "America/New_York"
+    sessH := nyH
+    sessM := nyMin
+else
+    sessH := hour(time, sessionTimezone)
+    sessM := minute(time, sessionTimezone)
+
+// NY week number — only the weekly cycle reads it.
+var int nyWeek = 0
+if enableWeekly
+    nyWeek := weekofyear(time, "America/New_York")
+
+// Trading day: futures true-day open is 18:00 NY (the counter rolls to tomorrow).
+currentDay = nyH >= 18 ? (nyY * 10000 + nyMo * 100 + nyD + 1) : (nyY * 10000 + nyMo * 100 + nyD)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              HELPER FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+getAbbr(sym) =>
+    parts = str.split(sym, ":")
+    ticker = array.size(parts) > 1 ? array.get(parts, 1) : array.get(parts, 0)
+
+    // Remove common suffixes
+    clean = str.replace_all(str.replace_all(str.replace_all(ticker, "USDT", ""), ".P", ""), "USD", "")
+
+    // Check if it ends with 1! (futures like ES1!, NQ1!)
+    if str.contains(clean, "1!")
+        clean := str.replace_all(clean, "1!", "")
+        // For indices ending in 1!, take first 2-3 chars (ES, NQ, YM, etc)
+        // Check for Micros (MES, MNQ, MYM, M2K)
+        if str.length(clean) == 3 and str.startswith(clean, "M")
+            // Strip 'M' to show underlying asset (ES, NQ, YM)
+            str.substring(clean, 1, 3)
+        else
+            str.substring(clean, 0, math.min(str.length(clean), 3))
+    else
+        // Check for monthly contract codes (H, M, U, Z followed by year)
+        // Examples: MESH2025, MYMH2025, MNQZ2024
+        hasMonthCode = false
+        monthCodePos = -1
+
+        // Check for common month codes: F, G, H, J, K, M, N, Q, U, V, X, Z
+        if str.contains(clean, "H") or str.contains(clean, "M") or str.contains(clean, "U") or str.contains(clean, "Z") or str.contains(clean, "F") or str.contains(clean, "G") or str.contains(clean, "J") or str.contains(clean, "K") or str.contains(clean, "N") or str.contains(clean, "Q") or str.contains(clean, "V") or str.contains(clean, "X")
+            // Find position of month code (usually 3rd or 4th character)
+            len = str.length(clean)
+            for i = 2 to math.min(4, len - 1)
+                char = str.substring(clean, i, i + 1)
+                if char == "H" or char == "M" or char == "U" or char == "Z" or char == "F" or char == "G" or char == "J" or char == "K" or char == "N" or char == "Q" or char == "V" or char == "X"
+                    // Check if next character is a digit (year)
+                    if i + 1 < len
+                        nextChar = str.substring(clean, i + 1, i + 2)
+                        if nextChar == "1" or nextChar == "2" or nextChar == "3" or nextChar == "4" or nextChar == "5" or nextChar == "6" or nextChar == "7" or nextChar == "8" or nextChar == "9" or nextChar == "0"
+                            hasMonthCode := true
+                            monthCodePos := i
+                            break
+
+        if hasMonthCode and monthCodePos > 0
+            // Extract base symbol before month code (e.g., MES, MYM, MNQ)
+            baseSymbol = str.substring(clean, 0, monthCodePos)
+            // Remove leading M for micro contracts (MES -> ES, MYM -> YM, MNQ -> NQ)
+            if str.length(baseSymbol) == 3 and str.substring(baseSymbol, 0, 1) == "M"
+                str.substring(baseSymbol, 1, 3)
+            else
+                baseSymbol
+        else
+            // For other symbols (BTCUSDT, ETH, TOTAL, etc), return the full cleaned name so labels aren't truncated
+            clean
+
+// Helper to sum digits and reduce to digital root
+reduceDigits(n) =>
+    val = n
+    if val > 9
+        val := math.floor(val / 10) + (val % 10)
+    if val > 9
+        val := math.floor(val / 10) + (val % 10)
+    val
+
+// Calculate 369 numerology from a session-timezone clock reading
+// (== get369(t) for any chart bar time t, without the timezone conversions)
+// Priority: 1. Minutes only sum, 2. Hour+Minutes sum
+// Returns 3, 6, or 9 if applicable, otherwise returns 0
+get369FromHM(int h, int m) =>
+    // 1. Full Time Sum (HH + MM digits)
+    sumHHMM = reduceDigits(math.floor(h / 10) + (h % 10) + math.floor(m / 10) + (m % 10))
+
+    // 2. Minutes Only Sum
+    sumMM = reduceDigits(m)
+
+    // Result logic: prioritize Minutes Only (:MM) result
+    res = 0
+    if sumMM == 3 or sumMM == 6 or sumMM == 9
+        res := sumMM
+    else if sumHHMM == 3 or sumHHMM == 6 or sumHHMM == 9
+        res := sumHHMM
+    res
+
+// NOTE: inSession()/isMonthlyContract() and calcLen() were deleted in V-4.1 —
+// neither had a live effect (inSession() had no caller; calcLen() only fed
+// `LineMetadata.length`, which nothing ever read). The `Enable Session Filter` /
+// `Session Time` inputs stay declared so the settings panel is unchanged.
+createPivot(float price, int barIdx, int t) =>
+    PivotPoint.new(price, barIdx, t, 0, 0)
+
+// Rebuild the cached grouping keys after a line's coordinates change
+// (repositionAllLabels() builds its three grouping maps from these).
+refreshLineKeys(LineMetadata m) =>
+    m.x2Str := str.tostring(m.x2)
+    m.key1 := str.tostring(m.x1) + "_" + m.x2Str + "_" + m.cycleLabel + "_" + (m.isBearish ? "1" : "0")
+
+// Stack Order Helper. Coarse cycles stack above fine ones, sessions last. The 90/30-minute
+// pair is gone: 60 sits where 90 did, and 30/20/15 are the fractal children between it and 10.
+getStackOrder(lbl) =>
+    lbl == "Y" ? 0 : (lbl == "M" ? 1 : (lbl == "W" ? 2 : (lbl == "D" ? 3 : (lbl == "60" ? 4 : (lbl == "30" ? 5 : (lbl == "20" ? 6 : (lbl == "15" ? 7 : (lbl == "10" ? 8 : (lbl == "3" ? 9 : 10)))))))))
+
+// Strict Cycle Timing Helper
+// Cycle slot id for a NY minutes-of-day value.
+cycleIdFromMins(int totalMins, int duration) =>
+    // All cycles align to 02:30 NY time
+    // Return unique ID for specific cycle slot
+    // ID = (Minutes from 02:30) / duration
+
+    // Dual Anchor Logic:
+    // Asia Session (18:00 - 00:00 NY): Anchor at 18:00 (1080 mins)
+    // Day Session (02:30 - 18:00 NY): Anchor at 02:30 (150 mins)
+    // Gap Period (00:00 - 02:30 NY): Start fresh, align to 00:00 or treat as Gap.
+    // However, the critical rule is NO OVERLAP at 02:30.
+
+    int anchorMins = 0
+
+    // Day Session Block: 02:30 to 18:00
+    if totalMins >= 150 and totalMins < 1080
+        anchorMins := 150 // 02:30 Anchor
+    else
+        // Asia / Gap Block: 18:00 to 02:30 (starts at 1080)
+        anchorMins := 1080 // 18:00 Anchor
+
+    // Calculate raw minutes from anchor
+    // If calculated mins is negative (e.g., 01:00 vs 18:00), we add 24h (1440m) to normalize
+    minsFromAnchor = totalMins - anchorMins
+    if minsFromAnchor < 0
+        minsFromAnchor += 1440
+
+    // Return Cycle ID
+    math.floor(minsFromAnchor / duration)
+
+//                              INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+initCycleData() =>
+    CycleData.new(na, na, createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), false, 0, 0, 0, 0, 0)
+
+initDailySession(name, sessionTime, timezone, enabled) =>
+    DailySession.new(name, sessionTime, timezone, enabled, initCycleData())
+
+if barstate.isfirst
+    // Intraday Cycles — one manager per check-box. A size that is off is never pushed, so the
+    // per-bar loops below and the label map simply never see it.
+    if enable60min
+        array.push(managers, CycleManager.new(60, "60", initCycleData(), array.new<CycleData>()))
+    if enable30min
+        array.push(managers, CycleManager.new(30, "30", initCycleData(), array.new<CycleData>()))
+    if enable20min
+        array.push(managers, CycleManager.new(20, "20", initCycleData(), array.new<CycleData>()))
+    if enable15min
+        array.push(managers, CycleManager.new(15, "15", initCycleData(), array.new<CycleData>()))
+    if enable10min
+        array.push(managers, CycleManager.new(10, "10", initCycleData(), array.new<CycleData>()))
+    if enable3min and timeframe.in_seconds(timeframe.period) <= 60
+        array.push(managers, CycleManager.new(3, "3", initCycleData(), array.new<CycleData>()))
+
+    // Calendar Cycles
+    if enableDaily
+        array.push(managers, CycleManager.new(-1, "D", initCycleData(), array.new<CycleData>()))
+    if enableWeekly
+        array.push(managers, CycleManager.new(-2, "W", initCycleData(), array.new<CycleData>()))
+    if enableMonthly
+        array.push(managers, CycleManager.new(-3, "M", initCycleData(), array.new<CycleData>()))
+    if enableYearly
+        array.push(managers, CycleManager.new(-4, "Y", initCycleData(), array.new<CycleData>()))
+
+    // Initialize daily sessions - sequential progression. These 2.5h session windows are
+    // carried over verbatim: they are not derived from the cycle size (2.5h divides neither
+    // 90min nor 60min), so the 60min base does not change them.
+    array.push(dailySessions, initDailySession("ASIA", "1800-0230", "America/New_York", showAsiaSession))
+    array.push(dailySessions, initDailySession("LONDON", "0230-0700", "America/New_York", showLondonSession))
+    array.push(dailySessions, initDailySession("NY-AM", "0700-1130", "America/New_York", showNYSession))
+    array.push(dailySessions, initDailySession("NY-PM", "1130-1600", "America/New_York", showNYPMSession))
+
+    s1Abbr := na(symbol1) ? "" : getAbbr(symbol1)
+    s2Abbr := na(symbol2) ? "" : getAbbr(symbol2)
+
+    // OPTIMIZATION: Cache line styles once
+    line_style_60 := get_style(lineStyle60min)
+    line_style_30 := get_style(lineStyle30min)
+    line_style_20 := get_style(lineStyle20min)
+    line_style_15 := get_style(lineStyle15min)
+    line_style_10 := get_style(lineStyle10min)
+    line_style_3 := get_style(lineStyle3min)
+    // s1Enabled / s2Enabled are now updated every bar (not cached via var)
+
+    // Index managers by label once (used by drawSMT/checkInvalidation/updateExistingLines)
+    for i = 0 to array.size(managers) - 1
+        map.put(mgrIdxByLabel, array.get(managers, i).label, i)
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              CYCLE MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+startCycle(CycleData c, int dur) =>
+    c.startTime := time
+    c.startBar := bar_index
+    c.mainPivotHigh := createPivot(na, na, na)
+    c.mainPivotLow := createPivot(na, na, na)
+    c.s1PivotHigh := createPivot(na, na, na)
+    c.s1PivotLow := createPivot(na, na, na)
+    c.s2PivotHigh := createPivot(na, na, na)
+    c.s2PivotLow := createPivot(na, na, na)
+    c.active := true
+    // Cycle-slot / calendar ids of the start bar. Constant for the whole cycle,
+    // so they are computed once here instead of being re-derived from
+    // c.startTime on every bar inside shouldComplete().
+    c.startCycleId := dur > 0 ? cycleIdFromMins(nyTotalMins, dur) : 0
+    c.startDayId := nyY * 10000 + nyMo * 100 + nyD
+    c.startWeekId := nyY * 100 + nyWeek
+    c.startMonthId := nyY * 100 + nyMo
+    c.startYear := nyY
+
+updatePivots(CycleData c) =>
+    if c.active
+        // Track main symbol extremes. Guard order is na-first so the `or` short-circuits
+        // on the very first assignment of a cycle (na compares false otherwise).
+        if na(c.mainPivotHigh.price) or high > c.mainPivotHigh.price
+            c.mainPivotHigh.price := high
+            c.mainPivotHigh.barIndex := bar_index
+            c.mainPivotHigh.time := time
+            c.mainPivotHigh.dayId := currentDay
+            c.mainPivotHigh.num369 := get369FromHM(sessH, sessM)
+
+        if na(c.mainPivotLow.price) or low < c.mainPivotLow.price
+            c.mainPivotLow.price := low
+            c.mainPivotLow.barIndex := bar_index
+            c.mainPivotLow.time := time
+            c.mainPivotLow.dayId := currentDay
+            c.mainPivotLow.num369 := get369FromHM(sessH, sessM)
+
+        // Track comparison symbols only if enabled
+        if s1Enabled or s2Enabled
+            // Track Symbol 1 extremes
+            if s1Enabled and not na(s1_high) and s1_high > 0
+                if na(c.s1PivotHigh.price) or s1_high > c.s1PivotHigh.price
+                    c.s1PivotHigh.price := s1_high
+                    c.s1PivotHigh.barIndex := bar_index
+                    c.s1PivotHigh.time := time
+                    c.s1PivotHigh.dayId := currentDay
+                    c.s1PivotHigh.num369 := get369FromHM(sessH, sessM)
+                if not na(s1_low) and s1_low > 0 and (na(c.s1PivotLow.price) or s1_low < c.s1PivotLow.price)
+                    c.s1PivotLow.price := s1_low
+                    c.s1PivotLow.barIndex := bar_index
+                    c.s1PivotLow.time := time
+                    c.s1PivotLow.dayId := currentDay
+                    c.s1PivotLow.num369 := get369FromHM(sessH, sessM)
+
+            // Track Symbol 2 extremes
+            if s2Enabled and not na(s2_high) and s2_high > 0
+                if na(c.s2PivotHigh.price) or s2_high > c.s2PivotHigh.price
+                    c.s2PivotHigh.price := s2_high
+                    c.s2PivotHigh.barIndex := bar_index
+                    c.s2PivotHigh.time := time
+                    c.s2PivotHigh.dayId := currentDay
+                    c.s2PivotHigh.num369 := get369FromHM(sessH, sessM)
+                if not na(s2_low) and s2_low > 0 and (na(c.s2PivotLow.price) or s2_low < c.s2PivotLow.price)
+                    c.s2PivotLow.price := s2_low
+                    c.s2PivotLow.barIndex := bar_index
+                    c.s2PivotLow.time := time
+                    c.s2PivotLow.dayId := currentDay
+                    c.s2PivotLow.num369 := get369FromHM(sessH, sessM)
+
+markLinesAsHistorical(int mgrIdx, int cycleStartBar) =>
+    // Mark all lines from a completed cycle as historical
+    if array.size(lines) > 0
+        for i = 0 to array.size(lines) - 1
+            meta = array.get(lines, i)
+            // Mark lines from this specific cycle (manager, 1:1 with its label) as historical
+            if meta.isForCurrentCycle and meta.mgrIdx == mgrIdx and meta.historyCycleStart == cycleStartBar
+                meta.isForCurrentCycle := false
+
+repositionAllLabels() =>
+    // OPTIMIZED: O(N) implementation using Maps to group labels
+    // All geometry/keys/text come from the LineMetadata cache: no line.get_*()
+    // built-in calls and no str.tostring() per pass, and label.set_*() only runs
+    // when the value actually changes (final label state is identical).
+    if array.size(lines) > 0
+        // Pass 1: Group by (x1, x2, cycle, isBearish) to merge symbols
+        // Key: cached LineMetadata.key1 = x1_x2_cycle_bearish
+        // FIX: Use wrapper type IntArray instead of array<int> directly in map
+        var p1Map = map.new<string, IntArray>()
+        map.clear(p1Map)
+
+        for i = 0 to array.size(lines) - 1
+            meta = array.get(lines, i)
+            // Generate Key (cached; refreshed whenever the line moves)
+            k = meta.key1
+
+            if not map.contains(p1Map, k)
+                map.put(p1Map, k, IntArray.new(array.new<int>()))
+            array.push(map.get(p1Map, k).values, i)
+
+        // Pass 2: Merge symbols and Group by (x2, symbols, isBearish) to merge cycles
+        // Key: x2_symbols_bearish
+        var p2Map = map.new<string, IntArray>()
+        map.clear(p2Map)
+        var displaySymsMap = map.new<int, string>()
+        map.clear(displaySymsMap)
+
+        // Iterate over Pass 1 groups
+        keys1 = map.keys(p1Map)
+        for k in keys1
+            indices = map.get(p1Map, k).values
+            baseIdx = array.get(indices, 0)
+            baseMeta = array.get(lines, baseIdx)
+            combinedSyms = baseMeta.symbols
+
+            // Merge multiple symbols if present
+            if array.size(indices) > 1
+                for j = 1 to array.size(indices) - 1
+                    otherMeta = array.get(lines, array.get(indices, j))
+                    combinedSyms += "+" + otherMeta.symbols
+                    if otherMeta.labTxt != ""
+                        label.set_text(otherMeta.labelObj, "") // Hide merged
+                        otherMeta.labTxt := ""
+
+            // Store resolved symbols for this group base
+            map.put(displaySymsMap, baseIdx, combinedSyms)
+
+            // Add to Pass 2 Map
+            k2 = baseMeta.x2Str + "_" + combinedSyms + "_" + (baseMeta.isBearish ? "1" : "0")
+            if not map.contains(p2Map, k2)
+                map.put(p2Map, k2, IntArray.new(array.new<int>()))
+            array.push(map.get(p2Map, k2).values, baseIdx)
+
+        // Pass 3: Merge Cycles & Stack
+        var p3Map = map.new<string, IntArray>()
+        map.clear(p3Map)
+
+        keys2 = map.keys(p2Map)
+        for k2 in keys2
+            indices = map.get(p2Map, k2).values
+            baseIdx = array.get(indices, 0)
+            baseMeta = array.get(lines, baseIdx)
+            currentSyms = map.get(displaySymsMap, baseIdx)
+
+            cycleListStr = baseMeta.cycleLabel
+
+            // Merge cycles if present
+            if array.size(indices) > 1
+                for j = 1 to array.size(indices) - 1
+                    otherMeta = array.get(lines, array.get(indices, j))
+                    cycleListStr += " + " + otherMeta.cycleLabel
+                    if otherMeta.labTxt != ""
+                        label.set_text(otherMeta.labelObj, "") // Hide merged
+                        otherMeta.labTxt := ""
+
+            // Update Label Text
+            hasDigits = str.contains(cycleListStr, "0") or str.contains(cycleListStr, "3") or str.contains(cycleListStr, "9") or str.contains(cycleListStr, "1")
+            suffix = hasDigits ? "m " : " "
+            // Use CACHED num369
+            suffix369 = enable369Ids and baseMeta.num369 > 0 ? " (" + str.tostring(baseMeta.num369) + ")" : ""
+            finalTxt = cycleListStr + suffix + currentSyms + suffix369
+            if baseMeta.labTxt != finalTxt
+                label.set_text(baseMeta.labelObj, finalTxt)
+                baseMeta.labTxt := finalTxt
+
+            // Add to Stack Map (Group by Location & Direction)
+            k3 = baseMeta.x2Str + "_" + (baseMeta.isBearish ? "1" : "0")
+            if not map.contains(p3Map, k3)
+                map.put(p3Map, k3, IntArray.new(array.new<int>()))
+            array.push(map.get(p3Map, k3).values, baseIdx)
+
+        // Apply Stacking
+        keys3 = map.keys(p3Map)
+        for k3 in keys3
+            indices = map.get(p3Map, k3).values
+            cnt = array.size(indices)
+
+            // Sort by cached stack order (Bubble Sort) if needed
+            // Order: Y(0), M(1)... 3(6), sessions 7. Ascending puts the base cycle
+            // at offset 0 and the lowest cycle on top - same order as V-4.0.
+            if cnt > 1
+                for i = 0 to cnt - 2
+                    for j = 0 to cnt - 2 - i
+                        idxA = array.get(indices, j)
+                        idxB = array.get(indices, j + 1)
+                        if array.get(lines, idxA).cycleOrder > array.get(lines, idxB).cycleOrder
+                            array.set(indices, j, idxB)
+                            array.set(indices, j + 1, idxA)
+
+            // Apply Offsets
+            for i = 0 to cnt - 1
+                meta = array.get(lines, array.get(indices, i))
+                stackOffset = i * labelStackSpacing
+                totalOffset = meta.isBearish ? (labelBaseOffset + stackOffset) : -(labelBaseOffset + stackOffset)
+
+                midX = math.floor((meta.x1 + meta.x2) / 2)
+                midY = (meta.y1 + meta.y2) / 2
+                newY = midY + totalOffset
+                if meta.labX != midX or meta.labY != newY
+                    label.set_xy(meta.labelObj, midX, newY)
+                    meta.labX := midX
+                    meta.labY := newY
+
+completeCycle(CycleManager m, int mIdx) =>
+    // Mark existing lines for this cycle as historical BEFORE starting new cycle
+    markLinesAsHistorical(mIdx, m.current.startBar)
+
+    // Create deep copies of pivot points
+    mainHighCopy = createPivot(m.current.mainPivotHigh.price, m.current.mainPivotHigh.barIndex, m.current.mainPivotHigh.time)
+    mainLowCopy = createPivot(m.current.mainPivotLow.price, m.current.mainPivotLow.barIndex, m.current.mainPivotLow.time)
+    s1HighCopy = createPivot(m.current.s1PivotHigh.price, m.current.s1PivotHigh.barIndex, m.current.s1PivotHigh.time)
+    s1LowCopy = createPivot(m.current.s1PivotLow.price, m.current.s1PivotLow.barIndex, m.current.s1PivotLow.time)
+    s2HighCopy = createPivot(m.current.s2PivotHigh.price, m.current.s2PivotHigh.barIndex, m.current.s2PivotHigh.time)
+    s2LowCopy = createPivot(m.current.s2PivotLow.price, m.current.s2PivotLow.barIndex, m.current.s2PivotLow.time)
+    savedCycle = CycleData.new(m.current.startTime, m.current.startBar, mainHighCopy, mainLowCopy, s1HighCopy, s1LowCopy, s2HighCopy, s2LowCopy, true, m.current.startCycleId, m.current.startDayId, m.current.startWeekId, m.current.startMonthId, m.current.startYear)
+    array.push(m.history, savedCycle)
+
+    // OPTIMIZATION: Cap history size
+    if array.size(m.history) > 40
+        array.shift(m.history)
+
+    startCycle(m.current, m.duration)
+
+shouldComplete(CycleData c, int durMin) =>
+    if not c.active or na(c.startTime)
+        false
+    else
+        // STRICT TIMING: Check if we have moved to a new cycle slot
+        bool shouldFinish = false
+
+        if durMin > 0
+            // Intraday Cycles (60, 10, 3) — c.startCycleId was cached at cycle start
+            shouldFinish := cycleIdFromMins(nyTotalMins, durMin) != c.startCycleId
+        else if durMin == -1
+            // Calendar Cycles (-1=Daily, -2=Weekly, -3=Monthly, -4=Yearly)
+            // Use NY time for all calendar boundaries (per-bar cache).
+            // Daily: pure calendar day, 00:00 NY boundary
+            shouldFinish := (nyY * 10000 + nyMo * 100 + nyD) != c.startDayId
+        else if durMin == -2 // Weekly
+            // y*100+w is injective for w <= 53, so this equals (nyWeek != startWeek or nyY != startYear)
+            shouldFinish := (nyY * 100 + nyWeek) != c.startWeekId
+        else if durMin == -3 // Monthly
+            // y*100+m is injective for m <= 12, so this equals (nyMo != startMonth or nyY != startYear)
+            shouldFinish := (nyY * 100 + nyMo) != c.startMonthId
+        else if durMin == -4 // Yearly
+            shouldFinish := nyY != c.startYear
+
+        shouldFinish
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              SMT DETECTION & DRAWING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+isInvalidated(meta, isS1, isHigh, bearish, inverse, currMain, currComp) =>
+    if na(currComp) or na(currMain)
+        false
+    else
+        if inverse
+            bearish ? (currComp < meta.compPrice or currMain > meta.mainPrice) : (currComp > meta.compPrice or currMain < meta.mainPrice)
+        else
+            bearish ? currComp > meta.compPrice : currComp < meta.compPrice
+
+// NOTE: getDayId() was deleted in V-4.1 - the trading-day id is now cached on
+// PivotPoint (`dayId`) at the same bar the pivot is written, which is exactly
+// the bar `time2` came from.
+drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, string symbolStr, string cycleLabel, bool bearish, int typeId, float compPrice, int cycleStartBar, int currentDay, int t2DayId, int t2Num369) =>
+    if na(bar1) or na(bar2) or na(time1) or na(time2)
+        false
+    else
+        // Owning cycle manager (session labels have none)
+        int mgrIdx = -1
+        if map.contains(mgrIdxByLabel, cycleLabel)
+            mgrIdx := map.get(mgrIdxByLabel, cycleLabel)
+
+        bool isLongTerm = false
+        if mgrIdx >= 0
+            isLongTerm := array.get(managers, mgrIdx).duration < 0
+
+        // ONLY draw SMTs from current trading day for intraday cycles
+        // Long-term cycles (D, W, M, Y) can span multiple days
+        // t2DayId == getDayId(time2), cached on the pivot that produced time2
+        if not isLongTerm and t2DayId != currentDay
+            false  // Skip drawing this SMT - it's from a previous trading day
+        else
+            lineColor = bearish ? bearishSmtColor : bullishSmtColor
+            textColor = bearish ? bearishSmtColor : bullishSmtColor
+            lineStyle = cycleLabel == "60" ? line_style_60 : (cycleLabel == "30" ? line_style_30 : (cycleLabel == "20" ? line_style_20 : (cycleLabel == "15" ? line_style_15 : (cycleLabel == "10" ? line_style_10 : (cycleLabel == "3" ? line_style_3 : line.style_solid)))))
+
+            shouldAdd = true
+            mergeIdx = -1
+
+            if array.size(lines) > 0
+                for i = 0 to array.size(lines) - 1
+                    m = array.get(lines, i)
+                    // Check if this is EXACT SAME symbol, cycle, and direction
+                    if m.isBearish == bearish and m.isForCurrentCycle and m.mgrIdx == mgrIdx and m.cycleLabel == cycleLabel and m.symbols == symbolStr
+                        // Update existing line for this specific symbol
+                        mergeIdx := i
+                        shouldAdd := false
+                        break
+
+            isNew = false
+            if mergeIdx >= 0
+                // Update existing SMT line for this symbol
+                existing = array.get(lines, mergeIdx)
+
+                // Keep the existing drawing object alive while its realtime endpoint develops.
+                // Recreating the line on every new extreme causes visible flicker in realtime.
+
+                if na(existing.lineObj)
+                    existing.lineObj := line.new(time1, price1, time2, price2, xloc=xloc.bar_time, color=lineColor, width=1, style=lineStyle)
+                else
+                    line.set_xy1(existing.lineObj, time1, price1)
+                    line.set_xy2(existing.lineObj, time2, price2)
+
+                existing.mainPrice := price1
+                existing.compPrice := compPrice
+                // Keep the cached geometry mirror in sync with the updated line
+                existing.x1 := time1
+                existing.y1 := price1
+                existing.x2 := time2
+                existing.y2 := price2
+                refreshLineKeys(existing)
+
+                // Coordinates and cached label geometry are synchronized below.
+
+                isNew := true
+            else if shouldAdd
+                // No need to remove old lines here based on length anymore.
+                // Just add the new one and let the FIFO limit handle cleanup.
+
+                l = line.new(time1, price1, time2, price2, xloc=xloc.bar_time, color=lineColor, width=1, style=lineStyle)
+
+                // Calculate midpoint for label placement
+                midTime = math.floor((time1 + time2) / 2)
+                midPrice = (price1 + price2) / 2
+
+                // The stack offset is recomputed by repositionAllLabels() at the end of
+                // every bar that draws, so only the base offset is needed here.
+                totalOffset = bearish ? labelBaseOffset : -labelBaseOffset
+
+                // Add "m" only for numeric cycle labels (60, 10, 3), not for session or calendar labels
+                isSessionLabel = cycleLabel == "ASIA" or cycleLabel == "LONDON" or cycleLabel == "NY-AM" or cycleLabel == "NY-PM" or cycleLabel == "D" or cycleLabel == "W" or cycleLabel == "M" or cycleLabel == "Y"
+
+                // 369 numerology of the endpoint (cached on the pivot that produced time2)
+                num369 = t2Num369
+                suffix369 = enable369Ids and num369 > 0 ? " (" + str.tostring(num369) + ")" : ""
+
+                txt = isSessionLabel ? cycleLabel + " " + symbolStr + suffix369 : cycleLabel + "m " + symbolStr + suffix369
+
+                // Create label at midpoint of line
+                lab = label.new(midTime, midPrice + totalOffset, txt, xloc=xloc.bar_time, style=label.style_none, color=textColor, textcolor=textColor, size=size.small, yloc=yloc.price)
+
+                meta = LineMetadata.new(l, lab, bearish, typeId, price1, compPrice, symbolStr, cycleLabel, cycleStartBar, true, num369, mgrIdx, getStackOrder(cycleLabel), time1, price1, time2, price2, "", "", txt, midTime, midPrice + totalOffset)
+                refreshLineKeys(meta)
+                array.push(lines, meta)
+                // Keep the just-created signal visible; if the regular cap is full, evict an older line.
+                int newestLineIdx = array.size(lines) - 1
+
+                // Calculate regular (non-exempt) and 369 line counts separately
+                int regularLineCount = 0
+                int line369Count = 0
+                if array.size(lines) > 0
+                    for i = 0 to array.size(lines) - 1
+                        m_chk = array.get(lines, i)
+                        // OPTIMIZATION: Use cached num369
+                        is369 = enable369Ids and m_chk.num369 > 0
+                        if is369
+                            line369Count += 1
+                        else
+                            regularLineCount += 1
+
+                if enableOldSmtDeletion
+                    // Delete excess regular SMTs, but never evict the line created on this bar.
+                    // Among existing lines, lowest priority first = highest cycleOrder.
+                    while regularLineCount > maxTotalLines
+                        // Find the lowest-priority existing line; the new line is protected.
+                        idxToRemove = -1
+                        maxOrder = -1
+
+                        for i = 0 to array.size(lines) - 1
+                            checkLn = array.get(lines, i)
+
+                            // EXEMPT 369 SMTs from regular deletion
+                            if enable369Ids and checkLn.num369 > 0
+                                continue
+
+                            // Strict greater-than keeps the distinct oldest if priorities match (FIFO within priority)
+                            if i != newestLineIdx and checkLn.cycleOrder > maxOrder
+                                maxOrder := checkLn.cycleOrder
+                                idxToRemove := i
+
+                        if idxToRemove >= 0
+                            old = array.remove(lines, idxToRemove)
+                            line.delete(old.lineObj)
+                            label.delete(old.labelObj)
+                            regularLineCount -= 1
+                        else
+                            // If no existing regular line can be removed, keep the new signal visible.
+                            break
+                    // Delete excess 369 SMTs (FIFO - oldest first)
+                    while line369Count > max369Lines
+                        idxToRemove = -1
+
+                        for i = 0 to array.size(lines) - 1
+                            checkLn = array.get(lines, i)
+
+                            // Only consider 369 SMTs
+                            if enable369Ids and checkLn.num369 > 0
+                                idxToRemove := i
+                                break  // Remove the first (oldest) 369 SMT found
+
+                        if idxToRemove >= 0
+                            old = array.remove(lines, idxToRemove)
+                            line.delete(old.lineObj)
+                            label.delete(old.labelObj)
+                            line369Count -= 1
+                        else
+                            break
+
+                isNew := true
+            isNew
+
+// Unified SMT Detection Helper
+//
+// Every SMT is a SEQUENTIAL, one-step-back comparison: the live cycle's extreme is measured
+// against the previous CLOSED cycle's extreme. That holds for the intraday cycles (60/10/3)
+// and the calendar cycles (D/W/M/Y) alike. `prevMain`/`prevComp` are the deep copies
+// completeCycle() freezes at the rollover, so the reference cannot drift while the live cycle is
+// still forming: the SMT fires on the first bar the live extreme crosses the closed cycle's, and
+// the line runs from the closed cycle's extreme to the live one.
+//
+// The comparison is exactly one cycle back, and a session extreme is never substituted for the
+// previous cycle. An intraday SMT is therefore a divergence between two adjacent cycles of the
+// same size, not a session sweep reprinted under a cycle label. Session sweeps are the session
+// SMTs' job (see compareSessionSMT), which compares session against session.
+checkAndDrawSMT(PivotPoint currMain, PivotPoint prevMain, PivotPoint currComp, PivotPoint prevComp, string symStr, string lbl, int startBar, int typeBase, bool isBearish, int currentDay) =>
+    detected = false
+    // Sequential reference for every cycle size: the previous CLOSED cycle's extreme
+    PivotPoint rMain = prevMain
+    PivotPoint rComp = prevComp
+    bool refsOk = not na(currMain.price) and not na(currComp.price) and not na(prevMain.price) and not na(prevComp.price)
+    if refsOk
+        if isBearish
+            // Bearish Normal: main breaks the closed cycle's high, comp holds below its own
+            if currMain.price > rMain.price and currComp.price < rComp.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 0, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+            // Bearish Inverse: comp breaks the closed cycle's high, main holds below its own
+            if currComp.price > rComp.price and currMain.price < rMain.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 4, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+        else
+            // Bullish Normal: main breaks the closed cycle's low, comp holds above its own
+            if currMain.price < rMain.price and currComp.price > rComp.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 1, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+            // Bullish Inverse: comp breaks the closed cycle's low, main holds above its own
+            if currComp.price < rComp.price and currMain.price > rMain.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 5, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+    detected
+
+checkInvalidation() =>
+    bool removed = false
+    // Reused across bars instead of re-allocated on every execution
+    var array<int> toRemove = array.new<int>()
+    // OPTIMIZATION: Early exit if no symbols enabled
+    if s1Enabled or s2Enabled
+        if array.size(lines) > 0
+            array.clear(toRemove)
+            for i = 0 to array.size(lines) - 1
+                m = array.get(lines, i)
+                isS1 = m.smtTypeId == 0 or m.smtTypeId == 1 or m.smtTypeId == 4 or m.smtTypeId == 5
+                isHigh = m.smtTypeId == 0 or m.smtTypeId == 2 or m.smtTypeId == 4 or m.smtTypeId == 6
+                inverse = m.smtTypeId >= 4
+                enabled = isS1 ? s1Enabled : s2Enabled
+
+                // Only the cycle that is still open can invalidate its own SMT. Once a cycle has
+                // rolled over, its recorded extremes are history; and a session SMT (mgrIdx -1) is
+                // final the moment its session closes. Neither is broken by later price action -
+                // without this gate every finished line was erased within a bar or two of being
+                // drawn, by a comparison price that had nothing to do with the cycle it came from.
+                if enabled and m.mgrIdx >= 0 and m.isForCurrentCycle
+                    currMain = isHigh ? high : low
+                    currComp = isS1 ? (isHigh ? s1_high : s1_low) : (isHigh ? s2_high : s2_low)
+
+                    mgr = array.get(managers, m.mgrIdx)
+                    if mgr.current.active
+                        cMain = isHigh ? mgr.current.mainPivotHigh.price : mgr.current.mainPivotLow.price
+                        cComp = isS1 ? (isHigh ? mgr.current.s1PivotHigh.price : mgr.current.s1PivotLow.price) : (isHigh ? mgr.current.s2PivotHigh.price : mgr.current.s2PivotLow.price)
+                        if not na(cMain)
+                            currMain := cMain
+                        if not na(cComp)
+                            currComp := cComp
+
+                    if not na(currMain) and not na(currComp)
+                        // Checks all SMTs (including 369s) for invalidation/sync
+                        if isInvalidated(m, isS1, isHigh, m.isBearish, inverse, currMain, currComp)
+                            array.push(toRemove, i)
+
+            if array.size(toRemove) > 0
+                for i = array.size(toRemove) - 1 to 0
+                    old = array.remove(lines, array.get(toRemove, i))
+                    line.delete(old.lineObj)
+                    label.delete(old.labelObj)
+                // Reposition remaining labels after deletion
+                removed := true
+    removed
+
+updateExistingLines(CycleManager m, int mIdx) =>
+    curr = m.current
+    bool changed = false
+    if array.size(lines) > 0 and curr.active
+        for i = 0 to array.size(lines) - 1
+            meta = array.get(lines, i)
+            // ROBUSTNESS FIX: Remove strict startBar check. Rely on isForCurrentCycle and manager match.
+            // This ensures active lines tracks price even if startBar accounting drifts slightly.
+            if meta.isForCurrentCycle and meta.mgrIdx == mIdx
+                isHigh = meta.smtTypeId == 0 or meta.smtTypeId == 2 or meta.smtTypeId == 4 or meta.smtTypeId == 6
+
+                // Get current pivot (the end point of the line)
+                currPivot = isHigh ? curr.mainPivotHigh : curr.mainPivotLow
+
+                // Cached mirror instead of line.get_x2/get_y2 (set_xy2 below is the only writer)
+                if not na(currPivot.price) and (meta.x2 != currPivot.time or meta.y2 != currPivot.price)
+                    // Update the line endpoint to current cycle's extreme
+                    line.set_xy2(meta.lineObj, currPivot.time, currPivot.price)
+                    meta.x2 := currPivot.time
+                    meta.y2 := currPivot.price
+                    refreshLineKeys(meta)
+
+                    // Update Cached 369 since time changed (pivot cached it at write time)
+                    meta.num369 := currPivot.num369
+
+                    changed := true
+    changed
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              SESSION SMT FUNCTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+isInSession(sessionTime, timezone) =>
+    not na(time("", sessionTime, timezone))
+
+startDailySession(s) =>
+    startCycle(s.data, 0)
+
+compareSessionSMT(curr, prev, int currentDay) =>
+    // Note: Sessions use prev.startTime as the identifier (not startBar since sessions don't have startBar)
+    sessionStartBar = bar_index  // Use current bar as the session start reference
+
+    // Compare current session high to previous session high (Bearish)
+    if s1Enabled or s2Enabled
+        if not na(curr.data.mainPivotHigh.price) and not na(prev.data.mainPivotHigh.price)
+            if s1Enabled
+                checkAndDrawSMT(curr.data.mainPivotHigh, prev.data.mainPivotHigh, curr.data.s1PivotHigh, prev.data.s1PivotHigh, s1Abbr, prev.name, sessionStartBar, 0, true, currentDay)
+            if s2Enabled
+                checkAndDrawSMT(curr.data.mainPivotHigh, prev.data.mainPivotHigh, curr.data.s2PivotHigh, prev.data.s2PivotHigh, s2Abbr, prev.name, sessionStartBar, 2, true, currentDay)
+
+        // Compare current session low to previous session low (Bullish)
+        if not na(curr.data.mainPivotLow.price) and not na(prev.data.mainPivotLow.price)
+            if s1Enabled
+                checkAndDrawSMT(curr.data.mainPivotLow, prev.data.mainPivotLow, curr.data.s1PivotLow, prev.data.s1PivotLow, s1Abbr, prev.name, sessionStartBar, 0, false, currentDay)
+            if s2Enabled
+                checkAndDrawSMT(curr.data.mainPivotLow, prev.data.mainPivotLow, curr.data.s2PivotLow, prev.data.s2PivotLow, s2Abbr, prev.name, sessionStartBar, 2, false, currentDay)
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              MAIN EXECUTION LOGIC
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  EXECUTION FLOW:
+//      1. Update cycle and session extremes from the current realtime bar
+//      2. Invalidate the SMTs of still-open cycles against those current extremes
+//      3. Detect new SMTs and update existing line endpoints in place
+//      4. Reposition labels once after all SMT processing
+//
+//  TRADING DAY:
+//      • Trading day starts at 18:00 NY time (Asia session open)
+//      • Nothing is cleared at the boundary. Cycle history, session data and the drawn SMTs all
+//        carry across, so the first cycle of a new day still has the previous day's last cycle to
+//        measure against, and yesterday's SMTs stay on the chart. The count is bounded by the
+//        "Max Total SMT Lines" and "Max 369 SMT Lines" FIFO caps, not by a daily wipe.
+//      • Cycle and session state self-resets, so no boundary bookkeeping is needed: startDailySession()
+//        wipes a session's pivots when it opens, and an intraday cycle rolls over on its own
+//        because 18:00 is one of its slot boundaries.
+//      • Only a still-open cycle can invalidate its own SMT. A line whose cycle has rolled over,
+//        and every session SMT, keeps the extremes it was drawn with.
+//
+//  SMT DETECTION LOGIC:
+//      Bearish SMT (Normal): Main makes higher high, Comparison makes lower high
+//      Bullish SMT (Normal): Main makes lower low, Comparison makes higher low
+//      Bearish SMT (Inverse): Comparison makes higher high, Main makes lower high
+//      Bullish SMT (Inverse): Comparison makes lower low, Main makes higher low
+//
+//  SEQUENTIAL DETECTION: every SMT compares the live cycle against the previous CLOSED cycle —
+//      one step back, same cycle size, for the intraday cycles (60/10/3) and the calendar cycles
+//      (D/W/M/Y) alike. The live cycle supplies the event window and the live extreme;
+//      completeCycle() deep-copies the finished cycle's extremes, so the reference is frozen from
+//      the moment the cycle rolls over and the SMT fires on the first bar the live extreme crosses
+//      it. The line is drawn from the closed cycle's extreme to the live one.
+//
+//  LINE DISPLAY:
+//      • Black lines connect previous cycle extreme to current cycle extreme
+//      • Labels show: "SMT-[Symbol(s)] [Cycle]"
+//      • Combined labels (e.g., "SMT-BTC+ES 60") indicate multiple SMTs aligned
+//      • Lines update in real-time as current cycle's high/low changes
+//      • Lines are automatically removed if pattern is invalidated
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Process long-term cycles (D, W, M, Y) - ALWAYS active, ignore session filter
+for i = 0 to array.size(managers) - 1
+    m = array.get(managers, i)
+    // Long-term managers are the ones with a negative duration
+    if m.duration >= 0
+        continue
+
+    curr = m.current
+
+    // 1. CYCLE LIFECYCLE - start or complete
+    if not curr.active
+        startCycle(curr, m.duration)
+    else if shouldComplete(curr, m.duration)
+        completeCycle(m, i)
+        curr := m.current
+
+    // Skip inactive cycles
+    if not curr.active
+        continue
+
+    // 2. DATA SNAPSHOT - always snapshot for comparisons
+    prevMainHigh = curr.mainPivotHigh.price
+    prevMainLow = curr.mainPivotLow.price
+    prevS1High = curr.s1PivotHigh.price
+    prevS1Low = curr.s1PivotLow.price
+    prevS2High = curr.s2PivotHigh.price
+    prevS2Low = curr.s2PivotLow.price
+
+    // 3. UPDATE CURRENT EXTREMES
+    updatePivots(curr)
+
+    // 4. INVALIDATION CHECK - Moved to global scope once per bar (below)
+
+    // 5. CHANGE DETECTION - optimized
+    anyHighChanged = curr.mainPivotHigh.price != prevMainHigh or curr.s1PivotHigh.price != prevS1High or curr.s2PivotHigh.price != prevS2High
+    anyLowChanged = curr.mainPivotLow.price != prevMainLow or curr.s1PivotLow.price != prevS1Low or curr.s2PivotLow.price != prevS2Low
+
+    // Skip if no changes
+    if not anyHighChanged and not anyLowChanged
+        continue
+
+    // 5. REAL-TIME LINE UPDATES - only when this cycle's extremes moved
+    if updateExistingLines(m, i)
+        needReposition := true
+
+    // 6. INTRA-CYCLE DETECTION - compare the currently-open cycle against the single previous completed cycle only
+    if array.size(m.history) >= 1
+        mLabel = m.label  // Cache label for alert conditions
+
+        lastCompleted = array.get(m.history, array.size(m.history) - 1)
+
+        if anyHighChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s1PivotHigh, lastCompleted.s1PivotHigh, s1Abbr, mLabel, curr.startBar, 0, true, currentDay)
+                needReposition := true
+
+        if anyHighChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s2PivotHigh, lastCompleted.s2PivotHigh, s2Abbr, mLabel, curr.startBar, 2, true, currentDay)
+                needReposition := true
+
+        if anyLowChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s1PivotLow, lastCompleted.s1PivotLow, s1Abbr, mLabel, curr.startBar, 0, false, currentDay)
+                needReposition := true
+
+        if anyLowChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s2PivotLow, lastCompleted.s2PivotLow, s2Abbr, mLabel, curr.startBar, 2, false, currentDay)
+                needReposition := true
+
+// Process intraday cycles (60m, 10m, 3m) - always run (session filter does not gate cycle tracking)
+for mIdx = 0 to array.size(managers) - 1
+    m = array.get(managers, mIdx)
+    // Skip long-term cycles (already processed above)
+    if m.duration < 0
+        continue
+
+    curr = m.current
+
+    // 1. CYCLE LIFECYCLE - start or complete
+    if not curr.active
+        startCycle(curr, m.duration)
+    else if shouldComplete(curr, m.duration)
+        completeCycle(m, mIdx)
+        curr := m.current
+
+    // Skip inactive cycles
+    if not curr.active
+        continue
+
+    // 2. DATA SNAPSHOT - always snapshot for comparisons
+    prevMainHigh = curr.mainPivotHigh.price
+    prevMainLow = curr.mainPivotLow.price
+    prevS1High = curr.s1PivotHigh.price
+    prevS1Low = curr.s1PivotLow.price
+    prevS2High = curr.s2PivotHigh.price
+    prevS2Low = curr.s2PivotLow.price
+
+    // 3. UPDATE CURRENT EXTREMES
+    updatePivots(curr)
+
+    // 5. CHANGE DETECTION - optimized
+    anyHighChanged = curr.mainPivotHigh.price != prevMainHigh or curr.s1PivotHigh.price != prevS1High or curr.s2PivotHigh.price != prevS2High
+    anyLowChanged = curr.mainPivotLow.price != prevMainLow or curr.s1PivotLow.price != prevS1Low or curr.s2PivotLow.price != prevS2Low
+
+    // Skip if no changes
+    if not anyHighChanged and not anyLowChanged
+        continue
+
+    // 5. REAL-TIME LINE UPDATES - only when this cycle's extremes moved
+    if updateExistingLines(m, mIdx)
+        needReposition := true
+
+    // 6. INTRA-CYCLE DETECTION - compare current cycle against the immediately previous completed cycle only
+    if array.size(m.history) > 0
+        mLabel = m.label
+
+        lastCompleted = array.get(m.history, array.size(m.history) - 1)
+
+        if anyHighChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s1PivotHigh, lastCompleted.s1PivotHigh, s1Abbr, mLabel, curr.startBar, 0, true, currentDay)
+                needReposition := true
+
+        if anyHighChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s2PivotHigh, lastCompleted.s2PivotHigh, s2Abbr, mLabel, curr.startBar, 2, true, currentDay)
+                needReposition := true
+
+        if anyLowChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s1PivotLow, lastCompleted.s1PivotLow, s1Abbr, mLabel, curr.startBar, 0, false, currentDay)
+                needReposition := true
+
+        if anyLowChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s2PivotLow, lastCompleted.s2PivotLow, s2Abbr, mLabel, curr.startBar, 2, false, currentDay)
+                needReposition := true
+
+// 7. BATCH PROCESSING - the per-manager endpoint update runs inside each manager loop above,
+// guarded by the change flag that loop already computed (no extra full pass over `managers`).
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                              SESSION SMT PROCESSING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Process session SMTs - sequential comparison like cycles
+if enableSessionSMT
+    for i = 0 to array.size(dailySessions) - 1
+        sess = array.get(dailySessions, i)
+
+        if not sess.enabled
+            continue
+
+        inSession = isInSession(sess.sessionTime, sess.timezone)
+
+        if inSession and not sess.data.active
+            startDailySession(sess)
+
+        if sess.data.active
+            updatePivots(sess.data)
+
+        if not inSession and sess.data.active and not na(sess.data.mainPivotHigh.price) and not na(sess.data.mainPivotLow.price)
+            sess.data.active := false
+
+            // Sequential: the session that just closed is measured against the one immediately
+            // before it and nothing else, so a session SMT is one step back exactly the way the
+            // cycle SMTs are. Sessions switched off in the panel are stepped over, not compared to.
+            if i > 0
+                for j = i - 1 to 0
+                    prevSess = array.get(dailySessions, j)
+                    if prevSess.enabled and not na(prevSess.data.mainPivotHigh.price) and not na(prevSess.data.mainPivotLow.price)
+                        compareSessionSMT(sess, prevSess, currentDay)
+                        break
+            needReposition := true
+
+// Invalidation runs after every cycle/session has consumed the current bar.
+// This makes a break visible on the same realtime update that created it.
+if checkInvalidation()
+    needReposition := true
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                    SWING HIGH / LOW PLOTTING (TIME-BASED)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  Detects 3-candle swing patterns on strict GBT master grid marks:
+//  • Rule: HH + MM = GB-set number (full set, hour-dependent minute lattice)
+//  • Non-GB numbers (23, 35, 65, 77) labeled with "N" prefix (N23, N35, N65, N77)
+//  • Strict marks only - no +/-1 tolerance
+//  • GB number printed above (high) / below (low) the swing
+//  • FIFO label cap (Max Swing Labels) keeps the total under the 500-label
+//    chart limit so recent marks always render (oldest are deleted first)
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+var array<int> gbtNumbers = array.from(3, 11, 17, 23, 29, 35, 41, 47, 53, 59, 65, 71, 77, 83, 89, 97)
+
+// Sum lookup: gbSumLut[s] is true when h + m == s is a GBT master-grid number.
+// Built once on the first bar (replaces a 16-element scan per isGbHM() call).
+buildGbSumLut(array<int> nums) =>
+    lut = array.new<bool>(144, false)
+    for i = 0 to array.size(nums) - 1
+        array.set(lut, array.get(nums, i), true)
+    lut
+
+var array<bool> gbSumLut = buildGbSumLut(gbtNumbers)
+
+// nextMarkOffset[minuteOfDay] = minutes until the next GBT mark exists
+// (wrapping past midnight). Built once on the first bar so the next-mark lookup is O(1)
+// instead of scanning up to 61 candidate minutes per bar. This is the HOUR-SHIFTED path,
+// used by the Shift row of the Next table.
+buildNextMarkOffsets(array<bool> sumLut) =>
+    minuteLut = array.new<bool>(1440, false)
+    for i = 0 to 1439
+        if array.get(sumLut, math.floor(i / 60) + (i % 60))
+            array.set(minuteLut, i, true)
+    firstMark = 0
+    for i = 0 to 1439
+        if array.get(minuteLut, i)
+            firstMark := i
+            break
+    offsets = array.new<int>(1440, 0)
+    run = 0
+    wrapped = true
+    for i = 1439 to 0
+        if array.get(minuteLut, i)
+            run := 0
+            wrapped := false
+        else
+            run += 1
+        array.set(offsets, i, wrapped ? (1440 - i) + firstMark : run)
+    offsets
+
+var array<int> nextMarkOffset = buildNextMarkOffsets(gbSumLut)
+
+// Basic path ("GB minutes that repeat in every hour"): the master-grid numbers that are valid
+// minutes (< 60) form a lattice with no hour term, so the next mark depends on the minute only
+// and a 60-entry table is enough. offs[m] = minutes from minute m to the next lattice minute,
+// wrapping the hour (0 when m itself is a mark). Built once on the first bar.
+buildBasicMinuteOffsets(array<int> nums) =>
+    offs = array.new<int>(60, 60)
+    for k = 0 to array.size(nums) - 1
+        n = array.get(nums, k)
+        if n < 60
+            for i = 0 to 59
+                d = (n - i + 60) % 60
+                if d < array.get(offs, i)
+                    array.set(offs, i, d)
+    offs
+
+var array<int> nextBasicOffset = buildBasicMinuteOffsets(gbtNumbers)
+
+var array<label> swingLabels = array.new<label>()
+maxSwingLabels = input.int(200, "Max Swing Labels", minval=1, maxval=300, group="Swing Detection",
+  tooltip="FIFO cap for swing and diamond labels. Oldest labels are deleted so the total stays under the 500-label chart limit, otherwise recent marks stop rendering.")
+
+// Helper: strict GBT master grid check (O(1) LUT lookup).
+// Rule: HH + MM must equal a GB-set number. No +/-1 tolerance.
+// Non-GB numbers (23, 35, 65, 77) are flagged for the "N" label prefix.
+isGbHM(int h, int m) =>
+    int s = h + m
+    bool isMark = false
+    if s >= 0 and s < 144
+        isMark := array.get(gbSumLut, s)
+    isMark
+
+// Returns [isMark, gbNumber, isNonGb]
+isGbtMark(int h, int m) =>
+    int s = h + m
+    bool isMark = isGbHM(h, m)
+    [isMark, s, isMark and (s == 23 or s == 35 or s == 65 or s == 77)]
+
+// Fixed pixel offsets from the bar's high/low (zoom-independent):
+// number label closest to the candle, dot stacked further out.
+LABEL_PX_NEAR = 3
+LABEL_PX_FAR = 28
+
+// Create a number label anchored to the bar: fixed pixel offset from
+// the high (above=true) or low (above=false). yloc.abovebar/belowbar keep
+// the label glued to the candle at a constant screen distance when zooming.
+// px = pixel offset. FIFO-trimmed to stay under the 500-label chart limit.
+addSwingLabel(int barIdx, string txt, color col, bool above, int px) =>
+    lbl = label.new(barIdx, px, txt, xloc=xloc.bar_index,
+      yloc=above ? yloc.abovebar : yloc.belowbar,
+      color=color.new(color.black, 100), textcolor=col,
+      style=label.style_none, size=size.small)
+    array.push(swingLabels, lbl)
+    while array.size(swingLabels) > maxSwingLabels
+        oldLbl = array.shift(swingLabels)
+        label.delete(oldLbl)
+
+// 3-candle swing patterns (middle candle is bar[1])
+isSwingHighPattern = high[2] < high[1] and high[0] < high[1]
+isSwingLowPattern = low[2] > low[1] and low[0] > low[1]
+
+// Detect and plot Swing High (strict GBT mark only)
+if enableSwingDetection and isSwingHighPattern and not na(time[1])
+    // sessH[1]/sessM[1] == hour/minute of time[1] in the session timezone (cached)
+    [swIsMark, swGbNum, swIsNonGb] = isGbtMark(sessH[1], sessM[1])
+    if swIsMark
+        // GB number above swing high; "N" prefix for non-GB numbers
+        labelTxt = swIsNonGb ? "N" + str.tostring(swGbNum) : str.tostring(swGbNum)
+        addSwingLabel(bar_index[1], labelTxt, bearishSmtColor, true, LABEL_PX_NEAR)
+
+// Detect and plot Swing Low (strict GBT mark only)
+if enableSwingDetection and isSwingLowPattern and not na(time[1])
+    // sessH[1]/sessM[1] == hour/minute of time[1] in the session timezone (cached)
+    [swIsMark, swGbNum, swIsNonGb] = isGbtMark(sessH[1], sessM[1])
+    if swIsMark
+        // GB number below swing low; "N" prefix for non-GB numbers
+        labelTxt = swIsNonGb ? "N" + str.tostring(swGbNum) : str.tostring(swGbNum)
+        addSwingLabel(bar_index[1], labelTxt, bullishSmtColor, false, LABEL_PX_NEAR)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                    GB CANDLE SMT (SINGLE-CANDLE DIVERGENCE)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  Compares the GB swing stamp of the middle candle across ALL symbols
+//  (main chart + enabled comparison symbols).
+//  A symbol "stamps" when it forms a 3-candle swing on a strict GBT mark.
+//  Single-candle SMT: tiny dot (plotshape circle) ONLY when symbols disagree
+//  on the stamp. Direction-aware: above a swing high, below a swing low,
+//  with the GB number label beside it (never overlaps).
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enableGbtCandleSmt = input.bool(false, "Enable GB Candle SMT", group="Candle GB SMT",
+  tooltip="Single-candle SMT: dot when symbols disagree on a GB swing stamp. Above swing highs, below swing lows, GB number inside.")
+gbtDiamondSize = input.string("Tiny", "Dot Size", options=["Tiny", "Small"], group="Candle GB SMT", inline="gbtDmd")
+gbtDiamondColor = input.color(color.yellow, "Dot Color", group="Candle GB SMT", inline="gbtDmd")
+
+// 3-candle swing patterns on each comparison symbol (bars aligned to chart)
+s1SwingHigh = s1_high[2] < s1_high[1] and s1_high[0] < s1_high[1]
+s1SwingLow = s1_low[2] > s1_low[1] and s1_low[0] > s1_low[1]
+s2SwingHigh = s2_high[2] < s2_high[1] and s2_high[0] < s2_high[1]
+s2SwingLow = s2_low[2] > s2_low[1] and s2_low[0] > s2_low[1]
+
+// Discrepancy: some symbols stamped the GB swing, some did not.
+// The whole computation is skipped when the feature is off (its default); the
+// plotshape() calls below stay global because plotshape() cannot be used in
+// local scope.
+bool gbtCandleDivergence = false
+bool dirIsHigh = false
+bool dirIsLow = false
+string dmdLabelTxt = ""
+if enableGbtCandleSmt
+    // Per-symbol GB swing stamp on the middle candle (bar[1]):
+    // a 3-candle swing formed AND the stamped candle is on a strict GBT mark
+    // (sessH[1]/sessM[1] == hour/minute of time[1] in the session timezone, cached)
+    mainStampHigh = not na(time[1]) and isGbHM(sessH[1], sessM[1]) and isSwingHighPattern
+    mainStampLow = not na(time[1]) and isGbHM(sessH[1], sessM[1]) and isSwingLowPattern
+    mainStamp = mainStampHigh or mainStampLow
+
+    bool s1StampHigh = false
+    bool s1StampLow = false
+    if s1Enabled and not na(s1_bar_time[1])
+        s1IsGb = isGbHM(hour(s1_bar_time[1], sessionTimezone), minute(s1_bar_time[1], sessionTimezone))
+        s1StampHigh := s1IsGb and s1SwingHigh
+        s1StampLow := s1IsGb and s1SwingLow
+
+    bool s2StampHigh = false
+    bool s2StampLow = false
+    if s2Enabled and not na(s2_bar_time[1])
+        s2IsGb = isGbHM(hour(s2_bar_time[1], sessionTimezone), minute(s2_bar_time[1], sessionTimezone))
+        s2StampHigh := s2IsGb and s2SwingHigh
+        s2StampLow := s2IsGb and s2SwingLow
+
+    s1Stamp = s1StampHigh or s1StampLow
+    s2Stamp = s2StampHigh or s2StampLow
+
+    comparedCount = 1 + (s1Enabled ? 1 : 0) + (s2Enabled ? 1 : 0)
+    stampCount = (mainStamp ? 1 : 0) + (s1Stamp ? 1 : 0) + (s2Stamp ? 1 : 0)
+    gbtCandleDivergence := stampCount > 0 and stampCount < comparedCount
+
+    // Direction: follow the main chart's stamp; fall back to comparison stamps
+    dirIsHigh := mainStampHigh or (not mainStampHigh and not mainStampLow and (s1StampHigh or s2StampHigh))
+    dirIsLow := mainStampLow or (not mainStampHigh and not mainStampLow and (s1StampLow or s2StampLow) and not (s1StampHigh or s2StampHigh))
+
+    // GB number of the stamped candle ("N" prefix for non-GB numbers)
+    [dmdIsMark, dmdGbNum, dmdIsNonGb] = isGbtMark(sessH[1], sessM[1])
+    dmdLabelTxt := dmdIsNonGb ? "N" + str.tostring(dmdGbNum) : str.tostring(dmdGbNum)
+
+// Tiny dot (plotshape circle - labels enforce a larger minimum size) for the
+// single-candle SMT discrepancy. Direction-aware: above a swing high, below
+// a swing low. plotshape size must be const, so split by direction+size.
+plotshape(gbtCandleDivergence and dirIsHigh and gbtDiamondSize == "Tiny", style=shape.circle, location=location.abovebar,
+  color=gbtDiamondColor, size=size.tiny, offset=-1)
+plotshape(gbtCandleDivergence and dirIsHigh and gbtDiamondSize != "Tiny", style=shape.circle, location=location.abovebar,
+  color=gbtDiamondColor, size=size.small, offset=-1)
+plotshape(gbtCandleDivergence and dirIsLow and gbtDiamondSize == "Tiny", style=shape.circle, location=location.belowbar,
+  color=gbtDiamondColor, size=size.tiny, offset=-1)
+plotshape(gbtCandleDivergence and dirIsLow and gbtDiamondSize != "Tiny", style=shape.circle, location=location.belowbar,
+  color=gbtDiamondColor, size=size.small, offset=-1)
+
+// GB number label beside the dot (plain text, pixel-anchored, never overlaps)
+if gbtCandleDivergence and dirIsHigh
+    addSwingLabel(bar_index[1], dmdLabelTxt, gbtDiamondColor, true, LABEL_PX_FAR)
+if gbtCandleDivergence and dirIsLow
+    addSwingLabel(bar_index[1], dmdLabelTxt, gbtDiamondColor, false, LABEL_PX_FAR)
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//                    NEXT GBT TIME TABLE
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//  Plain text (top-right, no border), two rows:
+//
+//    Next:  HH:MM -> next mark of the BASIC path: the fixed minute lattice
+//                    (3, 11, 17, 23, 29, 35, 41, 47, 53, 59) that repeats in
+//                    every hour. No hourly shift. Its GB number is the minute.
+//    Shift: HH:MM -> next mark of the hour-shifted path (a mark when hour +
+//                    minute is a master-grid number); its GB number is that sum.
+//                    Informational only - no vertical line is drawn for it.
+//
+//  Optional dynamic dotted vertical line tracks the Next (basic) mark; it is
+//  deleted and redrawn every bar so it always points at the next upcoming time.
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Zero-pad a number to 2 digits (e.g. 5 -> "05")
+pad2(int v) =>
+    v < 10 ? "0" + str.tostring(v) : str.tostring(v)
+
+// Mark `off` minutes after the current bar time (session timezone clock reading).
+// Returns [ts, "HH:MM", gbNum]: unix ms of the mark, its wall-clock text and its GB number.
+// O(1): the offset comes from a table built once on the first bar; every minute of the day is
+// covered, so it wraps past the hour and past midnight on its own.
+// gbByMinute: how the GB number is read - true for the basic path (its lattice members are
+// master-grid numbers, so the mark is identified by its minute), false for the hour-shifted
+// path (the mark is identified by hour + minute). Either way the number never has to be
+// worked out by hand.
+// Note: ts = t + off*60000 (real-time delta); on the 2 DST days/year the line
+// may sit one hour off for a single bar - the table text stays correct.
+gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
+    int nextMins = (totalMins + off) % 1440
+    int nh = math.floor(nextMins / 60)
+    int nm = nextMins % 60
+    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
+
+showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
+var table nextGbtTable = table.new(position.top_right, 2, 2)
+var line nextGbtLine = na
+var string lastNextTxt = ""
+var string lastShiftTxt = ""
+
+if not na(time)
+    int mTot = sessH * 60 + sessM
+    // Top row: basic path (fixed minutes every hour) - this is the "next GB time", and the
+    // vertical line below marks it. Bottom row: hour-shifted path, kept for reference.
+    [bTs, bTxt, bNum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
+    [_, sTxt, sSum] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
+
+    // Dynamic vertical line at the next mark: deleted and redrawn every bar
+    // so it always points at the next upcoming time (one line, no accumulation)
+    if showNextGbtLine
+        if not na(nextGbtLine)
+            line.delete(nextGbtLine)
+        nextGbtLine := line.new(bTs, 0, bTs, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dotted, color=color.gray, width=1)
+
+    // Table text only changes when a mark changes. Left cell = the clock time, right cell =
+    // that mark's GB number (basic row: the minute; shift row: hour + minute).
+    if bTxt != lastNextTxt or sTxt != lastShiftTxt
+        table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 0, bNum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 1, sSum, text_color=color.black, text_size=size.normal)
+        lastNextTxt := bTxt
+        lastShiftTxt := sTxt
+
+// Final check to reposition labels if any changes occurred
+if needReposition
+    repositionAllLabels()
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  REAL GBT — GB minutes that repeat in every hour                              ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//
+//  The master grid is read as minute-of-hour values, so a Real GBT time is the
+//  SAME minute in every hour — 3 lands on :03 of every hour (10:03, 13:03, 21:03),
+//  17 on :17 of every hour, and so on. There is no sliding with the hour.
+//
+//  Real GBT minutes = the master-grid numbers that are valid minutes (< 60):
+//
+//      3, 11, 17, 23, 29, 35, 41, 47, 53, 59
+//
+//  The upper grid numbers are dropped — a minute can never reach them:
+//  65, 71, 77, 83, 89, 97.
+//
+//  Each mark prints ONE number — no duplicates above and below. The numbers ride
+//  the active 60-minute cycle (the base cycle that replaced SMT's 90min carrier):
+//  they sit on a single horizontal line at that cycle's running high, each number
+//  anchored to its own candle, and the whole line moves up/down with the cycle as
+//  it extends. When no 60-minute cycle is active (16:00-18:00 gap, or 00:00-cycle
+//  start with the Midnight Window off) the last line is kept, so numbers keep
+//  printing on the same line. No dots, no vertical lines.
+//
+//  The ±1 minute tolerance is an OPTIONAL addition and is off by default: when
+//  enabled it also marks the minute either side of each Real GBT minute and dims
+//  those marks so they stay distinguishable from the exact ones.
+//
+//  Standalone: the swing marks, the GB candle SMT and the cycle logic above are
+//  untouched.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+grp_rgbt = "Real GBT"
+enableRealGbt = input.bool(false, "Enable Real GBT", group=grp_rgbt, tooltip="Marks every hour on the Real GBT minutes: 3, 11, 17, 23, 29, 35, 41, 47, 53 and 59 past the hour. Same minutes in every hour — no sliding. The upper master-grid numbers (65, 71, 77, 83, 89, 97) are not minutes and are excluded.")
+realGbtTol = input.bool(false, "Include +/- 1 Minute Tolerance", group=grp_rgbt, tooltip="OPTIONAL, off by default. Also marks one minute either side of each Real GBT minute (e.g. :16 and :18 for :17). Those marks are drawn dimmed.")
+realGbtCol = input.color(color.aqua, "Number Color", group=grp_rgbt)
+realGbtMax = input.int(40, "Max Real GBT Labels", minval=1, maxval=300, group=grp_rgbt, tooltip="FIFO cap for the Real GBT numbers — applied to the numbers riding the active 60min line and to the finished cycles separately. Oldest are deleted first so recent marks always render.")
+
+// Real GBT minutes — master-grid numbers that are valid minutes (< 60)
+realGbtMinutes = array.from(3, 11, 17, 23, 29, 35, 41, 47, 53, 59)
+
+// Minute lookup, built once
+buildRealGbtLut() =>
+    lut = array.new<bool>(60, false)
+    for i = 0 to array.size(realGbtMinutes) - 1
+        array.set(lut, array.get(realGbtMinutes, i), true)
+    lut
+
+var array<bool> realGbtLut = buildRealGbtLut()
+
+// True when a minute-of-hour is a Real GBT minute. No hour term: the same minutes
+// repeat in every hour.
+isRealGbtMinute(int m) =>
+    ok = false
+    if m >= 0 and m < 60
+        ok := array.get(realGbtLut, m)
+    ok
+
+realGbtExact = isRealGbtMinute(sessM)
+realGbtNear = realGbtTol and (isRealGbtMinute(sessM - 1) or isRealGbtMinute(sessM + 1))
+realGbtHit = enableRealGbt and (realGbtExact or realGbtNear)
+
+// Number to print: the matched Real GBT minute (for a tolerance hit, its neighbour)
+realGbtNum = realGbtExact ? sessM : (isRealGbtMinute(sessM - 1) ? sessM - 1 : sessM + 1)
+realGbtColUse = realGbtHit and not realGbtExact ? color.new(realGbtCol, 55) : realGbtCol
+
+// ── The 60-minute cycle line the numbers ride on ─────────────────────────────
+// Every number of the active 60min cycle sits on one horizontal line at that
+// cycle's running high and moves with it as the cycle extends. The x of each
+// number never changes: it stays anchored to its own candle.
+var float rgbtTop = na                          // the line (running high of the active cycle)
+var int rgbtId = -1                             // identity of the active 60min cycle
+var int rgbtPrevId = -1
+var float rgbtApplied = na                      // line value last written to the numbers
+var array<label> rgbtCur = array.new<label>()   // numbers still riding the active line
+var array<label> rgbtOld = array.new<label>()   // numbers of finished cycles (capped)
+
+if act_60
+    // The session boxes are not drawn while the custom set is on, so the numbers ride that
+    // cycle's high instead — otherwise they would have no line to sit on.
+    if cx_on and c_cx_60.active
+        rgbtTop := c_cx_60.h
+        rgbtId := 4000 + c_cx_60.idx
+    else if c_ny_60.active
+        rgbtTop := c_ny_60.h
+        rgbtId := 1000 + c_ny_60.idx
+    else if c_asia_60.active
+        rgbtTop := c_asia_60.h
+        rgbtId := 2000 + c_asia_60.idx
+    else if show_mid_win and c_mid_60.active
+        rgbtTop := c_mid_60.h
+        rgbtId := 3000 + c_mid_60.idx
+
+// New cycle: hand the finished cycle's numbers over to the capped pile so the
+// moving list only ever holds labels that are still alive, then start a fresh
+// line. With no active cycle rgbtTop is left untouched, so the numbers keep
+// printing on the same line.
+if rgbtId != rgbtPrevId
+    if array.size(rgbtCur) > 0
+        for i = 0 to array.size(rgbtCur) - 1
+            array.push(rgbtOld, array.get(rgbtCur, i))
+    array.clear(rgbtCur)
+    rgbtApplied := na
+rgbtPrevId := rgbtId
+
+// Cap the finished pile — those numbers no longer move, so deleting one is safe
+while array.size(rgbtOld) > realGbtMax
+    rgbtGoneOld = array.shift(rgbtOld)
+    label.delete(rgbtGoneOld)
+
+// The cycle extended: move this cycle's numbers to the new high
+if not na(rgbtTop) and (na(rgbtApplied) or rgbtApplied != rgbtTop)
+    if array.size(rgbtCur) > 0
+        for i = 0 to array.size(rgbtCur) - 1
+            label.set_y(array.get(rgbtCur, i), rgbtTop)
+    rgbtApplied := rgbtTop
+
+// One number per Real GBT candle, on the line, above the 60min cycle box
+if realGbtHit and not na(rgbtTop)
+    rgbtLb = label.new(bar_index, rgbtTop, str.tostring(realGbtNum), color=color.new(color.white, 100), textcolor=realGbtColUse, style=label.style_label_down, size=size.small)
+    array.push(rgbtCur, rgbtLb)
+    while array.size(rgbtCur) > realGbtMax             // very long windows: oldest number drops off the line
+        rgbtGoneCur = array.shift(rgbtCur)
+        label.delete(rgbtGoneCur)
+
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  ALGO TABLE — editable GB grid for Algo 1 / Algo 2                           ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//
+//  Two rows of GB numbers, sitting under the Next table:
+//
+//      Algo 1 | 0 | 11(14) | 41(44) | 3(7) | 17(23) | 29(35)/71(77)
+//      Algo 2 | 3(7) | 59(65) | 17(23) | 11(14) | 47(50) 53(56) | 29(35)
+//
+//  Each row is ONE editable string and "|" separates its cells, so cells can be
+//  added, removed, reordered or reworded without touching the code — the table
+//  grows to the widest row on its own. Borders are frame + cell grid, and every
+//  visual aspect is an input: position, background, cell text, row-label text,
+//  border colour, border width and text size.
+//
+//  Position: a Pine table cannot be offset pixel-wise, it snaps to one of nine
+//  anchors, so "under the Next table" is the anchor below it — Middle Right by
+//  default. Choose another anchor from the Position input if you prefer.
+//
+//  Standalone: nothing else in the script reads or writes this table.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+grp_algo = "Algo Table"
+showAlgoTable = input.bool(true, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
+algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
+algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
+algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
+algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
+algoPos = input.string("Middle Right", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
+algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
+algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
+algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
+algoLblCol = input.color(color.black, "Row Labels", group=grp_algo)
+algoBorderCol = input.color(color.gray, "Border", group=grp_algo)
+algoBorderW = input.int(1, "Border Width", 0, 3, group=grp_algo)
+
+// Anchor picked from the Position input
+algoAnchor = algoPos == "Top Right" ? position.top_right : algoPos == "Top Center" ? position.top_center : algoPos == "Top Left" ? position.top_left : algoPos == "Middle Right" ? position.middle_right : algoPos == "Middle Center" ? position.middle_center : algoPos == "Middle Left" ? position.middle_left : algoPos == "Bottom Right" ? position.bottom_right : algoPos == "Bottom Center" ? position.bottom_center : position.bottom_left
+
+// Split each row on "|"; the grid takes the widest row plus one label column
+algoCells1 = str.split(algoRow1Txt, "|")
+algoCells2 = str.split(algoRow2Txt, "|")
+algoCols = math.max(array.size(algoCells1), array.size(algoCells2))
+
+var table algoTable = na
+if showAlgoTable and na(algoTable)
+    algoTable := table.new(algoAnchor, algoCols + 1, 2, frame_color=algoBorderCol, frame_width=algoBorderW, border_color=algoBorderCol, border_width=algoBorderW)
+    table.cell(algoTable, 0, 0, algoRow1Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+    table.cell(algoTable, 0, 1, algoRow2Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+    for c = 0 to algoCols - 1                       // cell count guards: never index past a row
+        if c < array.size(algoCells1)
+            table.cell(algoTable, c + 1, 0, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        if c < array.size(algoCells2)
+            table.cell(algoTable, c + 1, 1, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+
+// ╔═════════════════════════════════════════════════════════════════════════════╗
+// ║  FVG ON REGULAR (BASIC) GB TIMES                                               ║
+// ╚═════════════════════════════════════════════════════════════════════════════╝
+//
+//  Three-candle Fair Value Gap, kept when ANY of the three candles it is built from carries a
+//  regular GB stamp. Requiring the middle candle specifically (the old rule) dropped two of every
+//  three GB-touching patterns on a 1-minute chart — every FVG whose gap candle sat a minute or two
+//  off a GB minute, even when the confirming candle was on one. No shifted times: the check is the
+//  basic minute lattice alone (3, 11, 17, 23, 29, 35, 41, 47, 53, 59 past the hour, the same minutes
+//  in every hour — the same set as realGbtMinutes). The hour-shifted HH+MM rule (isGbHM) is
+//  deliberately not involved.
+//
+//    Bullish FVG: candle 1 high < candle 3 low   -> zone = [candle1.high, candle3.low]
+//    Bearish FVG: candle 1 low  > candle 3 high  -> zone = [candle3.high, candle1.low]
+//
+//  Works from 1h down to 1 second. A candle carries the GB stamp when a regular GB
+//  minute falls INSIDE its span (nextBasicOffset[minute] < candle length), not when its
+//  opening minute equals one: candles that open on :00 / :15 / :30 / :45 would otherwise
+//  never match, which is why a strict minute test only ever fires below 5 minutes. On
+//  1-minute candles this is exactly the strict match (10 candles an hour); on wider
+//  candles the window widens with them, so 15m and above stamp every candle.
+//
+//  Each box grows with the live candle until price first trades into the zone — a wick counts —
+//  and then stops there and stays put. The GB number is drawn at the right edge of the box.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+grp_fvg = "FVG"
+show_fvg = input.bool(false, "FVG on GB Times", group=grp_fvg, tooltip="Three-candle Fair Value Gaps kept when any of the three candles carries a regular GB minute (3, 11, 17, 23, 29, 35, 41, 47, 53, 59 past the hour — no shifted times). A candle is stamped when a GB minute falls inside it, so the same rule works on 1h and every lower timeframe.")
+c_fvg_bull = input.color(color.blue, "Bullish", group=grp_fvg, inline="fvg1")
+c_fvg_bear = input.color(color.red, "Bearish", group=grp_fvg, inline="fvg1")
+fvg_t = input.int(80, "Transparency", 0, 100, group=grp_fvg, inline="fvg1")
+fvg_max = input.int(200, "Max FVG Boxes", minval=10, maxval=400, group=grp_fvg, tooltip="FIFO cap — the oldest FVG boxes are deleted first. Cycle and FVG boxes share TradingView's hard limit of 500 boxes per script, so the cycles get 500 minus this while FVGs are on (TradingView evicts the oldest boxes of either kind beyond that). Lower Max Cycle Boxes to shift the budget towards FVGs.")
+
+// One live FVG: its box, the two zone edges, and whether price has already traded into it (once true,
+// the box stops growing at that candle).
+type Fvg
+    box bx
+    label gbLbl
+    float top
+    float bot
+    bool done
+
+var array<Fvg> fvgList = array.new<Fvg>()
+
+// Candle length in minutes, forced to float: int division floors a 30s chart to 0.
+fvg_tfm = timeframe.in_seconds() / 60.0
+
+// True when a regular GB minute falls inside a candle opening on minute `m`. nextBasicOffset[m] is
+// the distance to the next lattice minute (0 when m is one), built from the master-grid numbers that
+// are valid minutes — the same set as realGbtMinutes. The hour wrap is already baked into the table.
+isGbCandle(int m, float tfm) => array.get(nextBasicOffset, m) < tfm
+
+// Extension pass: every FVG price has not traded into yet grows with the live candle, and freezes on
+// the candle that first penetrates its zone. The test is strictly inside on both edges, because the
+// zone's near edge is the confirming candle's own extreme (bull: top = candle 3 low, bear: bottom =
+// candle 3 high) — a non-strict overlap test would mark a brand-new FVG as already traded into.
+for f in fvgList
+    if not f.done
+        box.set_right(f.bx, bar_index)
+        label.set_x(f.gbLbl, bar_index)
+        if low < f.top and high > f.bot
+            f.done := true
+
+// Does the three-candle pattern carry a regular GB stamp? True when any of its three candles is a GB
+// candle — not just the middle one, which would drop two of every three GB-touching patterns on a
+// 1-minute chart. sessM[2], sessM[1] and sessM are the session-timezone minutes of candle 1, the
+// middle candle and candle 3.
+fvgGbPattern(int m1, int m2, int m3, float tfm) =>
+    isGbCandle(m1, tfm) or isGbCandle(m2, tfm) or isGbCandle(m3, tfm)
+
+// Evaluated as candle 3 closes: candle 1 = [2], the middle candle = [1], candle 3 = now.
+if show_fvg and not na(time[2]) and fvgGbPattern(sessM[2], sessM[1], sessM, fvg_tfm)
+    float c1h = high[2]
+    float c1l = low[2]
+    bool fvgBull = c1h < low                                // gap up: candle 1 high under candle 3 low
+    bool fvgBear = c1l > high                               // gap down: candle 1 low over candle 3 high
+    if fvgBull or fvgBear
+        float zTop = fvgBull ? low : c1l                    // bull zone = [c1.high, c3.low]
+        float zBot = fvgBull ? c1h : high                   // bear zone = [c3.high, c1.low]
+        color fvgCol = fvgBull ? c_fvg_bull : c_fvg_bear
+        int fvgGbM = isGbCandle(sessM[2], fvg_tfm) ? sessM[2] : isGbCandle(sessM[1], fvg_tfm) ? sessM[1] : sessM
+        int fvgGbNum = (fvgGbM + array.get(nextBasicOffset, fvgGbM)) % 60
+        box fvgBx = box.new(bar_index - 2, zTop, bar_index, zBot, border_color=c_box_border, border_width=1, bgcolor=color.new(fvgCol, fvg_t))
+        label fvgLbl = label.new(bar_index, (zTop + zBot) / 2, str.tostring(fvgGbNum), xloc=xloc.bar_index, yloc=yloc.price, color=color.new(fvgCol, 100), textcolor=fvgCol, style=label.style_label_left, size=size.small)
+        array.push(fvgList, Fvg.new(fvgBx, fvgLbl, zTop, zBot, false))
+        while array.size(fvgList) > fvg_max
+            fvgGone = array.shift(fvgList)
+            box.delete(fvgGone.bx)
+            label.delete(fvgGone.gbLbl)
