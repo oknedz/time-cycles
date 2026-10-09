@@ -2366,7 +2366,7 @@ gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
     [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
 
 showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
-var table nextGbtTable = table.new(position.top_right, 2, 2)
+var table nextGbtTable = table.new(position.top_right, 3, 2)
 var line nextGbtLine = na
 var string lastNextTxt = ""
 var string lastShiftTxt = ""
@@ -2388,10 +2388,14 @@ if not na(time)
     // Table text only changes when a mark changes. Left cell = the clock time, right cell =
     // that mark's GB number (basic row: the minute; shift row: hour + minute).
     if bTxt != lastNextTxt or sTxt != lastShiftTxt
+        bSumDig = reduceDigits(str.tonumber(bNum))
+        sSumDig = reduceDigits(str.tonumber(sSum))
         table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=color.black, text_size=size.normal)
         table.cell(nextGbtTable, 1, 0, bNum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 2, 0, str.tostring(bSumDig), text_color=color.black, text_size=size.normal)
         table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=color.black, text_size=size.normal)
         table.cell(nextGbtTable, 1, 1, sSum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 2, 1, str.tostring(sSumDig), text_color=color.black, text_size=size.normal)
         lastNextTxt := bTxt
         lastShiftTxt := sTxt
 

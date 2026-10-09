@@ -1,0 +1,1932 @@
+//@version=6
+
+indicator("TC-SMT v0.1 [StoneFace]", shorttitle="TimeCycle + SMT v0.1 [StoneFace]", overlay=true, max_lines_count=500, max_labels_count=500, max_boxes_count=500, calc_bars_count=6000)
+
+grp_cyc = "Cycles"
+grp_ol = "Opening Lines"
+grp_col = "Colors"
+grp_day = "Day"
+
+cx_on = input.bool(false, "Custom Cycles", group=grp_cyc, inline="c5")
+cx_h = input.int(18, "Hr", 0, 23, group=grp_cyc, inline="c5", active=cx_on)
+cx_m = input.int(41, "Min", 0, 59, group=grp_cyc, inline="c5", active=cx_on)
+show_90 = input.bool(true, "90min", group=grp_cyc, inline="c1")
+show_30 = input.bool(true, "30min", group=grp_cyc, inline="c1")
+show_10 = input.bool(false, "10min", group=grp_cyc, inline="c1")
+show_mid_win = input.bool(false, "Midnight Window", group=grp_cyc, inline="c2", active=not cx_on)
+var array<string> cyc_opts = array.from("00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00")
+var array<int> cyc_mins = array.from(0, 30, 60, 90, 120, 150, 180)
+cyc_start_str = input.string("2:00", "Cycle Start (London)", options=["00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00"], group=grp_cyc, inline="c4")
+auto_adj = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
+max_boxes = input.int(500, "Max Cycle Boxes", 10, 500, group=grp_cyc, tooltip="How many cycle boxes stay on the chart — the oldest are removed first once this many exist. TradingView allows a maximum of 500 drawings per type, and cycle boxes, FVG boxes and the Forward HTF Candles panels (up to 21 boxes, 20 lines and a label each, three panels) all share that per-type limit, so the oldest object of any kind is evicted first. History this buys with the default windows: ≈33 days with 90min only, ≈9 days with 90min+30min, ≈3 days with all three sizes. Fewer active sizes or a lower cap = less clutter.")
+
+grp_asb = "Asia Session"
+show_asb = input.bool(true, "Show Box", group=grp_asb, inline="asb1", tooltip="Draws a single box spanning the whole session below — not cycles. The range may cross midnight (start > end). Start and end must differ.")
+asb_h = input.int(18, "Start Hr", 0, 23, group=grp_asb, inline="asb1", active=show_asb)
+asb_m = input.int(0, "Min", 0, 59, group=grp_asb, inline="asb1", active=show_asb)
+asb_eh = input.int(2, "End Hr", 0, 23, group=grp_asb, inline="asb2", active=show_asb)
+asb_em = input.int(30, "Min", 0, 59, group=grp_asb, inline="asb2", active=show_asb)
+c_asb_fill = input.color(color.purple, "Color", group=grp_asb, inline="asb2", active=show_asb)
+
+show_mid = input.bool(true, "Midnight", group=grp_ol, inline="mid")
+c_mid = input.color(#787b86, "", group=grp_ol, inline="mid")
+w_mid = input.int(1, "", 1, 3, group=grp_ol, inline="mid")
+s_mid = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="mid")
+show_90_open = input.bool(false, "90min Cycle Opens", group=grp_ol, inline="90open", active=not cx_on)
+c_90_open = input.color(color.orange, "", group=grp_ol, inline="90open")
+w_90_open = input.int(1, "", 1, 3, group=grp_ol, inline="90open")
+s_90_open = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="90open")
+show_830 = input.bool(true, "8:30", group=grp_ol, inline="830")
+c_830 = input.color(#787b86, "", group=grp_ol, inline="830")
+w_830 = input.int(1, "", 1, 3, group=grp_ol, inline="830")
+s_830 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="830")
+show_930 = input.bool(true, "9:30", group=grp_ol, inline="930")
+c_930 = input.color(#787b86, "", group=grp_ol, inline="930")
+w_930 = input.int(1, "", 1, 3, group=grp_ol, inline="930")
+s_930 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_ol, inline="930")
+
+c_90_a = input.color(color.blue, "90min A", group=grp_col, inline="90")
+c_90_m = input.color(color.red, "M", group=grp_col, inline="90")
+c_90_d = input.color(color.green, "D", group=grp_col, inline="90")
+c_30_a = input.color(color.blue, "30min A", group=grp_col, inline="30")
+c_30_m = input.color(color.red, "M", group=grp_col, inline="30")
+c_30_d = input.color(color.green, "D", group=grp_col, inline="30")
+c_10 = input.color(color.gray, "10min", group=grp_col)
+c_asia = input.color(color.purple, "Asia H/L", group=grp_col)
+c_london = input.color(color.blue, "London H/L", group=grp_col)
+c_ny_am = input.color(color.red, "NY AM H/L", group=grp_col)
+c_ny_pm = input.color(color.green, "NY PM H/L", group=grp_col)
+hl_ts = input.string(size.small, "H/L Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_col)
+fill_transp = input.int(93, "Fill Transparency", 0, 100, group="Display")
+
+show_dsep = input.bool(true, "Day Sep", group=grp_day, inline="ds")
+c_dsep = input.color(color.gray, "", group=grp_day, inline="ds")
+s_dsep = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_day, inline="ds")
+show_wd = input.bool(true, "Weekdays", group=grp_day, inline="wd")
+c_wd = input.color(color.gray, "", group=grp_day, inline="wd")
+loc_wd = input.string("Bottom", "", ["Top", "Bottom"], group=grp_day, inline="wd")
+fmt_wd = input.string("Short", "Format", ["Short", "Long"], group=grp_day, inline="wd2")
+off_wd = input.int(0, "Offset (min)", group=grp_day, inline="wd2")
+
+grp_pce = "Cycle C.E."
+show_pce = input.bool(false, "Show Prev Cycle C.E.", group=grp_pce)
+c_pce = input.color(color.black, "Color", group=grp_pce, inline="pce")
+w_pce = input.int(1, "", 1, 5, group=grp_pce, inline="pce")
+s_pce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pce, inline="pce")
+
+grp_pdh = "Prev Day H/L"
+show_pdhl = input.bool(true, "Show PDH/PDL", group=grp_pdh)
+c_pdh = input.color(color.black, "PDH", group=grp_pdh, inline="pdh")
+w_pdh = input.int(1, "", 1, 5, group=grp_pdh, inline="pdh")
+s_pdh = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdh, inline="pdh")
+c_pdl = input.color(color.black, "PDL", group=grp_pdh, inline="pdl")
+w_pdl = input.int(1, "", 1, 5, group=grp_pdh, inline="pdl")
+s_pdl = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pdh, inline="pdl")
+show_pdce = input.bool(true, "50% C.E.", group=grp_pdh, inline="pdce")
+c_pdce = input.color(color.black, "", group=grp_pdh, inline="pdce")
+w_pdce = input.int(1, "", 1, 5, group=grp_pdh, inline="pdce")
+s_pdce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pdh, inline="pdce")
+show_pdhl_lbl = input.bool(true, "Show Labels", group=grp_pdh, inline="pdlbl")
+pdhl_ts = input.string(size.small, "Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_pdh, inline="pdlbl")
+
+grp_vl = "Cycle Dividers"
+show_vl = input.bool(false, "Vertical Lines Instead of Boxes", group=grp_vl, tooltip="On: the cycles are marked by vertical lines and the filled cycle boxes are hidden. Off: the usual cycle boxes. The two are never shown together.")
+vl_mode = input.string("Full Chart", "Height", ["Full Chart", "Match Cycle Box"], group=grp_vl, inline="vlm", active=show_vl)
+vl_max = input.int(400, "Max Lines", 10, 400, group=grp_vl, inline="vlm", active=show_vl)
+show_vl_90 = input.bool(true, "90min", group=grp_vl, inline="v90", active=show_vl)
+c_vl_90 = input.color(#787b86, "", group=grp_vl, inline="v90", active=show_vl)
+w_vl_90 = input.int(1, "", 1, 3, group=grp_vl, inline="v90", active=show_vl)
+s_vl_90 = input.string("Solid", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="v90", active=show_vl)
+t_vl_90 = input.int(0, "", 0, 100, group=grp_vl, inline="v90", active=show_vl)
+show_vl_30 = input.bool(true, "30min", group=grp_vl, inline="v30", active=show_vl)
+c_vl_30 = input.color(#787b86, "", group=grp_vl, inline="v30", active=show_vl)
+w_vl_30 = input.int(1, "", 1, 3, group=grp_vl, inline="v30", active=show_vl)
+s_vl_30 = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="v30", active=show_vl)
+t_vl_30 = input.int(40, "", 0, 100, group=grp_vl, inline="v30", active=show_vl)
+show_vl_10 = input.bool(true, "10min", group=grp_vl, inline="v10", active=show_vl)
+c_vl_10 = input.color(#787b86, "", group=grp_vl, inline="v10", active=show_vl)
+w_vl_10 = input.int(1, "", 1, 3, group=grp_vl, inline="v10", active=show_vl)
+s_vl_10 = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_vl, inline="v10", active=show_vl)
+t_vl_10 = input.int(60, "", 0, 100, group=grp_vl, inline="v10", active=show_vl)
+
+tf_min = timeframe.in_seconds() / 60
+valid_tf = tf_min <= 240
+act_90 = auto_adj ? (tf_min <= 240 and show_90) : show_90
+act_30 = auto_adj ? (tf_min <= 60 and show_30) : show_30
+act_10 = auto_adj ? (tf_min <= 30 and show_10) : show_10
+is_crypto = syminfo.type == "crypto"
+calc_tz = is_crypto ? "UTC" : "America/New_York"
+is_new_d = ta.change(dayofmonth(time, calc_tz)) != 0
+ny_h = hour(time, "America/New_York")
+ny_m = minute(time, "America/New_York")
+ny_m_total = ny_h * 60 + ny_m
+var int cyc_start = cyc_mins.get(array.indexof(cyc_opts, cyc_start_str))
+cx_anchor = cx_h * 60 + cx_m
+asb_s = asb_h * 60 + asb_m
+asb_e = asb_eh * 60 + asb_em
+asb_len = (asb_e - asb_s) % 1440
+
+type Cycle
+    box bx
+    int idx
+    float h
+    float l
+    bool active
+    line vl
+
+type LevelObj
+    line h
+    line l
+    line m
+    label lb_h
+    label lb_l
+    label lb_m
+    float hv
+    float lv
+    bool lock_h
+    bool lock_l
+
+type TimeLine
+    line l
+    label lb
+    bool stopped
+
+type CeLevel
+    line l
+    label lb
+
+var Cycle c_asia_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_asia_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_asia_10 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_mid_10 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_ny_10 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_cx_90 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_cx_30 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_cx_10 = Cycle.new(na, -1, na, na, false, na)
+var Cycle c_asb = Cycle.new(na, -1, na, na, false, na)
+
+var TimeLine tl_mid = TimeLine.new(na, na, false)
+var TimeLine tl_830 = TimeLine.new(na, na, false)
+var TimeLine tl_930 = TimeLine.new(na, na, false)
+
+var CeLevel ce90 = CeLevel.new(na, na)
+var CeLevel ce30 = CeLevel.new(na, na)
+var CeLevel ce_cx90 = CeLevel.new(na, na)
+var CeLevel ce_cx30 = CeLevel.new(na, na)
+
+var array<box> all_boxes = array.new<box>()
+var array<line> all_vl = array.new<line>()
+
+var color c_90_a_fill = color.new(c_90_a, fill_transp)
+var color c_90_m_fill = color.new(c_90_m, fill_transp)
+var color c_90_d_fill = color.new(c_90_d, fill_transp)
+var color c_30_a_fill = color.new(c_30_a, fill_transp)
+var color c_30_m_fill = color.new(c_30_m, fill_transp)
+var color c_30_d_fill = color.new(c_30_d, fill_transp)
+var color c_10_fill = color.new(c_10, fill_transp)
+var array<color> cols_90_fill = array.from(c_90_a_fill, c_90_m_fill, c_90_d_fill)
+var array<color> cols_30_fill = array.from(c_30_a_fill, c_30_m_fill, c_30_d_fill)
+var array<color> cols_10_fill = array.from(c_10_fill)
+var array<color> cols_asb_fill = array.from(color.new(c_asb_fill, fill_transp))
+
+var color c_trans = color.new(color.white, 100)
+var color c_box_border = color.new(color.white, 100)
+
+get_style(s) => s == "Dashed" ? line.style_dashed : s == "Dotted" ? line.style_dotted : line.style_solid
+
+set_level(line ln, label lb, float y, int x) =>
+    line.set_y1(ln, y)
+    line.set_y2(ln, y)
+    line.set_x2(ln, x)
+    label.set_xy(lb, x, y)
+    x
+
+set_level_x(line ln, label lb, int x) =>
+    line.set_x2(ln, x)
+    label.set_x(lb, x)
+    x
+
+extend_ce(CeLevel ce) =>
+    if not na(ce.l)
+        line.set_x2(ce.l, bar_index + 5)
+        label.set_x(ce.lb, bar_index + 5)
+
+update_level(LevelObj o, bool is_start, bool in_sess, bool ext_ok, string name, color col) =>
+    if is_start
+        line.delete(o.h)
+        label.delete(o.lb_h)
+        line.delete(o.l)
+        label.delete(o.lb_l)
+        line.delete(o.m)
+        label.delete(o.lb_m)
+        o.h := na
+        o.l := na
+        o.m := na
+        o.hv := na
+        o.lv := na
+        o.lock_h := false
+        o.lock_l := false
+    if in_sess
+        o.hv := na(o.hv) ? high : math.max(o.hv, high)
+        o.lv := na(o.lv) ? low : math.min(o.lv, low)
+        if na(o.h)
+            o.h := line.new(bar_index, o.hv, bar_index, o.hv, color=col)
+            o.lb_h := label.new(bar_index, o.hv, name + " High", color=c_trans, textcolor=col, style=label.style_label_lower_right, size=hl_ts)
+            o.l := line.new(bar_index, o.lv, bar_index, o.lv, color=col)
+            o.lb_l := label.new(bar_index, o.lv, name + " Low", color=c_trans, textcolor=col, style=label.style_label_upper_right, size=hl_ts)
+            o.m := line.new(bar_index, (o.hv + o.lv) / 2, bar_index, (o.hv + o.lv) / 2, color=col, style=line.style_dashed)
+            o.lb_m := label.new(bar_index, (o.hv + o.lv) / 2, "C.E.", color=c_trans, textcolor=col, style=label.style_label_left, size=hl_ts)
+        else
+            set_level(o.h, o.lb_h, o.hv, bar_index)
+            set_level(o.l, o.lb_l, o.lv, bar_index)
+            set_level(o.m, o.lb_m, (o.hv + o.lv) / 2, bar_index)
+    if not in_sess and not na(o.h)
+        if not o.lock_h and high >= o.hv
+            o.lock_h := true
+            set_level_x(o.h, o.lb_h, bar_index)
+        if not o.lock_l and low <= o.lv
+            o.lock_l := true
+            set_level_x(o.l, o.lb_l, bar_index)
+        if ext_ok and not o.lock_h
+            set_level_x(o.h, o.lb_h, bar_index + 5)
+        if ext_ok and not o.lock_l
+            set_level_x(o.l, o.lb_l, bar_index + 5)
+        if ext_ok and (not o.lock_h or not o.lock_l)
+            set_level_x(o.m, o.lb_m, bar_index + 5)
+
+vl_on(per) => per == 90 ? show_vl_90 : per == 30 ? show_vl_30 : per == 10 ? show_vl_10 : false
+vl_col(per) => per == 90 ? c_vl_90 : per == 30 ? c_vl_30 : c_vl_10
+vl_w(per) => per == 90 ? w_vl_90 : per == 30 ? w_vl_30 : w_vl_10
+vl_s(per) => per == 90 ? s_vl_90 : per == 30 ? s_vl_30 : s_vl_10
+vl_t(per) => per == 90 ? t_vl_90 : per == 30 ? t_vl_30 : t_vl_10
+
+reg_vl(line l) =>
+    array.push(all_vl, l)
+
+vl_new(Cycle c, int per) =>
+    col = color.new(vl_col(per), vl_t(per))
+    if vl_mode == "Full Chart"
+        c.vl := line.new(bar_index, low, bar_index, high == low ? high + syminfo.mintick : high, color=col, width=vl_w(per), style=get_style(vl_s(per)), extend=extend.both)
+    else
+        c.vl := line.new(bar_index, c.l, bar_index, c.h == c.l ? c.h + syminfo.mintick : c.h, color=col, width=vl_w(per), style=get_style(vl_s(per)))
+    reg_vl(c.vl)
+    c.vl
+
+vl_stretch(Cycle c) =>
+    if not na(c.vl) and vl_mode != "Full Chart"
+        line.set_y1(c.vl, c.l)
+        line.set_y2(c.vl, c.h)
+
+draw_cycle_box(Cycle c, int start, int end, int per, array<color> cols_fill, CeLevel ce, int anchor) =>
+    in_win = start > end ? (ny_m_total >= start or ny_m_total < end) : (ny_m_total >= start and ny_m_total < end)
+    eff = start > end and ny_m_total < end ? ny_m_total + 1440 : ny_m_total
+    if in_win
+        off = eff - anchor
+        idx = math.floor((off < 0 ? off + 1440 : off) / per)
+        col_fill = show_vl ? c_trans : cols_fill.get(idx % cols_fill.size())
+        if idx != c.idx or not c.active
+            if not na(c.bx)
+                box.set_right(c.bx, bar_index - 1)
+            if show_pce and per != 10 and c.active and idx != c.idx and not na(c.h) and not na(c.l)
+                mid = (c.h + c.l) / 2
+                x0 = na(c.bx) ? bar_index : box.get_left(c.bx)
+                line.delete(ce.l)
+                label.delete(ce.lb)
+                ce.l := line.new(x0, mid, bar_index, mid, color=c_pce, width=w_pce, style=get_style(s_pce))
+                ce.lb := label.new(bar_index, mid, str.tostring(per) + " C.E.", color=c_trans, textcolor=c_pce, style=label.style_label_left, size=hl_ts)
+            c.idx := idx
+            c.h := high
+            c.l := low
+            c.active := true
+            c.bx := box.new(left=bar_index, top=c.h, right=bar_index, bottom=c.l, border_color=c_box_border, border_width=1, bgcolor=col_fill)
+            array.push(all_boxes, c.bx)
+            if show_vl and vl_on(per)
+                vl_new(c, per)
+        else
+            c.h := math.max(c.h, high)
+            c.l := math.min(c.l, low)
+            box.set_top(c.bx, c.h)
+            box.set_bottom(c.bx, c.l)
+            box.set_right(c.bx, bar_index)
+            vl_stretch(c)
+    if not in_win and c.active
+        c.active := false
+        if not na(c.bx)
+            box.set_right(c.bx, bar_index - 1)
+            c.bx := na
+            c.idx := -1
+
+if valid_tf and not cx_on
+    if act_90
+        draw_cycle_box(c_asia_90, 1080, 1440, 90, cols_90_fill, ce90, 1080)
+    if act_30
+        draw_cycle_box(c_asia_30, 1080, 1440, 30, cols_30_fill, ce30, 1080)
+    if act_10
+        draw_cycle_box(c_asia_10, 1080, 1440, 10, cols_10_fill, ce90, 1080)
+    if show_mid_win
+        if act_90
+            draw_cycle_box(c_mid_90, 1440, cyc_start, 90, cols_90_fill, ce90, 1440)
+        if act_30
+            draw_cycle_box(c_mid_30, 1440, cyc_start, 30, cols_30_fill, ce30, 1440)
+        if act_10
+            draw_cycle_box(c_mid_10, 1440, cyc_start, 10, cols_10_fill, ce90, 1440)
+    if act_90
+        draw_cycle_box(c_ny_90, cyc_start, 960, 90, cols_90_fill, ce90, cyc_start)
+    if act_30
+        draw_cycle_box(c_ny_30, cyc_start, 960, 30, cols_30_fill, ce30, cyc_start)
+    if act_10
+        draw_cycle_box(c_ny_10, cyc_start, 960, 10, cols_10_fill, ce90, cyc_start)
+    if show_asb
+        draw_cycle_box(c_asb, asb_s, asb_e, asb_len, cols_asb_fill, ce90, asb_s)
+
+if valid_tf and cx_on
+    if act_90
+        draw_cycle_box(c_cx_90, 0, 1440, 90, cols_90_fill, ce_cx90, cx_anchor)
+    if act_30
+        draw_cycle_box(c_cx_30, 0, 1440, 30, cols_30_fill, ce_cx30, cx_anchor)
+    if act_10
+        draw_cycle_box(c_cx_10, 0, 1440, 10, cols_10_fill, ce_cx90, cx_anchor)
+
+while array.size(all_boxes) > max_boxes
+    box.delete(all_boxes.shift())
+while array.size(all_vl) > vl_max
+    line.delete(all_vl.shift())
+
+if valid_tf and (ny_h == 0 and ny_m == 0) and show_dsep
+    line.new(bar_index, low, bar_index, high == low ? high + syminfo.mintick : high, color=c_dsep, style=get_style(s_dsep), extend=extend.both)
+
+draw_op_line(TimeLine tl, int h, int m, color c, int w, string s, string txt, int stop_h) =>
+    if ny_h == h and ny_m == m
+        line.delete(tl.l)
+        label.delete(tl.lb)
+        tl.l := line.new(bar_index, open, bar_index, open, color=c, width=w, style=get_style(s))
+        tl.lb := label.new(bar_index, open, txt, color=c_trans, textcolor=c, style=label.style_label_left, size=size.small)
+        tl.stopped := false
+    if ny_h == stop_h and ny_m == 0
+        tl.stopped := true
+    if not na(tl.l) and not tl.stopped
+        line.set_x2(tl.l, bar_index)
+        label.set_x(tl.lb, bar_index)
+        label.set_y(tl.lb, line.get_y1(tl.l))
+
+if valid_tf
+    if show_mid
+        draw_op_line(tl_mid, 0, 0, c_mid, w_mid, s_mid, "00:00", 24)
+    if show_830
+        draw_op_line(tl_830, 8, 30, c_830, w_830, s_830, "8:30", 16)
+    if show_930
+        draw_op_line(tl_930, 9, 30, c_930, w_930, s_930, "9:30", 16)
+
+var array<line> l90 = array.new_line()
+var array<bool> stop90 = array.new_bool()
+var array<int> t90_h = array.new<int>()
+var array<int> t90_m = array.new<int>()
+
+if valid_tf and show_90_open and act_90 and not cx_on
+    if barstate.isfirst or (ny_h == 18 and ny_m == 0)
+        for i = 0 to array.size(l90) - 1
+            line.delete(l90.get(i))
+        array.clear(l90), array.clear(stop90)
+        array.clear(t90_h), array.clear(t90_m)
+        array.push(t90_h, 18), array.push(t90_m, 0)
+        array.push(t90_h, 19), array.push(t90_m, 30)
+        array.push(t90_h, 21), array.push(t90_m, 0)
+        array.push(t90_h, 22), array.push(t90_m, 30)
+        nb = cyc_start
+        while nb < 960
+            array.push(t90_h, math.floor(nb / 60))
+            array.push(t90_m, nb % 60)
+            nb += 90
+        for i = 0 to array.size(t90_h) - 1
+            array.push(l90, na)
+            array.push(stop90, false)
+    for i = 0 to array.size(t90_h) - 1
+        if ny_h == t90_h.get(i) and ny_m == t90_m.get(i)
+            line.delete(l90.get(i))
+            l90.set(i, line.new(bar_index, open, bar_index, open, color=c_90_open, width=w_90_open, style=get_style(s_90_open)))
+            stop90.set(i, false)
+            if i > 0
+                stop90.set(i-1, true)
+    if ny_h == 16 and ny_m == 0 and array.size(stop90) > 0
+        stop90.set(array.size(stop90) - 1, true)
+    for i = 0 to array.size(l90) - 1
+        ln = l90.get(i)
+        if not na(ln) and not stop90.get(i)
+            line.set_x2(ln, bar_index)
+
+var LevelObj o_asia = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_london = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_ny_am = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+var LevelObj o_ny_pm = LevelObj.new(na, na, na, na, na, na, na, na, false, false)
+
+if valid_tf
+    extend_ce(ce90)
+    extend_ce(ce30)
+    extend_ce(ce_cx90)
+    extend_ce(ce_cx30)
+    in_asia = ny_m_total >= 1080
+    update_level(o_asia, ny_h == 18 and ny_m == 0, in_asia, ny_m_total <= 960, "Asia", c_asia)
+    in_london = ny_m_total >= cyc_start and ny_m_total < cyc_start + 270
+    update_level(o_london, in_london and not in_london[1], in_london, ny_m_total >= cyc_start + 270 and ny_m_total <= 960, "London", c_london)
+    in_ny_am = ny_m_total >= cyc_start + 270 and ny_m_total < cyc_start + 540
+    update_level(o_ny_am, in_ny_am and not in_ny_am[1], in_ny_am, ny_m_total >= cyc_start + 270 and ny_m_total <= 960, "NY AM", c_ny_am)
+    in_ny_pm = ny_m_total >= 690 and ny_m_total < 960
+    update_level(o_ny_pm, in_ny_pm and not in_ny_pm[1], in_ny_pm, false, "NY PM", c_ny_pm)
+
+var float pd_h = na
+var float pd_l = na
+var float pd_ph = na
+var float pd_pl = na
+var line pd_line_h = na
+var line pd_line_l = na
+var line pd_line_ce = na
+var label pd_lbl_h = na
+var label pd_lbl_l = na
+var label pd_lbl_ce = na
+var bool pd_stale = true
+
+if valid_tf
+    if is_new_d
+        if not na(pd_h) and not na(pd_l)
+            pd_ph := pd_h
+            pd_pl := pd_l
+            pd_stale := true
+        pd_h := high
+        pd_l := low
+    else
+        pd_h := na(pd_h) ? high : math.max(pd_h, high)
+        pd_l := na(pd_l) ? low : math.min(pd_l, low)
+else
+    pd_stale := true
+
+var float pd_ce = na
+pd_ce := not na(pd_ph) and not na(pd_pl) ? (pd_ph + pd_pl) / 2 : na
+
+if valid_tf and show_pdhl
+    if pd_stale and not na(pd_ph) and not na(pd_pl)
+        pd_stale := false
+        if not na(pd_line_h)
+            line.delete(pd_line_h)
+            label.delete(pd_lbl_h)
+            line.delete(pd_line_l)
+            label.delete(pd_lbl_l)
+            pd_line_h := na
+            pd_line_l := na
+            pd_lbl_h := na
+            pd_lbl_l := na
+        if not na(pd_line_ce)
+            line.delete(pd_line_ce)
+            label.delete(pd_lbl_ce)
+            pd_line_ce := na
+            pd_lbl_ce := na
+        pd_line_h := line.new(bar_index, pd_ph, bar_index, pd_ph, color=c_pdh, width=w_pdh, style=get_style(s_pdh))
+        pd_line_l := line.new(bar_index, pd_pl, bar_index, pd_pl, color=c_pdl, width=w_pdl, style=get_style(s_pdl))
+        pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PD High" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PD Low" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
+    if show_pdce and na(pd_line_ce) and not na(pd_line_h)
+        pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
+        pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
+    if not na(pd_line_h)
+        line.set_x2(pd_line_h, bar_index)
+        line.set_x2(pd_line_l, bar_index)
+        label.set_x(pd_lbl_h, bar_index)
+        label.set_x(pd_lbl_l, bar_index)
+    if not na(pd_line_ce)
+        line.set_x2(pd_line_ce, bar_index)
+        label.set_x(pd_lbl_ce, bar_index)
+else
+    if not na(pd_line_h)
+        line.delete(pd_line_h)
+        line.delete(pd_line_l)
+        label.delete(pd_lbl_h)
+        label.delete(pd_lbl_l)
+        pd_line_h := na
+        pd_line_l := na
+        pd_lbl_h := na
+        pd_lbl_l := na
+    if not na(pd_line_ce)
+        line.delete(pd_line_ce)
+        label.delete(pd_lbl_ce)
+        pd_line_ce := na
+        pd_lbl_ce := na
+    pd_stale := true
+
+plot(pd_ph, "PD High", display=display.data_window)
+plot(pd_pl, "PD Low", display=display.data_window)
+plot(pd_ce, "Daily C.E.", display=display.data_window)
+
+wd_loc = loc_wd == "Top" ? location.top : location.bottom
+wd_off = off_wd == 0 ? 0 : math.round(off_wd / tf_min)
+c_inv = color.new(color.white, 100)
+is_mid_day = ny_h == 12 and ny_m == 0
+dow = dayofweek(time, calc_tz)
+show_days = valid_tf and show_wd
+is_short = fmt_wd == "Short"
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.monday, "Mon", shape.labelup, wd_loc, c_inv, wd_off, "Mon", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.tuesday, "Tue", shape.labelup, wd_loc, c_inv, wd_off, "Tue", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.wednesday, "Wed", shape.labelup, wd_loc, c_inv, wd_off, "Wed", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.thursday, "Thu", shape.labelup, wd_loc, c_inv, wd_off, "Thu", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and is_short and dow == dayofweek.friday, "Fri", shape.labelup, wd_loc, c_inv, wd_off, "Fri", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.monday, "Monday", shape.labelup, wd_loc, c_inv, wd_off, "Monday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.tuesday, "Tuesday", shape.labelup, wd_loc, c_inv, wd_off, "Tuesday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.wednesday, "Wednesday", shape.labelup, wd_loc, c_inv, wd_off, "Wednesday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.thursday, "Thursday", shape.labelup, wd_loc, c_inv, wd_off, "Thursday", c_wd, size=size.small)
+plotshape(show_days and is_mid_day and not is_short and dow == dayofweek.friday, "Friday", shape.labelup, wd_loc, c_inv, wd_off, "Friday", c_wd, size=size.small)
+
+autoDetectContracts = input.bool(true, "Auto-Detect Contracts", group="Comparison Symbols", tooltip="Sets Symbol 1/2 from the chart symbol: NQ/MNQ -> ES/MES + YM/MYM, ES/MES -> NQ/MNQ + YM/MYM, YM/MYM -> ES/MES + NQ/MNQ, BTCUSDT.P/ETHUSDT.P -> TOTAL + the other one. Contract size class (mini/micro) and contract month are carried over to the comparisons.")
+
+var compFams  = array.from("ES", "NQ", "YM")
+var compMicro = array.from("MES", "MNQ", "MYM")
+var compExch  = array.from("CME_MINI", "CME_MINI", "CBOT_MINI")
+
+var mainRoots = array.from("MNQ", "MES", "MYM", "NQ", "ES", "YM")
+var mainFams  = array.from("NQ",  "ES",  "YM",  "NQ", "ES", "YM")
+var mainMicro = array.from(true,  true,  true,  false, false, false)
+
+monthCodeChars = "FGHJKMNQUVXZ"
+
+isContractCode(string s) =>
+    n = str.length(s)
+    ok = false
+    if n == 2 and str.substring(s, 1, 2) == "!" and not na(str.tonumber(str.substring(s, 0, 1)))
+        ok := true
+    else if n == 5 and str.contains(monthCodeChars, str.substring(s, 0, 1)) and not na(str.tonumber(str.substring(s, 1, 5)))
+        ok := true
+    ok
+
+feedMod(string exch) =>
+    string m = na
+    if str.startswith(exch, "CME_MINI")
+        m := str.substring(exch, str.length("CME_MINI"))
+    else if str.startswith(exch, "CBOT_MINI")
+        m := str.substring(exch, str.length("CBOT_MINI"))
+    m
+
+compSymbol(string fam, bool micro, string code, string mod) =>
+    famIdx = array.indexof(compFams, fam)
+    array.get(compExch, famIdx) + mod + ":" + (micro ? array.get(compMicro, famIdx) : fam) + code
+
+// Parses the chart ticker once and reports the family, the mini/micro class and
+// the contract month code of the charted contract. The family comes back na when
+// the chart is not a CME/CBOT futures contract (crypto, index, continuous 1!).
+chartContract() =>
+    tickParts = str.split(syminfo.ticker, ":")
+    base = array.size(tickParts) > 1 ? array.get(tickParts, 1) : array.get(tickParts, 0)
+    idParts = str.split(syminfo.tickerid, ":")
+    chartExch = array.size(idParts) > 1 ? array.get(idParts, 0) : ""
+    modRaw = feedMod(chartExch)
+    feedSuffix = na(modRaw) ? "" : modRaw
+    string fam = na
+    bool micro = false
+    string code = na
+    futuresLike = syminfo.type == "futures" or str.contains(chartExch, "CME") or str.contains(chartExch, "CBOT")
+    if futuresLike
+        for i = 0 to array.size(mainRoots) - 1
+            root = array.get(mainRoots, i)
+            if str.startswith(base, root)
+                c = str.substring(base, str.length(root))
+                if isContractCode(c)
+                    fam := array.get(mainFams, i)
+                    micro := array.get(mainMicro, i)
+                    code := c
+                    break
+    [fam, micro, code, feedSuffix]
+
+detectComparisonSymbols() =>
+    [cfFam, cfMicro, cfCode, feedSuffix] = chartContract()
+    string sym1 = na
+    string sym2 = na
+    if not na(cfFam)
+        for j = 0 to array.size(compFams) - 1
+            cf = array.get(compFams, j)
+            if cf != cfFam
+                if na(sym1)
+                    sym1 := compSymbol(cf, cfMicro, cfCode, feedSuffix)
+                else
+                    sym2 := compSymbol(cf, cfMicro, cfCode, feedSuffix)
+    if na(sym1)
+        tickParts = str.split(syminfo.ticker, ":")
+        base = array.size(tickParts) > 1 ? array.get(tickParts, 1) : array.get(tickParts, 0)
+        idParts = str.split(syminfo.tickerid, ":")
+        chartExch = array.size(idParts) > 1 ? array.get(idParts, 0) : ""
+        clen = str.length(base)
+        perp = clen > 2 and str.substring(base, clen - 2, clen) == ".P"
+        cryptRoot = perp ? str.substring(base, 0, clen - 2) : base
+        if cryptRoot == "BTCUSDT" or cryptRoot == "ETHUSDT"
+            other = (cryptRoot == "BTCUSDT" ? "ETHUSDT" : "BTCUSDT") + (perp ? ".P" : "")
+            sym1 := "TOTAL"
+            sym2 := chartExch == "" ? other : chartExch + ":" + other
+    [sym1, sym2]
+
+// Always the ES and the YM contract of the same month and class as the chart,
+// whichever family is charted. The SMT comparison needs "the other two families",
+// the Forward HTF Candles strips need these two specifically.
+detectEsYmSymbols() =>
+    [ccFam, ccMicro, ccCode, feedSuffix] = chartContract()
+    string es = na
+    string ym = na
+    if not na(ccFam)
+        es := compSymbol("ES", ccMicro, ccCode, feedSuffix)
+        ym := compSymbol("YM", ccMicro, ccCode, feedSuffix)
+    [es, ym]
+
+[autoSymbol1, autoSymbol2] = detectComparisonSymbols()
+
+manualSymbol1 = input.symbol("CME_MINI:MES1!", "Symbol 1", confirm=false, group="Comparison Symbols", inline="sym1", tooltip="Used only while Auto-Detect Contracts is OFF.")
+manualSymbol2 = input.symbol("CBOT_MINI:MYM1!", "Symbol 2", confirm=false, group="Comparison Symbols", inline="sym2", tooltip="Used only while Auto-Detect Contracts is OFF.")
+
+symbol1 = autoDetectContracts ? autoSymbol1 : manualSymbol1
+symbol2 = autoDetectContracts ? autoSymbol2 : manualSymbol2
+
+enableSymbol1 = input.bool(true, "Enable Symbol 1", group="Comparison Symbols", inline="en1")
+enableSymbol2 = input.bool(true, "Enable Symbol 2", group="Comparison Symbols", inline="en2")
+
+enable90min = input.bool(true, "90-Minute Cycle", group="Cycle Timeframes", inline="c90")
+lineStyle90min = input.string("Dashed", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c90")
+enable30min = input.bool(true, "30-Minute Cycle", group="Cycle Timeframes", inline="c30")
+lineStyle30min = input.string("Solid", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c30")
+enable10min = input.bool(true, "10-Minute Cycle", group="Cycle Timeframes", inline="c10")
+lineStyle10min = input.string("Solid", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c10")
+enable3min = input.bool(true, "3-Minute Cycle", group="Cycle Timeframes", inline="c3")
+lineStyle3min = input.string("Solid", "Style", options=["Solid", "Dashed", "Dotted"], group="Cycle Timeframes", inline="c3")
+
+enableDaily = input.bool(true, "Daily Cycle (D)", group="Long Term Cycles", inline="cD")
+enableWeekly = input.bool(true, "Weekly Cycle (W)", group="Long Term Cycles", inline="cW")
+enableMonthly = input.bool(true, "Monthly Cycle (M)", group="Long Term Cycles", inline="cM")
+enableYearly = input.bool(true, "Yearly Cycle (Y)", group="Long Term Cycles", inline="cY")
+
+enableSession = input.bool(true, "Enable Session Filter", group="Session Filter")
+sessionStart = input.session("0230-1600", "Session Time", group="Session Filter")
+sessionTimezone = input.string("America/New_York", "Timezone", options=["America/New_York", "America/Chicago", "Europe/London"], group="Session Filter")
+
+enableSessionSMT = input.bool(true, "Enable Session SMT Detection", group="Session SMT")
+showAsiaSession = input.bool(true, "Show Asia Session SMTs", group="Session SMT")
+showLondonSession = input.bool(true, "Show London Session SMTs", group="Session SMT")
+showNYSession = input.bool(true, "Show NY Session SMTs", group="Session SMT")
+showNYPMSession = input.bool(true, "Show NY PM Session SMTs", group="Session SMT")
+maxSessionSMTs = input.int(3, "Max Session SMTs per Session", minval=1, maxval=10, group="Session SMT")
+
+maxTotalLines = input.int(4, "Max Total SMT Lines", minval=1, maxval=20, group="Display")
+enableOldSmtDeletion = input.bool(true, "Delete Old SMTs", group="Display")
+enable369Ids = input.bool(true, "Enable 369 SMTs", group="Display")
+max369Lines = input.int(10, "Max 369 SMT Lines", minval=1, maxval=50, tooltip="Maximum number of 369 SMT lines to display. 369 SMTs are tracked separately from regular SMTs.", group="Display")
+labelOffset = input.int(25, "Label Offset (Pips/Points)", minval=5, maxval=500, tooltip="Distance of labels from SMT lines. Uses mintick multiplication (25 = 2.5 pips for forex, ~6.25 pts for NQ/ES)", group="Display")
+bullishSmtColor = input.color(color.rgb(74, 150, 98), "Bullish SMT", group="Display")
+bearishSmtColor = input.color(color.rgb(148, 43, 43), "Bearish SMT", group="Display")
+
+enableSwingDetection = input.bool(false, "Enable Swing Detection", group="Swing Detection",
+  tooltip="Detect 3-candle swing highs/lows on target minutes with colored dots")
+
+type IntArray
+    array<int> values
+
+type PivotPoint
+    float price
+    int barIndex
+    int time
+    int dayId
+    int num369
+
+type CycleData
+    int startTime
+    int startBar
+    PivotPoint mainPivotHigh
+    PivotPoint mainPivotLow
+    PivotPoint s1PivotHigh
+    PivotPoint s1PivotLow
+    PivotPoint s2PivotHigh
+    PivotPoint s2PivotLow
+    bool active
+    int startCycleId
+    int startDayId
+    int startWeekId
+    int startMonthId
+    int startYear
+
+type CycleManager
+    int duration
+    string label
+    CycleData current
+    array<CycleData> history
+
+type LineMetadata
+    line lineObj
+    label labelObj
+    bool isBearish
+    int smtTypeId
+    float mainPrice
+    float compPrice
+    string symbols
+    string cycleLabel
+    int historyCycleStart
+    bool isForCurrentCycle
+    int num369
+    int mgrIdx
+    int cycleOrder
+    int x1
+    float y1
+    int x2
+    float y2
+    string key1
+    string x2Str
+    string labTxt
+    float labX
+    float labY
+
+type DailySession
+    string name
+    string sessionTime
+    string timezone
+    bool enabled
+    CycleData data
+
+s1ReqSym = na(symbol1) ? syminfo.tickerid : symbol1
+s2ReqSym = na(symbol2) ? syminfo.tickerid : symbol2
+
+s1_normalized = ticker.standard(s1ReqSym)
+s2_normalized = ticker.standard(s2ReqSym)
+
+[s1_high, s1_low] = request.security(s1_normalized, timeframe.period, [high, low], barmerge.gaps_off, barmerge.lookahead_off)
+[s2_high, s2_low] = request.security(s2_normalized, timeframe.period, [high, low], barmerge.gaps_off, barmerge.lookahead_off)
+
+s1_bar_time = request.security(s1_normalized, timeframe.period, time, barmerge.gaps_on, barmerge.lookahead_off)
+s2_bar_time = request.security(s2_normalized, timeframe.period, time, barmerge.gaps_on, barmerge.lookahead_off)
+
+var array<CycleManager> managers = array.new<CycleManager>()
+var map<string, int> mgrIdxByLabel = map.new<string, int>()
+
+var float labelBaseOffset = labelOffset * syminfo.mintick
+var float labelStackSpacing = (labelOffset * 0.3) * syminfo.mintick
+var array<LineMetadata> lines = array.new<LineMetadata>()
+var array<DailySession> dailySessions = array.new<DailySession>()
+var string s1Abbr = ""
+var string s2Abbr = ""
+
+var line_style_90 = line.style_solid
+var line_style_30 = line.style_solid
+var line_style_10 = line.style_solid
+var line_style_3 = line.style_solid
+s1Enabled = enableSymbol1 and not na(symbol1)
+s2Enabled = enableSymbol2 and not na(symbol2)
+
+bool needReposition = false
+
+nyH   = hour(time, "America/New_York")
+nyMin = minute(time, "America/New_York")
+nyY   = year(time, "America/New_York")
+nyMo  = month(time, "America/New_York")
+nyD   = dayofmonth(time, "America/New_York")
+nyTotalMins = nyH * 60 + nyMin
+
+var int sessH = 0
+var int sessM = 0
+if sessionTimezone == "America/New_York"
+    sessH := nyH
+    sessM := nyMin
+else
+    sessH := hour(time, sessionTimezone)
+    sessM := minute(time, sessionTimezone)
+
+var int nyWeek = 0
+if enableWeekly
+    nyWeek := weekofyear(time, "America/New_York")
+
+currentDay = nyH >= 18 ? (nyY * 10000 + nyMo * 100 + nyD + 1) : (nyY * 10000 + nyMo * 100 + nyD)
+
+getAbbr(sym) =>
+    parts = str.split(sym, ":")
+    ticker = array.size(parts) > 1 ? array.get(parts, 1) : array.get(parts, 0)
+    clean = str.replace_all(str.replace_all(str.replace_all(ticker, "USDT", ""), ".P", ""), "USD", "")
+    if str.contains(clean, "1!")
+        clean := str.replace_all(clean, "1!", "")
+        if str.length(clean) == 3 and str.startswith(clean, "M")
+            str.substring(clean, 1, 3)
+        else
+            str.substring(clean, 0, math.min(str.length(clean), 3))
+    else
+        hasMonthCode = false
+        monthCodePos = -1
+        if str.contains(clean, "H") or str.contains(clean, "M") or str.contains(clean, "U") or str.contains(clean, "Z") or str.contains(clean, "F") or str.contains(clean, "G") or str.contains(clean, "J") or str.contains(clean, "K") or str.contains(clean, "N") or str.contains(clean, "Q") or str.contains(clean, "V") or str.contains(clean, "X")
+            len = str.length(clean)
+            for i = 2 to math.min(4, len - 1)
+                char = str.substring(clean, i, i + 1)
+                if char == "H" or char == "M" or char == "U" or char == "Z" or char == "F" or char == "G" or char == "J" or char == "K" or char == "N" or char == "Q" or char == "V" or char == "X"
+                    if i + 1 < len
+                        nextChar = str.substring(clean, i + 1, i + 2)
+                        if nextChar == "1" or nextChar == "2" or nextChar == "3" or nextChar == "4" or nextChar == "5" or nextChar == "6" or nextChar == "7" or nextChar == "8" or nextChar == "9" or nextChar == "0"
+                            hasMonthCode := true
+                            monthCodePos := i
+                            break
+        if hasMonthCode and monthCodePos > 0
+            baseSymbol = str.substring(clean, 0, monthCodePos)
+            if str.length(baseSymbol) == 3 and str.substring(baseSymbol, 0, 1) == "M"
+                str.substring(baseSymbol, 1, 3)
+            else
+                baseSymbol
+        else
+            clean
+
+reduceDigits(n) =>
+    val = n
+    if val > 9
+        val := math.floor(val / 10) + (val % 10)
+    if val > 9
+        val := math.floor(val / 10) + (val % 10)
+    val
+
+get369FromHM(int h, int m) =>
+    sumHHMM = reduceDigits(math.floor(h / 10) + (h % 10) + math.floor(m / 10) + (m % 10))
+    sumMM = reduceDigits(m)
+    res = 0
+    if sumMM == 3 or sumMM == 6 or sumMM == 9
+        res := sumMM
+    else if sumHHMM == 3 or sumHHMM == 6 or sumHHMM == 9
+        res := sumHHMM
+    res
+
+createPivot(float price, int barIdx, int t) =>
+    PivotPoint.new(price, barIdx, t, 0, 0)
+
+refreshLineKeys(LineMetadata m) =>
+    m.x2Str := str.tostring(m.x2)
+    m.key1 := str.tostring(m.x1) + "_" + m.x2Str + "_" + m.cycleLabel + "_" + (m.isBearish ? "1" : "0")
+
+getStackOrder(lbl) =>
+    lbl == "Y" ? 0 : (lbl == "M" ? 1 : (lbl == "W" ? 2 : (lbl == "D" ? 3 : (lbl == "90" ? 4 : (lbl == "30" ? 5 : (lbl == "10" ? 6 : (lbl == "3" ? 7 : 8)))))))
+
+cycleIdFromMins(int totalMins, int duration) =>
+    int anchorMins = 0
+    if totalMins >= 150 and totalMins < 1080
+        anchorMins := 150
+    else
+        anchorMins := 1080
+    minsFromAnchor = totalMins - anchorMins
+    if minsFromAnchor < 0
+        minsFromAnchor += 1440
+    math.floor(minsFromAnchor / duration)
+
+initCycleData() =>
+    CycleData.new(na, na, createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), createPivot(na, na, na), false, 0, 0, 0, 0, 0)
+
+initDailySession(name, sessionTime, timezone, enabled) =>
+    DailySession.new(name, sessionTime, timezone, enabled, initCycleData())
+
+if barstate.isfirst
+    if enable90min
+        array.push(managers, CycleManager.new(90, "90", initCycleData(), array.new<CycleData>()))
+    if enable30min
+        array.push(managers, CycleManager.new(30, "30", initCycleData(), array.new<CycleData>()))
+    if enable10min
+        array.push(managers, CycleManager.new(10, "10", initCycleData(), array.new<CycleData>()))
+    if enable3min and timeframe.in_seconds(timeframe.period) <= 60
+        array.push(managers, CycleManager.new(3, "3", initCycleData(), array.new<CycleData>()))
+    if enableDaily
+        array.push(managers, CycleManager.new(-1, "D", initCycleData(), array.new<CycleData>()))
+    if enableWeekly
+        array.push(managers, CycleManager.new(-2, "W", initCycleData(), array.new<CycleData>()))
+    if enableMonthly
+        array.push(managers, CycleManager.new(-3, "M", initCycleData(), array.new<CycleData>()))
+    if enableYearly
+        array.push(managers, CycleManager.new(-4, "Y", initCycleData(), array.new<CycleData>()))
+    array.push(dailySessions, initDailySession("ASIA", "1800-0230", "America/New_York", showAsiaSession))
+    array.push(dailySessions, initDailySession("LONDON", "0230-0700", "America/New_York", showLondonSession))
+    array.push(dailySessions, initDailySession("NY-AM", "0700-1130", "America/New_York", showNYSession))
+    array.push(dailySessions, initDailySession("NY-PM", "1130-1600", "America/New_York", showNYPMSession))
+    s1Abbr := na(symbol1) ? "" : getAbbr(symbol1)
+    s2Abbr := na(symbol2) ? "" : getAbbr(symbol2)
+    line_style_90 := get_style(lineStyle90min)
+    line_style_30 := get_style(lineStyle30min)
+    line_style_10 := get_style(lineStyle10min)
+    line_style_3 := get_style(lineStyle3min)
+    for i = 0 to array.size(managers) - 1
+        map.put(mgrIdxByLabel, array.get(managers, i).label, i)
+
+startCycle(CycleData c, int dur) =>
+    c.startTime := time
+    c.startBar := bar_index
+    c.mainPivotHigh := createPivot(na, na, na)
+    c.mainPivotLow := createPivot(na, na, na)
+    c.s1PivotHigh := createPivot(na, na, na)
+    c.s1PivotLow := createPivot(na, na, na)
+    c.s2PivotHigh := createPivot(na, na, na)
+    c.s2PivotLow := createPivot(na, na, na)
+    c.active := true
+    c.startCycleId := dur > 0 ? cycleIdFromMins(nyTotalMins, dur) : 0
+    c.startDayId := nyY * 10000 + nyMo * 100 + nyD
+    c.startWeekId := nyY * 100 + nyWeek
+    c.startMonthId := nyY * 100 + nyMo
+    c.startYear := nyY
+
+updatePivots(CycleData c) =>
+    if c.active
+        if na(c.mainPivotHigh.price) or high > c.mainPivotHigh.price
+            c.mainPivotHigh.price := high
+            c.mainPivotHigh.barIndex := bar_index
+            c.mainPivotHigh.time := time
+            c.mainPivotHigh.dayId := currentDay
+            c.mainPivotHigh.num369 := get369FromHM(sessH, sessM)
+        if na(c.mainPivotLow.price) or low < c.mainPivotLow.price
+            c.mainPivotLow.price := low
+            c.mainPivotLow.barIndex := bar_index
+            c.mainPivotLow.time := time
+            c.mainPivotLow.dayId := currentDay
+            c.mainPivotLow.num369 := get369FromHM(sessH, sessM)
+        if s1Enabled or s2Enabled
+            if s1Enabled and not na(s1_high) and s1_high > 0
+                if na(c.s1PivotHigh.price) or s1_high > c.s1PivotHigh.price
+                    c.s1PivotHigh.price := s1_high
+                    c.s1PivotHigh.barIndex := bar_index
+                    c.s1PivotHigh.time := time
+                    c.s1PivotHigh.dayId := currentDay
+                    c.s1PivotHigh.num369 := get369FromHM(sessH, sessM)
+                if not na(s1_low) and s1_low > 0 and (na(c.s1PivotLow.price) or s1_low < c.s1PivotLow.price)
+                    c.s1PivotLow.price := s1_low
+                    c.s1PivotLow.barIndex := bar_index
+                    c.s1PivotLow.time := time
+                    c.s1PivotLow.dayId := currentDay
+                    c.s1PivotLow.num369 := get369FromHM(sessH, sessM)
+            if s2Enabled and not na(s2_high) and s2_high > 0
+                if na(c.s2PivotHigh.price) or s2_high > c.s2PivotHigh.price
+                    c.s2PivotHigh.price := s2_high
+                    c.s2PivotHigh.barIndex := bar_index
+                    c.s2PivotHigh.time := time
+                    c.s2PivotHigh.dayId := currentDay
+                    c.s2PivotHigh.num369 := get369FromHM(sessH, sessM)
+                if not na(s2_low) and s2_low > 0 and (na(c.s2PivotLow.price) or s2_low < c.s2PivotLow.price)
+                    c.s2PivotLow.price := s2_low
+                    c.s2PivotLow.barIndex := bar_index
+                    c.s2PivotLow.time := time
+                    c.s2PivotLow.dayId := currentDay
+                    c.s2PivotLow.num369 := get369FromHM(sessH, sessM)
+
+markLinesAsHistorical(int mgrIdx, int cycleStartBar) =>
+    if array.size(lines) > 0
+        for i = 0 to array.size(lines) - 1
+            meta = array.get(lines, i)
+            if meta.isForCurrentCycle and meta.mgrIdx == mgrIdx and meta.historyCycleStart == cycleStartBar
+                meta.isForCurrentCycle := false
+
+repositionAllLabels() =>
+    if array.size(lines) > 0
+        var p1Map = map.new<string, IntArray>()
+        map.clear(p1Map)
+        for i = 0 to array.size(lines) - 1
+            meta = array.get(lines, i)
+            k = meta.key1
+            if not map.contains(p1Map, k)
+                map.put(p1Map, k, IntArray.new(array.new<int>()))
+            array.push(map.get(p1Map, k).values, i)
+        var p2Map = map.new<string, IntArray>()
+        map.clear(p2Map)
+        var displaySymsMap = map.new<int, string>()
+        map.clear(displaySymsMap)
+        keys1 = map.keys(p1Map)
+        for k in keys1
+            indices = map.get(p1Map, k).values
+            baseIdx = array.get(indices, 0)
+            baseMeta = array.get(lines, baseIdx)
+            combinedSyms = baseMeta.symbols
+            if array.size(indices) > 1
+                for j = 1 to array.size(indices) - 1
+                    otherMeta = array.get(lines, array.get(indices, j))
+                    combinedSyms += "+" + otherMeta.symbols
+                    if otherMeta.labTxt != ""
+                        label.set_text(otherMeta.labelObj, "")
+                        otherMeta.labTxt := ""
+            map.put(displaySymsMap, baseIdx, combinedSyms)
+            k2 = baseMeta.x2Str + "_" + combinedSyms + "_" + (baseMeta.isBearish ? "1" : "0")
+            if not map.contains(p2Map, k2)
+                map.put(p2Map, k2, IntArray.new(array.new<int>()))
+            array.push(map.get(p2Map, k2).values, baseIdx)
+        var p3Map = map.new<string, IntArray>()
+        map.clear(p3Map)
+        keys2 = map.keys(p2Map)
+        for k2 in keys2
+            indices = map.get(p2Map, k2).values
+            baseIdx = array.get(indices, 0)
+            baseMeta = array.get(lines, baseIdx)
+            currentSyms = map.get(displaySymsMap, baseIdx)
+            cycleListStr = baseMeta.cycleLabel
+            if array.size(indices) > 1
+                for j = 1 to array.size(indices) - 1
+                    otherMeta = array.get(lines, array.get(indices, j))
+                    cycleListStr += " + " + otherMeta.cycleLabel
+                    if otherMeta.labTxt != ""
+                        label.set_text(otherMeta.labelObj, "")
+                        otherMeta.labTxt := ""
+            hasDigits = str.contains(cycleListStr, "0") or str.contains(cycleListStr, "3") or str.contains(cycleListStr, "9") or str.contains(cycleListStr, "1")
+            suffix = hasDigits ? "m " : " "
+            suffix369 = enable369Ids and baseMeta.num369 > 0 ? " (" + str.tostring(baseMeta.num369) + ")" : ""
+            finalTxt = cycleListStr + suffix + currentSyms + suffix369
+            if baseMeta.labTxt != finalTxt
+                label.set_text(baseMeta.labelObj, finalTxt)
+                baseMeta.labTxt := finalTxt
+            k3 = baseMeta.x2Str + "_" + (baseMeta.isBearish ? "1" : "0")
+            if not map.contains(p3Map, k3)
+                map.put(p3Map, k3, IntArray.new(array.new<int>()))
+            array.push(map.get(p3Map, k3).values, baseIdx)
+        keys3 = map.keys(p3Map)
+        for k3 in keys3
+            indices = map.get(p3Map, k3).values
+            cnt = array.size(indices)
+            if cnt > 1
+                for i = 0 to cnt - 2
+                    for j = 0 to cnt - 2 - i
+                        idxA = array.get(indices, j)
+                        idxB = array.get(indices, j + 1)
+                        if array.get(lines, idxA).cycleOrder > array.get(lines, idxB).cycleOrder
+                            array.set(indices, j, idxB)
+                            array.set(indices, j + 1, idxA)
+            for i = 0 to cnt - 1
+                meta = array.get(lines, array.get(indices, i))
+                stackOffset = i * labelStackSpacing
+                totalOffset = meta.isBearish ? (labelBaseOffset + stackOffset) : -(labelBaseOffset + stackOffset)
+                midX = math.floor((meta.x1 + meta.x2) / 2)
+                midY = (meta.y1 + meta.y2) / 2
+                newY = midY + totalOffset
+                if meta.labX != midX or meta.labY != newY
+                    label.set_xy(meta.labelObj, midX, newY)
+                    meta.labX := midX
+                    meta.labY := newY
+
+completeCycle(CycleManager m, int mIdx) =>
+    markLinesAsHistorical(mIdx, m.current.startBar)
+    mainHighCopy = createPivot(m.current.mainPivotHigh.price, m.current.mainPivotHigh.barIndex, m.current.mainPivotHigh.time)
+    mainLowCopy = createPivot(m.current.mainPivotLow.price, m.current.mainPivotLow.barIndex, m.current.mainPivotLow.time)
+    s1HighCopy = createPivot(m.current.s1PivotHigh.price, m.current.s1PivotHigh.barIndex, m.current.s1PivotHigh.time)
+    s1LowCopy = createPivot(m.current.s1PivotLow.price, m.current.s1PivotLow.barIndex, m.current.s1PivotLow.time)
+    s2HighCopy = createPivot(m.current.s2PivotHigh.price, m.current.s2PivotHigh.barIndex, m.current.s2PivotHigh.time)
+    s2LowCopy = createPivot(m.current.s2PivotLow.price, m.current.s2PivotLow.barIndex, m.current.s2PivotLow.time)
+    savedCycle = CycleData.new(m.current.startTime, m.current.startBar, mainHighCopy, mainLowCopy, s1HighCopy, s1LowCopy, s2HighCopy, s2LowCopy, true, m.current.startCycleId, m.current.startDayId, m.current.startWeekId, m.current.startMonthId, m.current.startYear)
+    array.push(m.history, savedCycle)
+    if array.size(m.history) > 40
+        array.shift(m.history)
+    startCycle(m.current, m.duration)
+
+shouldComplete(CycleData c, int durMin) =>
+    if not c.active or na(c.startTime)
+        false
+    else
+        bool shouldFinish = false
+        if durMin > 0
+            shouldFinish := cycleIdFromMins(nyTotalMins, durMin) != c.startCycleId
+        else if durMin == -1
+            shouldFinish := (nyY * 10000 + nyMo * 100 + nyD) != c.startDayId
+        else if durMin == -2
+            shouldFinish := (nyY * 100 + nyWeek) != c.startWeekId
+        else if durMin == -3
+            shouldFinish := (nyY * 100 + nyMo) != c.startMonthId
+        else if durMin == -4
+            shouldFinish := nyY != c.startYear
+        shouldFinish
+
+isInvalidated(meta, isS1, isHigh, bearish, inverse, currMain, currComp) =>
+    if na(currComp) or na(currMain)
+        false
+    else
+        if inverse
+            bearish ? (currComp < meta.compPrice or currMain > meta.mainPrice) : (currComp > meta.compPrice or currMain < meta.mainPrice)
+        else
+            bearish ? currComp > meta.compPrice : currComp < meta.compPrice
+
+drawSMT(int bar1, int time1, float price1, int bar2, int time2, float price2, string symbolStr, string cycleLabel, bool bearish, int typeId, float compPrice, int cycleStartBar, int currentDay, int t2DayId, int t2Num369) =>
+    if na(bar1) or na(bar2) or na(time1) or na(time2)
+        false
+    else
+        int mgrIdx = -1
+        if map.contains(mgrIdxByLabel, cycleLabel)
+            mgrIdx := map.get(mgrIdxByLabel, cycleLabel)
+        bool isLongTerm = false
+        if mgrIdx >= 0
+            isLongTerm := array.get(managers, mgrIdx).duration < 0
+        if not isLongTerm and t2DayId != currentDay
+            false
+        else
+            lineColor = bearish ? bearishSmtColor : bullishSmtColor
+            textColor = bearish ? bearishSmtColor : bullishSmtColor
+            lineStyle = cycleLabel == "90" ? line_style_90 : (cycleLabel == "30" ? line_style_30 : (cycleLabel == "10" ? line_style_10 : (cycleLabel == "3" ? line_style_3 : line.style_solid)))
+            shouldAdd = true
+            mergeIdx = -1
+            if array.size(lines) > 0
+                for i = 0 to array.size(lines) - 1
+                    m = array.get(lines, i)
+                    if m.isBearish == bearish and m.isForCurrentCycle and m.mgrIdx == mgrIdx and m.cycleLabel == cycleLabel and m.symbols == symbolStr
+                        mergeIdx := i
+                        shouldAdd := false
+                        break
+            isNew = false
+            if mergeIdx >= 0
+                existing = array.get(lines, mergeIdx)
+                if na(existing.lineObj)
+                    existing.lineObj := line.new(time1, price1, time2, price2, xloc=xloc.bar_time, color=lineColor, width=1, style=lineStyle)
+                else
+                    line.set_xy1(existing.lineObj, time1, price1)
+                    line.set_xy2(existing.lineObj, time2, price2)
+                existing.mainPrice := price1
+                existing.compPrice := compPrice
+                existing.x1 := time1
+                existing.y1 := price1
+                existing.x2 := time2
+                existing.y2 := price2
+                refreshLineKeys(existing)
+                isNew := true
+            else if shouldAdd
+                l = line.new(time1, price1, time2, price2, xloc=xloc.bar_time, color=lineColor, width=1, style=lineStyle)
+                midTime = math.floor((time1 + time2) / 2)
+                midPrice = (price1 + price2) / 2
+                totalOffset = bearish ? labelBaseOffset : -labelBaseOffset
+                isSessionLabel = cycleLabel == "ASIA" or cycleLabel == "LONDON" or cycleLabel == "NY-AM" or cycleLabel == "NY-PM" or cycleLabel == "D" or cycleLabel == "W" or cycleLabel == "M" or cycleLabel == "Y"
+                num369 = t2Num369
+                suffix369 = enable369Ids and num369 > 0 ? " (" + str.tostring(num369) + ")" : ""
+                txt = isSessionLabel ? cycleLabel + " " + symbolStr + suffix369 : cycleLabel + "m " + symbolStr + suffix369
+                lab = label.new(midTime, midPrice + totalOffset, txt, xloc=xloc.bar_time, style=label.style_none, color=textColor, textcolor=textColor, size=size.small, yloc=yloc.price)
+                meta = LineMetadata.new(l, lab, bearish, typeId, price1, compPrice, symbolStr, cycleLabel, cycleStartBar, true, num369, mgrIdx, getStackOrder(cycleLabel), time1, price1, time2, price2, "", "", txt, midTime, midPrice + totalOffset)
+                refreshLineKeys(meta)
+                array.push(lines, meta)
+                int newestLineIdx = array.size(lines) - 1
+                int regularLineCount = 0
+                int line369Count = 0
+                if array.size(lines) > 0
+                    for i = 0 to array.size(lines) - 1
+                        m_chk = array.get(lines, i)
+                        is369 = enable369Ids and m_chk.num369 > 0
+                        if is369
+                            line369Count += 1
+                        else
+                            regularLineCount += 1
+                if enableOldSmtDeletion
+                    while regularLineCount > maxTotalLines
+                        idxToRemove = -1
+                        maxOrder = -1
+                        for i = 0 to array.size(lines) - 1
+                            checkLn = array.get(lines, i)
+                            if enable369Ids and checkLn.num369 > 0
+                                continue
+                            if i != newestLineIdx and checkLn.cycleOrder > maxOrder
+                                maxOrder := checkLn.cycleOrder
+                                idxToRemove := i
+                        if idxToRemove >= 0
+                            old = array.remove(lines, idxToRemove)
+                            line.delete(old.lineObj)
+                            label.delete(old.labelObj)
+                            regularLineCount -= 1
+                        else
+                            break
+                    while line369Count > max369Lines
+                        idxToRemove = -1
+                        for i = 0 to array.size(lines) - 1
+                            checkLn = array.get(lines, i)
+                            if enable369Ids and checkLn.num369 > 0
+                                idxToRemove := i
+                                break
+                        if idxToRemove >= 0
+                            old = array.remove(lines, idxToRemove)
+                            line.delete(old.lineObj)
+                            label.delete(old.labelObj)
+                            line369Count -= 1
+                        else
+                            break
+                isNew := true
+            isNew
+
+checkAndDrawSMT(PivotPoint currMain, PivotPoint prevMain, PivotPoint currComp, PivotPoint prevComp, string symStr, string lbl, int startBar, int typeBase, bool isBearish, int currentDay) =>
+    detected = false
+    PivotPoint rMain = prevMain
+    PivotPoint rComp = prevComp
+    bool refsOk = not na(currMain.price) and not na(currComp.price) and not na(prevMain.price) and not na(prevComp.price)
+    if refsOk
+        if isBearish
+            if currMain.price > rMain.price and currComp.price < rComp.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 0, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+            if currComp.price > rComp.price and currMain.price < rMain.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, true, typeBase + 4, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+        else
+            if currMain.price < rMain.price and currComp.price > rComp.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 1, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+            if currComp.price < rComp.price and currMain.price > rMain.price
+                if drawSMT(rMain.barIndex, rMain.time, rMain.price, currMain.barIndex, currMain.time, currMain.price, symStr, lbl, false, typeBase + 5, rComp.price, startBar, currentDay, currMain.dayId, currMain.num369)
+                    detected := true
+    detected
+
+checkInvalidation() =>
+    bool removed = false
+    var array<int> toRemove = array.new<int>()
+    if s1Enabled or s2Enabled
+        if array.size(lines) > 0
+            array.clear(toRemove)
+            for i = 0 to array.size(lines) - 1
+                m = array.get(lines, i)
+                isS1 = m.smtTypeId == 0 or m.smtTypeId == 1 or m.smtTypeId == 4 or m.smtTypeId == 5
+                isHigh = m.smtTypeId == 0 or m.smtTypeId == 2 or m.smtTypeId == 4 or m.smtTypeId == 6
+                inverse = m.smtTypeId >= 4
+                enabled = isS1 ? s1Enabled : s2Enabled
+                if enabled and m.mgrIdx >= 0 and m.isForCurrentCycle
+                    currMain = isHigh ? high : low
+                    currComp = isS1 ? (isHigh ? s1_high : s1_low) : (isHigh ? s2_high : s2_low)
+                    mgr = array.get(managers, m.mgrIdx)
+                    if mgr.current.active
+                        cMain = isHigh ? mgr.current.mainPivotHigh.price : mgr.current.mainPivotLow.price
+                        cComp = isS1 ? (isHigh ? mgr.current.s1PivotHigh.price : mgr.current.s1PivotLow.price) : (isHigh ? mgr.current.s2PivotHigh.price : mgr.current.s2PivotLow.price)
+                        if not na(cMain)
+                            currMain := cMain
+                        if not na(cComp)
+                            currComp := cComp
+                    if not na(currMain) and not na(currComp)
+                        if isInvalidated(m, isS1, isHigh, m.isBearish, inverse, currMain, currComp)
+                            array.push(toRemove, i)
+            if array.size(toRemove) > 0
+                for i = array.size(toRemove) - 1 to 0
+                    old = array.remove(lines, array.get(toRemove, i))
+                    line.delete(old.lineObj)
+                    label.delete(old.labelObj)
+                removed := true
+    removed
+
+updateExistingLines(CycleManager m, int mIdx) =>
+    curr = m.current
+    bool changed = false
+    if array.size(lines) > 0 and curr.active
+        for i = 0 to array.size(lines) - 1
+            meta = array.get(lines, i)
+            if meta.isForCurrentCycle and meta.mgrIdx == mIdx
+                isHigh = meta.smtTypeId == 0 or meta.smtTypeId == 2 or meta.smtTypeId == 4 or meta.smtTypeId == 6
+                currPivot = isHigh ? curr.mainPivotHigh : curr.mainPivotLow
+                if not na(currPivot.price) and (meta.x2 != currPivot.time or meta.y2 != currPivot.price)
+                    line.set_xy2(meta.lineObj, currPivot.time, currPivot.price)
+                    meta.x2 := currPivot.time
+                    meta.y2 := currPivot.price
+                    refreshLineKeys(meta)
+                    meta.num369 := currPivot.num369
+                    changed := true
+    changed
+
+isInSession(sessionTime, timezone) =>
+    not na(time("", sessionTime, timezone))
+
+startDailySession(s) =>
+    startCycle(s.data, 0)
+
+compareSessionSMT(curr, prev, int currentDay) =>
+    sessionStartBar = bar_index
+    if s1Enabled or s2Enabled
+        if not na(curr.data.mainPivotHigh.price) and not na(prev.data.mainPivotHigh.price)
+            if s1Enabled
+                checkAndDrawSMT(curr.data.mainPivotHigh, prev.data.mainPivotHigh, curr.data.s1PivotHigh, prev.data.s1PivotHigh, s1Abbr, prev.name, sessionStartBar, 0, true, currentDay)
+            if s2Enabled
+                checkAndDrawSMT(curr.data.mainPivotHigh, prev.data.mainPivotHigh, curr.data.s2PivotHigh, prev.data.s2PivotHigh, s2Abbr, prev.name, sessionStartBar, 2, true, currentDay)
+        if not na(curr.data.mainPivotLow.price) and not na(prev.data.mainPivotLow.price)
+            if s1Enabled
+                checkAndDrawSMT(curr.data.mainPivotLow, prev.data.mainPivotLow, curr.data.s1PivotLow, prev.data.s1PivotLow, s1Abbr, prev.name, sessionStartBar, 0, false, currentDay)
+            if s2Enabled
+                checkAndDrawSMT(curr.data.mainPivotLow, prev.data.mainPivotLow, curr.data.s2PivotLow, prev.data.s2PivotLow, s2Abbr, prev.name, sessionStartBar, 2, false, currentDay)
+
+for i = 0 to array.size(managers) - 1
+    m = array.get(managers, i)
+    if m.duration >= 0
+        continue
+    curr = m.current
+    if not curr.active
+        startCycle(curr, m.duration)
+    else if shouldComplete(curr, m.duration)
+        completeCycle(m, i)
+        curr := m.current
+    if not curr.active
+        continue
+    prevMainHigh = curr.mainPivotHigh.price
+    prevMainLow = curr.mainPivotLow.price
+    prevS1High = curr.s1PivotHigh.price
+    prevS1Low = curr.s1PivotLow.price
+    prevS2High = curr.s2PivotHigh.price
+    prevS2Low = curr.s2PivotLow.price
+    updatePivots(curr)
+    anyHighChanged = curr.mainPivotHigh.price != prevMainHigh or curr.s1PivotHigh.price != prevS1High or curr.s2PivotHigh.price != prevS2High
+    anyLowChanged = curr.mainPivotLow.price != prevMainLow or curr.s1PivotLow.price != prevS1Low or curr.s2PivotLow.price != prevS2Low
+    if not anyHighChanged and not anyLowChanged
+        continue
+    if updateExistingLines(m, i)
+        needReposition := true
+    if array.size(m.history) >= 1
+        mLabel = m.label
+        lastCompleted = array.get(m.history, array.size(m.history) - 1)
+        if anyHighChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s1PivotHigh, lastCompleted.s1PivotHigh, s1Abbr, mLabel, curr.startBar, 0, true, currentDay)
+                needReposition := true
+        if anyHighChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s2PivotHigh, lastCompleted.s2PivotHigh, s2Abbr, mLabel, curr.startBar, 2, true, currentDay)
+                needReposition := true
+        if anyLowChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s1PivotLow, lastCompleted.s1PivotLow, s1Abbr, mLabel, curr.startBar, 0, false, currentDay)
+                needReposition := true
+        if anyLowChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s2PivotLow, lastCompleted.s2PivotLow, s2Abbr, mLabel, curr.startBar, 2, false, currentDay)
+                needReposition := true
+
+for mIdx = 0 to array.size(managers) - 1
+    m = array.get(managers, mIdx)
+    if m.duration < 0
+        continue
+    curr = m.current
+    if not curr.active
+        startCycle(curr, m.duration)
+    else if shouldComplete(curr, m.duration)
+        completeCycle(m, mIdx)
+        curr := m.current
+    if not curr.active
+        continue
+    prevMainHigh = curr.mainPivotHigh.price
+    prevMainLow = curr.mainPivotLow.price
+    prevS1High = curr.s1PivotHigh.price
+    prevS1Low = curr.s1PivotLow.price
+    prevS2High = curr.s2PivotHigh.price
+    prevS2Low = curr.s2PivotLow.price
+    updatePivots(curr)
+    anyHighChanged = curr.mainPivotHigh.price != prevMainHigh or curr.s1PivotHigh.price != prevS1High or curr.s2PivotHigh.price != prevS2High
+    anyLowChanged = curr.mainPivotLow.price != prevMainLow or curr.s1PivotLow.price != prevS1Low or curr.s2PivotLow.price != prevS2Low
+    if not anyHighChanged and not anyLowChanged
+        continue
+    if updateExistingLines(m, mIdx)
+        needReposition := true
+    if array.size(m.history) > 0
+        mLabel = m.label
+        lastCompleted = array.get(m.history, array.size(m.history) - 1)
+        if anyHighChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s1PivotHigh, lastCompleted.s1PivotHigh, s1Abbr, mLabel, curr.startBar, 0, true, currentDay)
+                needReposition := true
+        if anyHighChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotHigh, lastCompleted.mainPivotHigh, curr.s2PivotHigh, lastCompleted.s2PivotHigh, s2Abbr, mLabel, curr.startBar, 2, true, currentDay)
+                needReposition := true
+        if anyLowChanged and s1Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s1PivotLow, lastCompleted.s1PivotLow, s1Abbr, mLabel, curr.startBar, 0, false, currentDay)
+                needReposition := true
+        if anyLowChanged and s2Enabled
+            if checkAndDrawSMT(curr.mainPivotLow, lastCompleted.mainPivotLow, curr.s2PivotLow, lastCompleted.s2PivotLow, s2Abbr, mLabel, curr.startBar, 2, false, currentDay)
+                needReposition := true
+
+if enableSessionSMT
+    for i = 0 to array.size(dailySessions) - 1
+        sess = array.get(dailySessions, i)
+        if not sess.enabled
+            continue
+        inSession = isInSession(sess.sessionTime, sess.timezone)
+        if inSession and not sess.data.active
+            startDailySession(sess)
+        if sess.data.active
+            updatePivots(sess.data)
+        if not inSession and sess.data.active and not na(sess.data.mainPivotHigh.price) and not na(sess.data.mainPivotLow.price)
+            sess.data.active := false
+            if i > 0
+                for j = i - 1 to 0
+                    prevSess = array.get(dailySessions, j)
+                    if prevSess.enabled and not na(prevSess.data.mainPivotHigh.price) and not na(prevSess.data.mainPivotLow.price)
+                        compareSessionSMT(sess, prevSess, currentDay)
+                        break
+            needReposition := true
+
+if checkInvalidation()
+    needReposition := true
+
+var array<int> gbtNumbers = array.from(3, 11, 17, 23, 29, 35, 41, 47, 53, 59, 65, 71, 77, 83, 89, 97)
+
+buildGbSumLut(array<int> nums) =>
+    lut = array.new<bool>(144, false)
+    for i = 0 to array.size(nums) - 1
+        array.set(lut, array.get(nums, i), true)
+    lut
+
+var array<bool> gbSumLut = buildGbSumLut(gbtNumbers)
+
+buildNextMarkOffsets(array<bool> sumLut) =>
+    minuteLut = array.new<bool>(1440, false)
+    for i = 0 to 1439
+        if array.get(sumLut, math.floor(i / 60) + (i % 60))
+            array.set(minuteLut, i, true)
+    firstMark = 0
+    for i = 0 to 1439
+        if array.get(minuteLut, i)
+            firstMark := i
+            break
+    offsets = array.new<int>(1440, 0)
+    run = 0
+    wrapped = true
+    for i = 1439 to 0
+        if array.get(minuteLut, i)
+            run := 0
+            wrapped := false
+        else
+            run += 1
+        array.set(offsets, i, wrapped ? (1440 - i) + firstMark : run)
+    offsets
+
+var array<int> nextMarkOffset = buildNextMarkOffsets(gbSumLut)
+
+buildBasicMinuteOffsets(array<int> nums) =>
+    offs = array.new<int>(60, 60)
+    for k = 0 to array.size(nums) - 1
+        n = array.get(nums, k)
+        if n < 60
+            for i = 0 to 59
+                d = (n - i + 60) % 60
+                if d < array.get(offs, i)
+                    array.set(offs, i, d)
+    offs
+
+var array<int> nextBasicOffset = buildBasicMinuteOffsets(gbtNumbers)
+
+var array<label> swingLabels = array.new<label>()
+maxSwingLabels = input.int(200, "Max Swing Labels", minval=1, maxval=300, group="Swing Detection",
+  tooltip="FIFO cap for swing and diamond labels. Oldest labels are deleted so the total stays under the 500-label chart limit, otherwise recent marks stop rendering.")
+
+isGbHM(int h, int m) =>
+    int s = h + m
+    bool isMark = false
+    if s >= 0 and s < 144
+        isMark := array.get(gbSumLut, s)
+    isMark
+
+isGbtMark(int h, int m) =>
+    int s = h + m
+    bool isMark = isGbHM(h, m)
+    [isMark, s, isMark and (s == 23 or s == 35 or s == 65 or s == 77)]
+
+LABEL_PX_NEAR = 3
+LABEL_PX_FAR = 28
+
+addSwingLabel(int barIdx, string txt, color col, bool above, int px) =>
+    lbl = label.new(barIdx, px, txt, xloc=xloc.bar_index,
+      yloc=above ? yloc.abovebar : yloc.belowbar,
+      color=color.new(color.black, 100), textcolor=col,
+      style=label.style_none, size=size.small)
+    array.push(swingLabels, lbl)
+    while array.size(swingLabels) > maxSwingLabels
+        oldLbl = array.shift(swingLabels)
+        label.delete(oldLbl)
+
+isSwingHighPattern = high[2] < high[1] and high[0] < high[1]
+isSwingLowPattern = low[2] > low[1] and low[0] > low[1]
+
+if enableSwingDetection and isSwingHighPattern and not na(time[1])
+    [swIsMark, swGbNum, swIsNonGb] = isGbtMark(sessH[1], sessM[1])
+    if swIsMark
+        labelTxt = swIsNonGb ? "N" + str.tostring(swGbNum) : str.tostring(swGbNum)
+        addSwingLabel(bar_index[1], labelTxt, bearishSmtColor, true, LABEL_PX_NEAR)
+
+if enableSwingDetection and isSwingLowPattern and not na(time[1])
+    [swIsMark, swGbNum, swIsNonGb] = isGbtMark(sessH[1], sessM[1])
+    if swIsMark
+        labelTxt = swIsNonGb ? "N" + str.tostring(swGbNum) : str.tostring(swGbNum)
+        addSwingLabel(bar_index[1], labelTxt, bullishSmtColor, false, LABEL_PX_NEAR)
+
+enableGbtCandleSmt = input.bool(false, "Enable GB Candle SMT", group="Candle GB SMT",
+  tooltip="Single-candle SMT: dot when symbols disagree on a GB swing stamp. Above swing highs, below swing lows, GB number inside.")
+gbtDiamondSize = input.string("Tiny", "Dot Size", options=["Tiny", "Small"], group="Candle GB SMT", inline="gbtDmd")
+gbtDiamondColor = input.color(color.yellow, "Dot Color", group="Candle GB SMT", inline="gbtDmd")
+
+s1SwingHigh = s1_high[2] < s1_high[1] and s1_high[0] < s1_high[1]
+s1SwingLow = s1_low[2] > s1_low[1] and s1_low[0] > s1_low[1]
+s2SwingHigh = s2_high[2] < s2_high[1] and s2_high[0] < s2_high[1]
+s2SwingLow = s2_low[2] > s2_low[1] and s2_low[0] > s2_low[1]
+
+bool gbtCandleDivergence = false
+bool dirIsHigh = false
+bool dirIsLow = false
+string dmdLabelTxt = ""
+if enableGbtCandleSmt
+    mainStampHigh = not na(time[1]) and isGbHM(sessH[1], sessM[1]) and isSwingHighPattern
+    mainStampLow = not na(time[1]) and isGbHM(sessH[1], sessM[1]) and isSwingLowPattern
+    mainStamp = mainStampHigh or mainStampLow
+    bool s1StampHigh = false
+    bool s1StampLow = false
+    if s1Enabled and not na(s1_bar_time[1])
+        s1IsGb = isGbHM(hour(s1_bar_time[1], sessionTimezone), minute(s1_bar_time[1], sessionTimezone))
+        s1StampHigh := s1IsGb and s1SwingHigh
+        s1StampLow := s1IsGb and s1SwingLow
+    bool s2StampHigh = false
+    bool s2StampLow = false
+    if s2Enabled and not na(s2_bar_time[1])
+        s2IsGb = isGbHM(hour(s2_bar_time[1], sessionTimezone), minute(s2_bar_time[1], sessionTimezone))
+        s2StampHigh := s2IsGb and s2SwingHigh
+        s2StampLow := s2IsGb and s2SwingLow
+    s1Stamp = s1StampHigh or s1StampLow
+    s2Stamp = s2StampHigh or s2StampLow
+    comparedCount = 1 + (s1Enabled ? 1 : 0) + (s2Enabled ? 1 : 0)
+    stampCount = (mainStamp ? 1 : 0) + (s1Stamp ? 1 : 0) + (s2Stamp ? 1 : 0)
+    gbtCandleDivergence := stampCount > 0 and stampCount < comparedCount
+    dirIsHigh := mainStampHigh or (not mainStampHigh and not mainStampLow and (s1StampHigh or s2StampHigh))
+    dirIsLow := mainStampLow or (not mainStampHigh and not mainStampLow and (s1StampLow or s2StampLow) and not (s1StampHigh or s2StampHigh))
+    [dmdIsMark, dmdGbNum, dmdIsNonGb] = isGbtMark(sessH[1], sessM[1])
+    dmdLabelTxt := dmdIsNonGb ? "N" + str.tostring(dmdGbNum) : str.tostring(dmdGbNum)
+
+plotshape(gbtCandleDivergence and dirIsHigh and gbtDiamondSize == "Tiny", style=shape.circle, location=location.abovebar,
+  color=gbtDiamondColor, size=size.tiny, offset=-1)
+plotshape(gbtCandleDivergence and dirIsHigh and gbtDiamondSize != "Tiny", style=shape.circle, location=location.abovebar,
+  color=gbtDiamondColor, size=size.small, offset=-1)
+plotshape(gbtCandleDivergence and dirIsLow and gbtDiamondSize == "Tiny", style=shape.circle, location=location.belowbar,
+  color=gbtDiamondColor, size=size.tiny, offset=-1)
+plotshape(gbtCandleDivergence and dirIsLow and gbtDiamondSize != "Tiny", style=shape.circle, location=location.belowbar,
+  color=gbtDiamondColor, size=size.small, offset=-1)
+
+if gbtCandleDivergence and dirIsHigh
+    addSwingLabel(bar_index[1], dmdLabelTxt, gbtDiamondColor, true, LABEL_PX_FAR)
+if gbtCandleDivergence and dirIsLow
+    addSwingLabel(bar_index[1], dmdLabelTxt, gbtDiamondColor, false, LABEL_PX_FAR)
+
+pad2(int v) =>
+    v < 10 ? "0" + str.tostring(v) : str.tostring(v)
+
+gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
+    int nextMins = (totalMins + off) % 1440
+    int nh = math.floor(nextMins / 60)
+    int nm = nextMins % 60
+    [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
+
+showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
+var table nextGbtTable = table.new(position.top_right, 2, 2)
+var line nextGbtLine = na
+var string lastNextTxt = ""
+var string lastShiftTxt = ""
+
+if not na(time)
+    int mTot = sessH * 60 + sessM
+    [bTs, bTxt, bNum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
+    [_, sTxt, sSum] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
+    if showNextGbtLine
+        if not na(nextGbtLine)
+            line.delete(nextGbtLine)
+        nextGbtLine := line.new(bTs, 0, bTs, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dotted, color=color.gray, width=1)
+    if bTxt != lastNextTxt or sTxt != lastShiftTxt
+        table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 0, bNum, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=color.black, text_size=size.normal)
+        table.cell(nextGbtTable, 1, 1, sSum, text_color=color.black, text_size=size.normal)
+        lastNextTxt := bTxt
+        lastShiftTxt := sTxt
+
+if needReposition
+    repositionAllLabels()
+
+grp_rgbt = "Real GBT"
+enableRealGbt = input.bool(false, "Enable Real GBT", group=grp_rgbt, tooltip="Marks every hour on the Real GBT minutes: 3, 11, 17, 23, 29, 35, 41, 47, 53 and 59 past the hour. Same minutes in every hour — no sliding. The upper master-grid numbers (65, 71, 77, 83, 89, 97) are not minutes and are excluded.")
+realGbtTol = input.bool(false, "Include +/- 1 Minute Tolerance", group=grp_rgbt, tooltip="OPTIONAL, off by default. Also marks one minute either side of each Real GBT minute (e.g. :16 and :18 for :17). Those marks are drawn dimmed.")
+realGbtCol = input.color(color.aqua, "Number Color", group=grp_rgbt)
+realGbtMax = input.int(40, "Max Real GBT Labels", minval=1, maxval=300, group=grp_rgbt, tooltip="FIFO cap for the Real GBT numbers — applied to the numbers riding the active 90min line and to the finished cycles separately. Oldest are deleted first so recent marks always render.")
+
+realGbtMinutes = array.from(3, 11, 17, 23, 29, 35, 41, 47, 53, 59)
+
+buildRealGbtLut() =>
+    lut = array.new<bool>(60, false)
+    for i = 0 to array.size(realGbtMinutes) - 1
+        array.set(lut, array.get(realGbtMinutes, i), true)
+    lut
+
+var array<bool> realGbtLut = buildRealGbtLut()
+
+isRealGbtMinute(int m) =>
+    ok = false
+    if m >= 0 and m < 60
+        ok := array.get(realGbtLut, m)
+    ok
+
+realGbtExact = isRealGbtMinute(sessM)
+realGbtNear = realGbtTol and (isRealGbtMinute(sessM - 1) or isRealGbtMinute(sessM + 1))
+realGbtHit = enableRealGbt and (realGbtExact or realGbtNear)
+
+realGbtNum = realGbtExact ? sessM : (isRealGbtMinute(sessM - 1) ? sessM - 1 : sessM + 1)
+realGbtColUse = realGbtHit and not realGbtExact ? color.new(realGbtCol, 55) : realGbtCol
+
+var float rgbtTop = na
+var int rgbtId = -1
+var int rgbtPrevId = -1
+var float rgbtApplied = na
+var array<label> rgbtCur = array.new<label>()
+var array<label> rgbtOld = array.new<label>()
+
+if act_90
+    if cx_on and c_cx_90.active
+        rgbtTop := c_cx_90.h
+        rgbtId := 4000 + c_cx_90.idx
+    else if c_ny_90.active
+        rgbtTop := c_ny_90.h
+        rgbtId := 1000 + c_ny_90.idx
+    else if c_asia_90.active
+        rgbtTop := c_asia_90.h
+        rgbtId := 2000 + c_asia_90.idx
+    else if show_mid_win and c_mid_90.active
+        rgbtTop := c_mid_90.h
+        rgbtId := 3000 + c_mid_90.idx
+
+if rgbtId != rgbtPrevId
+    if array.size(rgbtCur) > 0
+        for i = 0 to array.size(rgbtCur) - 1
+            array.push(rgbtOld, array.get(rgbtCur, i))
+    array.clear(rgbtCur)
+    rgbtApplied := na
+rgbtPrevId := rgbtId
+
+while array.size(rgbtOld) > realGbtMax
+    rgbtGoneOld = array.shift(rgbtOld)
+    label.delete(rgbtGoneOld)
+
+if not na(rgbtTop) and (na(rgbtApplied) or rgbtApplied != rgbtTop)
+    if array.size(rgbtCur) > 0
+        for i = 0 to array.size(rgbtCur) - 1
+            label.set_y(array.get(rgbtCur, i), rgbtTop)
+    rgbtApplied := rgbtTop
+
+if realGbtHit and not na(rgbtTop)
+    rgbtLb = label.new(bar_index, rgbtTop, str.tostring(realGbtNum), color=color.new(color.white, 100), textcolor=realGbtColUse, style=label.style_label_down, size=size.small)
+    array.push(rgbtCur, rgbtLb)
+    while array.size(rgbtCur) > realGbtMax
+        rgbtGoneCur = array.shift(rgbtCur)
+        label.delete(rgbtGoneCur)
+
+grp_algo = "Algo Table"
+showAlgoTable = input.bool(false, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
+algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
+algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
+algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
+algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
+algoPos = input.string("Bottom Center", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
+algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
+algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
+algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
+algoLblCol = input.color(color.black, "Row Labels", group=grp_algo)
+algoBorderCol = input.color(color.gray, "Border", group=grp_algo)
+algoBorderW = input.int(1, "Border Width", 0, 3, group=grp_algo)
+
+algoAnchor = algoPos == "Top Right" ? position.top_right : algoPos == "Top Center" ? position.top_center : algoPos == "Top Left" ? position.top_left : algoPos == "Middle Right" ? position.middle_right : algoPos == "Middle Center" ? position.middle_center : algoPos == "Middle Left" ? position.middle_left : algoPos == "Bottom Right" ? position.bottom_right : algoPos == "Bottom Center" ? position.bottom_center : position.bottom_left
+
+algoCells1 = str.split(algoRow1Txt, "|")
+algoCells2 = str.split(algoRow2Txt, "|")
+algoCols = math.max(array.size(algoCells1), array.size(algoCells2))
+
+var table algoTable = na
+if showAlgoTable and na(algoTable)
+    algoTable := table.new(algoAnchor, algoCols + 1, 2, frame_color=algoBorderCol, frame_width=algoBorderW, border_color=algoBorderCol, border_width=algoBorderW)
+    table.cell(algoTable, 0, 0, algoRow1Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+    table.cell(algoTable, 0, 1, algoRow2Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+    for c = 0 to algoCols - 1
+        if c < array.size(algoCells1)
+            table.cell(algoTable, c + 1, 0, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        if c < array.size(algoCells2)
+            table.cell(algoTable, c + 1, 1, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+
+grp_fvg = "FVG"
+show_fvg = input.bool(false, "FVG on GB Times", group=grp_fvg, tooltip="Three-candle Fair Value Gaps kept when any of the three candles carries a regular GB minute (3, 11, 17, 23, 29, 35, 41, 47, 53, 59 past the hour — no shifted times). A candle is stamped when a GB minute falls inside it, so the same rule works on 1h and every lower timeframe.")
+c_fvg_bull = input.color(color.blue, "Bullish", group=grp_fvg, inline="fvg1")
+c_fvg_bear = input.color(color.red, "Bearish", group=grp_fvg, inline="fvg1")
+fvg_t = input.int(80, "Transparency", 0, 100, group=grp_fvg, inline="fvg1")
+fvg_max = input.int(200, "Max FVG Boxes", minval=10, maxval=400, group=grp_fvg, tooltip="FIFO cap — the oldest FVG boxes are deleted first. Cycle boxes, FVG boxes and the Forward HTF Candles preview share TradingView's hard limit of 500 boxes per script, so the cycles get 500 minus this while FVGs are on (TradingView evicts the oldest boxes of any kind beyond that). Lower Max Cycle Boxes to shift the budget towards FVGs.")
+
+type Fvg
+    box bx
+    label gbLbl
+    float top
+    float bot
+    bool done
+
+var array<Fvg> fvgList = array.new<Fvg>()
+
+fvg_tfm = timeframe.in_seconds() / 60.0
+
+isGbCandle(int m, float tfm) => array.get(nextBasicOffset, m) < tfm
+
+for f in fvgList
+    if not f.done
+        box.set_right(f.bx, bar_index)
+        label.set_x(f.gbLbl, bar_index)
+        if low < f.top and high > f.bot
+            f.done := true
+
+fvgGbPattern(int m1, int m2, int m3, float tfm) =>
+    isGbCandle(m1, tfm) or isGbCandle(m2, tfm) or isGbCandle(m3, tfm)
+
+if show_fvg and not na(time[2]) and fvgGbPattern(sessM[2], sessM[1], sessM, fvg_tfm)
+    float c1h = high[2]
+    float c1l = low[2]
+    bool fvgBull = c1h < low
+    bool fvgBear = c1l > high
+    if fvgBull or fvgBear
+        float zTop = fvgBull ? low : c1l
+        float zBot = fvgBull ? c1h : high
+        color fvgCol = fvgBull ? c_fvg_bull : c_fvg_bear
+        int fvgGbM = isGbCandle(sessM[2], fvg_tfm) ? sessM[2] : isGbCandle(sessM[1], fvg_tfm) ? sessM[1] : sessM
+        int fvgGbNum = (fvgGbM + array.get(nextBasicOffset, fvgGbM)) % 60
+        box fvgBx = box.new(bar_index - 2, zTop, bar_index, zBot, border_color=c_box_border, border_width=1, bgcolor=color.new(fvgCol, fvg_t))
+        label fvgLbl = label.new(bar_index, (zTop + zBot) / 2, str.tostring(fvgGbNum), xloc=xloc.bar_index, yloc=yloc.price, color=color.new(fvgCol, 100), textcolor=fvgCol, style=label.style_label_left, size=size.small)
+        array.push(fvgList, Fvg.new(fvgBx, fvgLbl, zTop, zBot, false))
+        while array.size(fvgList) > fvg_max
+            fvgGone = array.shift(fvgList)
+            box.delete(fvgGone.bx)
+            label.delete(fvgGone.gbLbl)
+
+grp_fwd = "Forward HTF Candles"
+fwd_on = input.bool(true, "Show", group=grp_fwd, tooltip="Draws three higher-timeframe preview panels stacked in the empty space to the right of the last chart bar — the chart's own contract on top, then ES, then YM. Each panel is framed and holds its own strip of candles scaled to fit inside it. The panels are sized as a share of the chart's visible price range, so they stay the same size on screen and stay fully on screen at any zoom. In each strip the rightmost candle is the live, still-forming higher-timeframe bar and repaints on every tick. Nothing is drawn while this is off.")
+fwd_auto = input.bool(true, "Auto-Detect ES/YM", group=grp_fwd, tooltip="Builds the ES and YM tickers from the chart symbol with the same contract month and the same mini/micro class the comparison symbols already use. When the chart is not a CME/CBOT contract the two manual symbols below are used instead. The top panel always reads the chart symbol itself and needs no setting.")
+fwd_sym = input.symbol("ESZ2026", "ES Symbol", group=grp_fwd, inline="fwd_sym", tooltip="Ticker of the middle panel. Used only while Auto-Detect ES/YM is off, or when it finds no contract.")
+fwd_ym_sym = input.symbol("YMZ2026", "YM Symbol", group=grp_fwd, inline="fwd_sym", tooltip="Ticker of the bottom panel. Used only while Auto-Detect ES/YM is off, or when it finds no contract.")
+fwd_map = input.string("Scaled", "Price Mapping", options=["Scaled", "Raw"], group=grp_fwd, tooltip="Scaled: each panel rescales its own contract into the panel band, so three contracts trading at very different prices with very different volatilities all come out the same size and stay comparable. Raw: each panel draws that contract's own prices and the frame grows to fit them, which breaks the uniform panel size.")
+fwd_tf = input.timeframe("60", "Higher Timeframe", group=grp_fwd, tooltip="Timeframe of the preview candles, shared by all three panels. Keep it higher than the chart's, otherwise the candle offsets step by chart bars instead of by higher-timeframe bars.")
+fwd_chart_on = input.bool(true, "Chart Strip", group=grp_fwd, inline="fwdchart", tooltip="The top panel, read from the chart's own symbol — the same contract one timeframe up.")
+fwd_right = input.int(12, "Bars to the Right of Last Bar", minval=0, maxval=200, group=grp_fwd, tooltip="Distance in chart bars from the last bar to the LEFT edge of the panel column. All three panels share this one offset so they line up as a single stack. TradingView allows drawings up to 500 bars past the last bar, so the column is clamped at 474 to leave room for the frame — beyond that it stops moving further right.")
+fwd_panel_w = input.int(60, "Panel Width (bars)", minval=5, maxval=470, group=grp_fwd, inline="fwdpanel", tooltip="Width of each panel frame, in chart bars. The frame grows past this when the candles need more room, so at 20 candles it widens rather than clipping them.")
+fwd_ym_on = input.bool(true, "YM Strip", group=grp_fwd, inline="fwdym", tooltip="The bottom panel, mirrored under the others.")
+fwd_gap = input.int(6, "Spacing Between Candles (bars)", minval=1, maxval=100, group=grp_fwd, tooltip="Distance in chart bars between two candle centres, shared by all three panels. At 20 candles the default reaches 114 bars, so the panels run well past the right edge of a default chart view.")
+fwd_bw = input.int(4, "Candle Body Width (bars)", minval=1, maxval=100, group=grp_fwd, tooltip="Body width in chart bars, centred on the candle. Measured against the reference screenshot: the body is drawn half this value either side of the centre and floored at 1 bar, so a width of 3 renders a 2-bar body with a 1-bar gutter at a spacing of 3. Rounding up instead would make the bodies wider than the reference.")
+fwd_n = input.int(4, "Number of Candles (1-20)", minval=1, maxval=20, group=grp_fwd, tooltip="How many higher-timeframe candles each panel shows, oldest on the left. The newest one is still forming. Twenty reads 80 values per symbol, so the request is split into two calls of forty to stay under Pine's 60-value tuple limit.")
+fwd_panel_h_pct = input.float(20, "Panel Height (% of Range)", minval=5, maxval=60, step=1, group=grp_fwd, inline="fwdpanel", tooltip="Height of each panel as a share of the chart's visible price range. Three panels at 20% plus two gaps use 66% of the range, so the stack fits with margin to spare at any zoom.")
+fwd_panel_gap_pct = input.float(3, "Gap Between Panels (% of Range)", minval=0, maxval=30, step=1, group=grp_fwd, inline="fwdpanel", tooltip="Vertical space between one panel's bottom edge and the next panel's top edge, as a share of the visible price range.")
+fwd_stack_pos = input.float(50, "Stack Position (% of Range)", minval=0, maxval=100, step=5, group=grp_fwd, inline="fwdpanel", tooltip="Where the middle panel sits, as a share up from the bottom of the visible price range. 50 centres the stack, 0 pins it to the bottom edge, 100 to the top.")
+fwd_panel_fill = input.float(70, "Panel Fill (%)", minval=10, maxval=100, step=5, group=grp_fwd, inline="fwdpanel", tooltip="How much of the panel height the candles occupy. The rest is padding so the tallest wick stays clear of the frame. 100 lets them touch the edges.")
+fwd_lbl_gap = input.int(30, "Label Gap (ticks)", minval=0, maxval=2000, group=grp_fwd, tooltip="How far the panel title sits ABOVE the frame's top edge, in ticks of the chart symbol. The title is right-aligned to the frame's top-right corner.")
+fwd_lbl_col = input.color(#787b86, "Label Color", group=grp_fwd, tooltip="Colour of the panel title text. The title has no background of its own.")
+fwd_bull = input.color(#67AD5C, "Bull Body Color", group=grp_fwd, inline="fwdc")
+fwd_bear = input.color(color.black, "Bear Body Color", group=grp_fwd, inline="fwdc")
+fwd_wick = input.color(color.black, "Wick Color", group=grp_fwd, inline="fwdb")
+fwd_border = input.color(color.black, "Candle Border Color", group=grp_fwd, inline="fwdb")
+fwd_bwborder = input.int(1, "Body Border Width", minval=0, maxval=4, group=grp_fwd)
+fwd_frame = input.color(#787b86, "Panel Frame Color", group=grp_fwd, inline="fwdframe")
+
+// Visible price range. Pine exposes only the visible bar TIMES, not prices, so this is
+// the documented pattern for screen-anchored drawings: walk the window the two timestamps
+// describe and accumulate its extremes. TradingView re-runs the whole script whenever
+// those timestamps change, so the accumulators are rebuilt on every scroll and zoom, and
+// on the last bar they hold the price range the user is actually looking at. Sizing the
+// panels as fractions of that range is what keeps them the same size on screen and fully
+// on screen at any zoom — anchoring them to an absolute price instead let them ride out
+// of the visible window entirely.
+var float fwd_visHi = na
+var float fwd_visLo = na
+if time >= chart.left_visible_bar_time and time <= chart.right_visible_bar_time
+    fwd_visHi := na(fwd_visHi) ? high : math.max(fwd_visHi, high)
+    fwd_visLo := na(fwd_visLo) ? low : math.min(fwd_visLo, low)
+fwd_visRange = na(fwd_visHi) ? math.max(high - low, syminfo.mintick) * 4 : fwd_visHi - fwd_visLo
+fwd_scaled = fwd_map == "Scaled"
+fwd_band = fwd_visRange * fwd_panel_h_pct / 100.0
+fwd_pitch = fwd_visRange * (fwd_panel_h_pct + fwd_panel_gap_pct) / 100.0
+fwd_stackC = na(fwd_visHi) ? close : fwd_visLo + fwd_visRange * fwd_stack_pos / 100.0
+fwd_fill = fwd_panel_fill / 100.0
+fwd_lgap = fwd_lbl_gap * syminfo.mintick
+
+[autoEsSym, autoYmSym] = detectEsYmSymbols()
+fwd_es_pick = fwd_auto and not na(autoEsSym) ? autoEsSym : fwd_sym
+fwd_ym_pick = fwd_auto and not na(autoYmSym) ? autoYmSym : fwd_ym_sym
+fwd_es_req = ticker.standard(na(fwd_es_pick) ? syminfo.tickerid : fwd_es_pick)
+fwd_ym_req = ticker.standard(na(fwd_ym_pick) ? syminfo.tickerid : fwd_ym_pick)
+
+// The chart panel's label comes from chartContract(), not from getAbbr(syminfo.tickerid):
+// that call returned a stringified tuple and rendered the label as false,"symbol", while
+// getAbbr on the detected ES/YM tickers returned "ES"/"YM" correctly. The family
+// chartContract() reports is the same abbreviation, with the same mini/micro convention.
+[fwdFam, fwdMicro, fwdCode, fwdFeed] = chartContract()
+fwd_ch_abbr = na(fwdFam) ? "" : fwdFam
+fwd_es_abbr = getAbbr(fwd_es_pick)
+fwd_ym_abbr = getAbbr(fwd_ym_pick)
+
+// Twenty candles is 80 values per symbol, over Pine's 60-value tuple limit, so each
+// symbol is read in two calls of ten bars and the two halves are concatenated into one
+// flat array of four values per bar. Both are called from the global scope, which is
+// where request.security() is allowed to live.
+fwd_ohlc_lo(string sym, string tf) =>
+    [q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39] = request.security(sym, tf, [open, high, low, close, open[1], high[1], low[1], close[1], open[2], high[2], low[2], close[2], open[3], high[3], low[3], close[3], open[4], high[4], low[4], close[4], open[5], high[5], low[5], close[5], open[6], high[6], low[6], close[6], open[7], high[7], low[7], close[7], open[8], high[8], low[8], close[8], open[9], high[9], low[9], close[9]], barmerge.gaps_off, barmerge.lookahead_off)
+    array.from(q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39)
+
+fwd_ohlc_hi(string sym, string tf) =>
+    [q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39, q40, q41, q42, q43, q44, q45, q46, q47, q48, q49] = request.security(sym, tf, [open[10], high[10], low[10], close[10], open[11], high[11], low[11], close[11], open[12], high[12], low[12], close[12], open[13], high[13], low[13], close[13], open[14], high[14], low[14], close[14], open[15], high[15], low[15], close[15], open[16], high[16], low[16], close[16], open[17], high[17], low[17], close[17], open[18], high[18], low[18], close[18], open[19], high[19], low[19], close[19]], barmerge.gaps_off, barmerge.lookahead_off)
+    array.from(q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39, q40, q41, q42, q43, q44, q45, q46, q47, q48, q49)
+
+type FwdCfg
+    int n
+    int right
+    int width
+    int gap
+    int half
+    float centre
+    float band
+    float fill
+    float lgap
+    color bull
+    color bear
+    color wick
+    color border
+    int bwborder
+    color frame
+    string abbr
+    color lblcol
+    bool scaled
+
+var array<box> fwdBodies = array.new<box>()
+var array<line> fwdWicks = array.new<line>()
+var array<box> esBodies = array.new<box>()
+var array<line> esWicks = array.new<line>()
+var array<box> ymBodies = array.new<box>()
+var array<line> ymWicks = array.new<line>()
+var array<label> fwdChLbls = array.new<label>()
+var array<label> esLbls = array.new<label>()
+var array<label> ymLbls = array.new<label>()
+
+fwd_wipe(array<box> bodies, array<line> wicks, array<label> lbls) =>
+    if array.size(bodies) > 0
+        for prevBx in bodies
+            box.delete(prevBx)
+        array.clear(bodies)
+    if array.size(wicks) > 0
+        for prevWk in wicks
+            line.delete(prevWk)
+        array.clear(wicks)
+    if array.size(lbls) > 0
+        for prevLb in lbls
+            label.delete(prevLb)
+        array.clear(lbls)
+
+draw_fwd_strip(array<float> d, FwdCfg c, array<box> bodies, array<line> wicks, array<label> lbls) =>
+    // d holds 4 values per candle, oldest HTF bar at index 0, so slot 0 is the live
+    // forming bar and belongs on the right — hence cnt - 1 - i.
+    int cnt = math.min(c.n, array.size(d) / 4)
+    // One shared horizontal offset for the whole column, so the three panels stack
+    // straight down instead of stepping sideways. The frame is at least Panel Width and
+    // grows past it when the candles need more room.
+    int innerW = (cnt - 1) * c.gap + 2 * c.half
+    int leftX = math.min(bar_index + c.right - c.half, bar_index + 470)
+    int rightX = math.min(leftX + math.max(c.width, innerW), bar_index + 480)
+    // Fit the strip into its panel band: one raw range over at most 20 candles, then one
+    // multiply and one add per price. That keeps three contracts at different price
+    // levels and different volatilities the same size inside identically sized frames.
+    float rHi = na
+    float rLo = na
+    for i = 0 to cnt - 1
+        int rb = (cnt - 1 - i) * 4
+        float rh = array.get(d, rb + 1)
+        float rl = array.get(d, rb + 2)
+        if not na(rh) and not na(rl)
+            rHi := na(rHi) ? rh : math.max(rHi, rh)
+            rLo := na(rLo) ? rl : math.min(rLo, rl)
+    bool haveRange = not na(rHi) and not na(rLo)
+    float rawRange = haveRange ? math.max(rHi - rLo, syminfo.mintick) : na
+    float midRaw = haveRange ? (rHi + rLo) / 2.0 : na
+    bool fit = c.scaled and haveRange and not na(c.centre)
+    // Unfitted leaves centre/mid at 0 and scale at 1, so the contract's own prices pass
+    // through untouched and, because neither reads midRaw, a missing candle degrades to
+    // raw prices instead of poisoning the strip with na.
+    float sc = fit ? c.band * c.fill / rawRange : 1.0
+    float cs = fit ? c.centre : 0.0
+    float ms = fit ? midRaw : 0.0
+    // The frame always contains the strip: half is the requested band, widened to the
+    // data when Raw draws something taller.
+    float half = math.max(c.band, haveRange ? rawRange * sc : 0.0) / 2.0
+    float panelC = fit or not haveRange ? c.centre : midRaw
+    array.push(bodies, box.new(left=leftX, top=panelC + half, right=rightX, bottom=panelC - half, border_color=c.frame, border_width=1, bgcolor=c_trans))
+    // Plain text just above the top edge, right-aligned to the frame's top-right corner.
+    // c_trans is the same fully transparent background the rest of this script uses for
+    // text-only labels.
+    if c.abbr != ""
+        array.push(lbls, label.new(rightX, panelC + half + c.lgap, c.abbr + " CHART", xloc=xloc.bar_index, yloc=yloc.price, color=c_trans, textcolor=c.lblcol, style=label.style_label_upper_left, size=size.small))
+    for i = 0 to cnt - 1
+        int slot = cnt - 1 - i
+        int b = slot * 4
+        float fo = cs + (array.get(d, b) - ms) * sc
+        float fh = cs + (array.get(d, b + 1) - ms) * sc
+        float fl = cs + (array.get(d, b + 2) - ms) * sc
+        float fc = cs + (array.get(d, b + 3) - ms) * sc
+        if not na(fo) and not na(fh) and not na(fl) and not na(fc)
+            int cx = math.min(bar_index + c.right + i * c.gap, bar_index + 480 - c.half)
+            float bodyTop = math.max(fo, fc)
+            float bodyBot = math.min(fo, fc)
+            if bodyTop == bodyBot
+                bodyBot := bodyTop - syminfo.mintick
+            float wickTop = fh == fl ? fh - syminfo.mintick : fh
+            array.push(bodies, box.new(left=cx - c.half, top=bodyTop, right=cx + c.half, bottom=bodyBot, border_color=c.border, border_width=c.bwborder, bgcolor=fc >= fo ? c.bull : c.bear))
+            array.push(wicks, line.new(cx, wickTop, cx, fl, color=c.wick, width=1))
+
+if barstate.islast
+    // This wipe is load-bearing, not housekeeping. Pine's per-tick rollback only clears
+    // the previous tick's objects on the same unconfirmed bar — it does not reach back
+    // to the previous bar's committed set. Wiping on every execution is what holds each
+    // panel at exactly cnt + 1 boxes, cnt wicks and one label, and keeps all of them the
+    // newest set on the chart, so TradingView's oldest-first GC can never take them. It
+    // also runs while Show is off, so switching the toggle off takes the committed
+    // panels down instead of stranding them. Do NOT simplify this into
+    // create-once-and-mutate with box.set_ and line.set_ setters: that makes the panels
+    // the oldest object set and they get garbage-collected a few hundred bars in.
+    fwd_wipe(fwdBodies, fwdWicks, fwdChLbls)
+    fwd_wipe(esBodies, esWicks, esLbls)
+    fwd_wipe(ymBodies, ymWicks, ymLbls)
+    if fwd_on
+        int fwdHalf = math.max(1, int(fwd_bw / 2))
+        if fwd_chart_on
+            array<float> chD = array.concat(fwd_ohlc_lo(syminfo.tickerid, fwd_tf), fwd_ohlc_hi(syminfo.tickerid, fwd_tf))
+            FwdCfg cfgCh = FwdCfg.new(fwd_n, fwd_right, fwd_panel_w, fwd_gap, fwdHalf, fwd_stackC + fwd_pitch, fwd_band, fwd_fill, fwd_lgap, fwd_bull, fwd_bear, fwd_wick, fwd_border, fwd_bwborder, fwd_frame, fwd_ch_abbr, fwd_lbl_col, fwd_scaled)
+            draw_fwd_strip(chD, cfgCh, fwdBodies, fwdWicks, fwdChLbls)
+        array<float> esD = array.concat(fwd_ohlc_lo(fwd_es_req, fwd_tf), fwd_ohlc_hi(fwd_es_req, fwd_tf))
+        FwdCfg cfgEs = FwdCfg.new(fwd_n, fwd_right, fwd_panel_w, fwd_gap, fwdHalf, fwd_stackC, fwd_band, fwd_fill, fwd_lgap, fwd_bull, fwd_bear, fwd_wick, fwd_border, fwd_bwborder, fwd_frame, fwd_es_abbr, fwd_lbl_col, fwd_scaled)
+        draw_fwd_strip(esD, cfgEs, esBodies, esWicks, esLbls)
+        if fwd_ym_on
+            array<float> ymD = array.concat(fwd_ohlc_lo(fwd_ym_req, fwd_tf), fwd_ohlc_hi(fwd_ym_req, fwd_tf))
+            FwdCfg cfgYm = FwdCfg.new(fwd_n, fwd_right, fwd_panel_w, fwd_gap, fwdHalf, fwd_stackC - fwd_pitch, fwd_band, fwd_fill, fwd_lgap, fwd_bull, fwd_bear, fwd_wick, fwd_border, fwd_bwborder, fwd_frame, fwd_ym_abbr, fwd_lbl_col, fwd_scaled)
+            draw_fwd_strip(ymD, cfgYm, ymBodies, ymWicks, ymLbls)
