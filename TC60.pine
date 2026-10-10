@@ -2328,20 +2328,16 @@ if gbtCandleDivergence and dirIsLow
     addSwingLabel(bar_index[1], dmdLabelTxt, gbtDiamondColor, false, LABEL_PX_FAR)
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//                    NEXT GBT TIME TABLE
+//                    UNIFIED GBT & ALGO TABLE
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-//  Plain text (top-right, no border), two rows:
+//  Combined Next GBT Time Table and Algo Table.
 //
-//    Next:  HH:MM -> next mark of the BASIC path: the fixed minute lattice
-//                    (3, 11, 17, 23, 29, 35, 41, 47, 53, 59) that repeats in
-//                    every hour. No hourly shift. Its GB number is the minute.
-//    Shift: HH:MM -> next mark of the hour-shifted path (a mark when hour +
-//                    minute is a master-grid number); its GB number is that sum.
-//                    Informational only - no vertical line is drawn for it.
+//  Top rows: Next & H-Shift basic GBT marks with a third column showing the
+//            current hour + minute sum.
+//  Bottom rows: Editable Algo 1 and Algo 2 grids that grow to fit the widest row.
 //
-//  Optional dynamic dotted vertical line tracks the Next (basic) mark; it is
-//  deleted and redrawn every bar so it always points at the next upcoming time.
+//  Optional dynamic dotted vertical line tracks the Next (basic) mark.
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2350,15 +2346,6 @@ pad2(int v) =>
     v < 10 ? "0" + str.tostring(v) : str.tostring(v)
 
 // Mark `off` minutes after the current bar time (session timezone clock reading).
-// Returns [ts, "HH:MM", gbNum]: unix ms of the mark, its wall-clock text and its GB number.
-// O(1): the offset comes from a table built once on the first bar; every minute of the day is
-// covered, so it wraps past the hour and past midnight on its own.
-// gbByMinute: how the GB number is read - true for the basic path (its lattice members are
-// master-grid numbers, so the mark is identified by its minute), false for the hour-shifted
-// path (the mark is identified by hour + minute). Either way the number never has to be
-// worked out by hand.
-// Note: ts = t + off*60000 (real-time delta); on the 2 DST days/year the line
-// may sit one hour off for a single bar - the table text stays correct.
 gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
     int nextMins = (totalMins + off) % 1440
     int nh = math.floor(nextMins / 60)
@@ -2366,34 +2353,70 @@ gbtMark(int t, int totalMins, int off, bool gbByMinute) =>
     [t + off * 60000, pad2(nh) + ":" + pad2(nm), str.tostring(gbByMinute ? nm : nh + nm)]
 
 showNextGbtLine = input.bool(true, "Show Next GBT Vertical Line", group="Swing Detection")
-var table nextGbtTable = table.new(position.top_right, 2, 2)
+
+grp_algo = "Algo Table"
+showAlgoTable = input.bool(true, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
+algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
+algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
+algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
+algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
+algoPos = input.string("Top Right", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
+algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
+algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
+algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
+algoLblCol = input.color(color.black, "Row Labels", group=grp_algo)
+algoBorderCol = input.color(color.gray, "Border", group=grp_algo)
+algoBorderW = input.int(1, "Border Width", 0, 3, group=grp_algo)
+
+algoAnchor = algoPos == "Top Right" ? position.top_right : algoPos == "Top Center" ? position.top_center : algoPos == "Top Left" ? position.top_left : algoPos == "Middle Right" ? position.middle_right : algoPos == "Middle Center" ? position.middle_center : algoPos == "Middle Left" ? position.middle_left : algoPos == "Bottom Right" ? position.bottom_right : algoPos == "Bottom Center" ? position.bottom_center : position.bottom_left
+
+algoCells1 = str.split(algoRow1Txt, "|")
+algoCells2 = str.split(algoRow2Txt, "|")
+algoCols = math.max(array.size(algoCells1), array.size(algoCells2))
+
+// Ensure the table has at least 3 columns so the "Sum" column (index 2) never crashes
+var table gbtTable = table.new(algoAnchor, math.max(algoCols + 1, 3), showAlgoTable ? 4 : 2, frame_color=algoBorderCol, frame_width=algoBorderW, border_color=algoBorderCol, border_width=algoBorderW)
 var line nextGbtLine = na
 var string lastNextTxt = ""
 var string lastShiftTxt = ""
+var int lastCurrentSum = -1
+
+if barstate.isfirst
+    if algoCols >= 2
+        table.merge_cells(gbtTable, 2, 0, algoCols, 0)
+        table.merge_cells(gbtTable, 2, 1, algoCols, 1)
+    if showAlgoTable
+        table.cell(gbtTable, 0, 2, algoRow1Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(gbtTable, 0, 3, algoRow2Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
+        for c = 0 to algoCols - 1
+            if c < array.size(algoCells1)
+                table.cell(gbtTable, c + 1, 2, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+            if c < array.size(algoCells2)
+                table.cell(gbtTable, c + 1, 3, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
 
 if not na(time)
     int mTot = sessH * 60 + sessM
-    // Top row: basic path (fixed minutes every hour) - this is the "next GB time", and the
-    // vertical line below marks it. Bottom row: hour-shifted path, kept for reference.
     [bTs, bTxt, bNum] = gbtMark(time, mTot, array.get(nextBasicOffset, sessM), true)
     [_, sTxt, sSum] = gbtMark(time, mTot, array.get(nextMarkOffset, mTot), false)
+    int currentSum = sessH + sessM
 
-    // Dynamic vertical line at the next mark: deleted and redrawn every bar
-    // so it always points at the next upcoming time (one line, no accumulation)
     if showNextGbtLine
         if not na(nextGbtLine)
             line.delete(nextGbtLine)
         nextGbtLine := line.new(bTs, 0, bTs, 0, xloc=xloc.bar_time, extend=extend.both, style=line.style_dotted, color=color.gray, width=1)
 
-    // Table text only changes when a mark changes. Left cell = the clock time, right cell =
-    // that mark's GB number (basic row: the minute; shift row: hour + minute).
-    if bTxt != lastNextTxt or sTxt != lastShiftTxt
-        table.cell(nextGbtTable, 0, 0, "Next: " + bTxt, text_color=color.black, text_size=size.normal)
-        table.cell(nextGbtTable, 1, 0, bNum, text_color=color.black, text_size=size.normal)
-        table.cell(nextGbtTable, 0, 1, "H-Shift: " + sTxt, text_color=color.black, text_size=size.normal)
-        table.cell(nextGbtTable, 1, 1, sSum, text_color=color.black, text_size=size.normal)
+    if bTxt != lastNextTxt or sTxt != lastShiftTxt or currentSum != lastCurrentSum
+        table.cell(gbtTable, 0, 0, "Next: " + bTxt, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(gbtTable, 1, 0, bNum, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(gbtTable, 2, 0, "Sum: " + str.tostring(currentSum), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+
+        table.cell(gbtTable, 0, 1, "H-Shift: " + sTxt, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(gbtTable, 1, 1, sSum, text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
+        table.cell(gbtTable, 2, 1, "", bgcolor=algoBg) // To keep the border/background consistent
+
         lastNextTxt := bTxt
         lastShiftTxt := sTxt
+        lastCurrentSum := currentSum
 
 // Final check to reposition labels if any changes occurred
 if needReposition
@@ -2521,61 +2544,6 @@ if realGbtHit and not na(rgbtTop)
     while array.size(rgbtCur) > realGbtMax             // very long windows: oldest number drops off the line
         rgbtGoneCur = array.shift(rgbtCur)
         label.delete(rgbtGoneCur)
-
-// ╔═════════════════════════════════════════════════════════════════════════════╗
-// ║  ALGO TABLE — editable GB grid for Algo 1 / Algo 2                           ║
-// ╚═════════════════════════════════════════════════════════════════════════════╝
-//
-//  Two rows of GB numbers, sitting under the Next table:
-//
-//      Algo 1 | 0 | 11(14) | 41(44) | 3(7) | 17(23) | 29(35)/71(77)
-//      Algo 2 | 3(7) | 59(65) | 17(23) | 11(14) | 47(50) 53(56) | 29(35)
-//
-//  Each row is ONE editable string and "|" separates its cells, so cells can be
-//  added, removed, reordered or reworded without touching the code — the table
-//  grows to the widest row on its own. Borders are frame + cell grid, and every
-//  visual aspect is an input: position, background, cell text, row-label text,
-//  border colour, border width and text size.
-//
-//  Position: a Pine table cannot be offset pixel-wise, it snaps to one of nine
-//  anchors, so "under the Next table" is the anchor below it — Middle Right by
-//  default. Choose another anchor from the Position input if you prefer.
-//
-//  Standalone: nothing else in the script reads or writes this table.
-// ═══════════════════════════════════════════════════════════════════════════════
-
-grp_algo = "Algo Table"
-showAlgoTable = input.bool(true, "Show Algo Table", group=grp_algo, tooltip="Draws the editable Algo 1 / Algo 2 grid. Nothing is drawn while this is off.")
-algoRow1Lbl = input.string("Algo 1", "Row 1 Label", group=grp_algo, inline="algo1")
-algoRow1Txt = input.string("0|11(14)|41(44)|3(7)|17(23)|29(35)/71(77)", "Row 1 Cells", group=grp_algo, inline="algo1", tooltip="One string for the whole row; '|' separates the cells. e.g. 0|11(14)|41(44)")
-algoRow2Lbl = input.string("Algo 2", "Row 2 Label", group=grp_algo, inline="algo2")
-algoRow2Txt = input.string("3(7)|59(65)|17(23)|11(14)|47(50) 53(56)|29(35)", "Row 2 Cells", group=grp_algo, inline="algo2", tooltip="One string for the whole row; '|' separates the cells.")
-algoPos = input.string("Middle Right", "Position", options=["Top Right", "Top Center", "Top Left", "Middle Right", "Middle Center", "Middle Left", "Bottom Right", "Bottom Center", "Bottom Left"], group=grp_algo)
-algoTxtSize = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=grp_algo)
-algoBg = input.color(color.new(color.gray, 85), "Background", group=grp_algo)
-algoTxtCol = input.color(color.black, "Cell Text", group=grp_algo)
-algoLblCol = input.color(color.black, "Row Labels", group=grp_algo)
-algoBorderCol = input.color(color.gray, "Border", group=grp_algo)
-algoBorderW = input.int(1, "Border Width", 0, 3, group=grp_algo)
-
-// Anchor picked from the Position input
-algoAnchor = algoPos == "Top Right" ? position.top_right : algoPos == "Top Center" ? position.top_center : algoPos == "Top Left" ? position.top_left : algoPos == "Middle Right" ? position.middle_right : algoPos == "Middle Center" ? position.middle_center : algoPos == "Middle Left" ? position.middle_left : algoPos == "Bottom Right" ? position.bottom_right : algoPos == "Bottom Center" ? position.bottom_center : position.bottom_left
-
-// Split each row on "|"; the grid takes the widest row plus one label column
-algoCells1 = str.split(algoRow1Txt, "|")
-algoCells2 = str.split(algoRow2Txt, "|")
-algoCols = math.max(array.size(algoCells1), array.size(algoCells2))
-
-var table algoTable = na
-if showAlgoTable and na(algoTable)
-    algoTable := table.new(algoAnchor, algoCols + 1, 2, frame_color=algoBorderCol, frame_width=algoBorderW, border_color=algoBorderCol, border_width=algoBorderW)
-    table.cell(algoTable, 0, 0, algoRow1Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
-    table.cell(algoTable, 0, 1, algoRow2Lbl, text_color=algoLblCol, text_size=algoTxtSize, bgcolor=algoBg)
-    for c = 0 to algoCols - 1                       // cell count guards: never index past a row
-        if c < array.size(algoCells1)
-            table.cell(algoTable, c + 1, 0, array.get(algoCells1, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
-        if c < array.size(algoCells2)
-            table.cell(algoTable, c + 1, 1, array.get(algoCells2, c), text_color=algoTxtCol, text_size=algoTxtSize, bgcolor=algoBg)
 
 // ╔═════════════════════════════════════════════════════════════════════════════╗
 // ║  FVG ON REGULAR (BASIC) GB TIMES                                               ║
