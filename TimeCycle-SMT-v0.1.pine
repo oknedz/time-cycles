@@ -18,7 +18,7 @@ var array<string> cyc_opts = array.from("00:00", "00:30", "1:00", "1:30", "2:00"
 var array<int> cyc_mins = array.from(0, 30, 60, 90, 120, 150, 180)
 cyc_start_str = input.string("2:00", "Cycle Start (London)", options=["00:00", "00:30", "1:00", "1:30", "2:00", "2:30", "3:00"], group=grp_cyc, inline="c4")
 auto_adj = input.bool(true, "Auto-adjust", group=grp_cyc, inline="c3")
-max_boxes = input.int(500, "Max Cycle Boxes", 10, 500, group=grp_cyc, tooltip="How many cycle boxes stay on the chart — the oldest are removed first once this many exist. TradingView allows a maximum of 500 drawings per type, and cycle boxes, FVG boxes and the Forward HTF Candles panels (up to 21 boxes, 20 lines and a label each, three panels) all share that per-type limit, so the oldest object of any kind is evicted first. History this buys with the default windows: ≈33 days with 90min only, ≈9 days with 90min+30min, ≈3 days with all three sizes. Fewer active sizes or a lower cap = less clutter.")
+max_boxes = input.int(500, "Max Cycle Boxes", 10, 500, group=grp_cyc, tooltip="How many cycle boxes stay on the chart — the oldest are removed first once this many exist. TradingView allows a maximum of 500 drawings per type. History this buys with the default windows: ≈33 days with 90min only, ≈9 days with 90min+30min, ≈3 days with all three sizes. Fewer active sizes or a lower cap = less clutter.")
 
 grp_asb = "Asia Session"
 show_asb = input.bool(true, "Show Box", group=grp_asb, inline="asb1", tooltip="Draws a single box spanning the whole session below — not cycles. The range may cross midnight (start > end). Start and end must differ.")
@@ -570,49 +570,33 @@ compSymbol(string fam, bool micro, string code, string mod) =>
     famIdx = array.indexof(compFams, fam)
     array.get(compExch, famIdx) + mod + ":" + (micro ? array.get(compMicro, famIdx) : fam) + code
 
-// Parses the chart ticker once and reports the family, the mini/micro class and
-// the contract month code of the charted contract. The family comes back na when
-// the chart is not a CME/CBOT futures contract (crypto, index, continuous 1!).
-chartContract() =>
+detectComparisonSymbols() =>
     tickParts = str.split(syminfo.ticker, ":")
     base = array.size(tickParts) > 1 ? array.get(tickParts, 1) : array.get(tickParts, 0)
     idParts = str.split(syminfo.tickerid, ":")
     chartExch = array.size(idParts) > 1 ? array.get(idParts, 0) : ""
     modRaw = feedMod(chartExch)
     feedSuffix = na(modRaw) ? "" : modRaw
-    string fam = na
-    bool micro = false
-    string code = na
+    string sym1 = na
+    string sym2 = na
     futuresLike = syminfo.type == "futures" or str.contains(chartExch, "CME") or str.contains(chartExch, "CBOT")
     if futuresLike
         for i = 0 to array.size(mainRoots) - 1
             root = array.get(mainRoots, i)
             if str.startswith(base, root)
-                c = str.substring(base, str.length(root))
-                if isContractCode(c)
-                    fam := array.get(mainFams, i)
-                    micro := array.get(mainMicro, i)
-                    code := c
+                code = str.substring(base, str.length(root))
+                if isContractCode(code)
+                    fam = array.get(mainFams, i)
+                    micro = array.get(mainMicro, i)
+                    for j = 0 to array.size(compFams) - 1
+                        cf = array.get(compFams, j)
+                        if cf != fam
+                            if na(sym1)
+                                sym1 := compSymbol(cf, micro, code, feedSuffix)
+                            else
+                                sym2 := compSymbol(cf, micro, code, feedSuffix)
                     break
-    [fam, micro, code, feedSuffix]
-
-detectComparisonSymbols() =>
-    [cfFam, cfMicro, cfCode, feedSuffix] = chartContract()
-    string sym1 = na
-    string sym2 = na
-    if not na(cfFam)
-        for j = 0 to array.size(compFams) - 1
-            cf = array.get(compFams, j)
-            if cf != cfFam
-                if na(sym1)
-                    sym1 := compSymbol(cf, cfMicro, cfCode, feedSuffix)
-                else
-                    sym2 := compSymbol(cf, cfMicro, cfCode, feedSuffix)
     if na(sym1)
-        tickParts = str.split(syminfo.ticker, ":")
-        base = array.size(tickParts) > 1 ? array.get(tickParts, 1) : array.get(tickParts, 0)
-        idParts = str.split(syminfo.tickerid, ":")
-        chartExch = array.size(idParts) > 1 ? array.get(idParts, 0) : ""
         clen = str.length(base)
         perp = clen > 2 and str.substring(base, clen - 2, clen) == ".P"
         cryptRoot = perp ? str.substring(base, 0, clen - 2) : base
@@ -621,18 +605,6 @@ detectComparisonSymbols() =>
             sym1 := "TOTAL"
             sym2 := chartExch == "" ? other : chartExch + ":" + other
     [sym1, sym2]
-
-// Always the ES and the YM contract of the same month and class as the chart,
-// whichever family is charted. The SMT comparison needs "the other two families",
-// the Forward HTF Candles strips need these two specifically.
-detectEsYmSymbols() =>
-    [ccFam, ccMicro, ccCode, feedSuffix] = chartContract()
-    string es = na
-    string ym = na
-    if not na(ccFam)
-        es := compSymbol("ES", ccMicro, ccCode, feedSuffix)
-        ym := compSymbol("YM", ccMicro, ccCode, feedSuffix)
-    [es, ym]
 
 [autoSymbol1, autoSymbol2] = detectComparisonSymbols()
 
@@ -1682,7 +1654,7 @@ show_fvg = input.bool(false, "FVG on GB Times", group=grp_fvg, tooltip="Three-ca
 c_fvg_bull = input.color(color.blue, "Bullish", group=grp_fvg, inline="fvg1")
 c_fvg_bear = input.color(color.red, "Bearish", group=grp_fvg, inline="fvg1")
 fvg_t = input.int(80, "Transparency", 0, 100, group=grp_fvg, inline="fvg1")
-fvg_max = input.int(200, "Max FVG Boxes", minval=10, maxval=400, group=grp_fvg, tooltip="FIFO cap — the oldest FVG boxes are deleted first. Cycle boxes, FVG boxes and the Forward HTF Candles preview share TradingView's hard limit of 500 boxes per script, so the cycles get 500 minus this while FVGs are on (TradingView evicts the oldest boxes of any kind beyond that). Lower Max Cycle Boxes to shift the budget towards FVGs.")
+fvg_max = input.int(200, "Max FVG Boxes", minval=10, maxval=400, group=grp_fvg, tooltip="FIFO cap — the oldest FVG boxes are deleted first. Cycle and FVG boxes share TradingView's hard limit of 500 boxes per script, so the cycles get 500 minus this while FVGs are on (TradingView evicts the oldest boxes of either kind beyond that). Lower Max Cycle Boxes to shift the budget towards FVGs.")
 
 type Fvg
     box bx
@@ -1725,208 +1697,3 @@ if show_fvg and not na(time[2]) and fvgGbPattern(sessM[2], sessM[1], sessM, fvg_
             fvgGone = array.shift(fvgList)
             box.delete(fvgGone.bx)
             label.delete(fvgGone.gbLbl)
-
-grp_fwd = "Forward HTF Candles"
-fwd_on = input.bool(true, "Show", group=grp_fwd, tooltip="Draws three higher-timeframe preview panels stacked in the empty space to the right of the last chart bar — the chart's own contract on top, then ES, then YM. Each panel is framed and holds its own strip of candles scaled to fit inside it. The panels are sized as a share of the chart's visible price range, so they stay the same size on screen and stay fully on screen at any zoom. In each strip the rightmost candle is the live, still-forming higher-timeframe bar and repaints on every tick. Nothing is drawn while this is off.")
-fwd_auto = input.bool(true, "Auto-Detect ES/YM", group=grp_fwd, tooltip="Builds the ES and YM tickers from the chart symbol with the same contract month and the same mini/micro class the comparison symbols already use. When the chart is not a CME/CBOT contract the two manual symbols below are used instead. The top panel always reads the chart symbol itself and needs no setting.")
-fwd_sym = input.symbol("ESZ2026", "ES Symbol", group=grp_fwd, inline="fwd_sym", tooltip="Ticker of the middle panel. Used only while Auto-Detect ES/YM is off, or when it finds no contract.")
-fwd_ym_sym = input.symbol("YMZ2026", "YM Symbol", group=grp_fwd, inline="fwd_sym", tooltip="Ticker of the bottom panel. Used only while Auto-Detect ES/YM is off, or when it finds no contract.")
-fwd_map = input.string("Scaled", "Price Mapping", options=["Scaled", "Raw"], group=grp_fwd, tooltip="Scaled: each panel rescales its own contract into the panel band, so three contracts trading at very different prices with very different volatilities all come out the same size and stay comparable. Raw: each panel draws that contract's own prices and the frame grows to fit them, which breaks the uniform panel size.")
-fwd_tf = input.timeframe("60", "Higher Timeframe", group=grp_fwd, tooltip="Timeframe of the preview candles, shared by all three panels. Keep it higher than the chart's, otherwise the candle offsets step by chart bars instead of by higher-timeframe bars.")
-fwd_chart_on = input.bool(true, "Chart Strip", group=grp_fwd, inline="fwdchart", tooltip="The top panel, read from the chart's own symbol — the same contract one timeframe up.")
-fwd_right = input.int(12, "Bars to the Right of Last Bar", minval=0, maxval=200, group=grp_fwd, tooltip="Distance in chart bars from the last bar to the LEFT edge of the panel column. All three panels share this one offset so they line up as a single stack. TradingView allows drawings up to 500 bars past the last bar, so the column is clamped at 474 to leave room for the frame — beyond that it stops moving further right.")
-fwd_panel_w = input.int(60, "Panel Width (bars)", minval=5, maxval=470, group=grp_fwd, inline="fwdpanel", tooltip="Width of each panel frame, in chart bars. The frame grows past this when the candles need more room, so at 20 candles it widens rather than clipping them.")
-fwd_ym_on = input.bool(true, "YM Strip", group=grp_fwd, inline="fwdym", tooltip="The bottom panel, mirrored under the others.")
-fwd_gap = input.int(6, "Spacing Between Candles (bars)", minval=1, maxval=100, group=grp_fwd, tooltip="Distance in chart bars between two candle centres, shared by all three panels. At 20 candles the default reaches 114 bars, so the panels run well past the right edge of a default chart view.")
-fwd_bw = input.int(4, "Candle Body Width (bars)", minval=1, maxval=100, group=grp_fwd, tooltip="Body width in chart bars, centred on the candle. Measured against the reference screenshot: the body is drawn half this value either side of the centre and floored at 1 bar, so a width of 3 renders a 2-bar body with a 1-bar gutter at a spacing of 3. Rounding up instead would make the bodies wider than the reference.")
-fwd_n = input.int(4, "Number of Candles (1-20)", minval=1, maxval=20, group=grp_fwd, tooltip="How many higher-timeframe candles each panel shows, oldest on the left. The newest one is still forming. Twenty reads 80 values per symbol, so the request is split into two calls of forty to stay under Pine's 60-value tuple limit.")
-fwd_panel_h_pct = input.float(20, "Panel Height (% of Range)", minval=5, maxval=60, step=1, group=grp_fwd, inline="fwdpanel", tooltip="Height of each panel as a share of the chart's visible price range. Three panels at 20% plus two gaps use 66% of the range, so the stack fits with margin to spare at any zoom.")
-fwd_panel_gap_pct = input.float(3, "Gap Between Panels (% of Range)", minval=0, maxval=30, step=1, group=grp_fwd, inline="fwdpanel", tooltip="Vertical space between one panel's bottom edge and the next panel's top edge, as a share of the visible price range.")
-fwd_stack_pos = input.float(50, "Stack Position (% of Range)", minval=0, maxval=100, step=5, group=grp_fwd, inline="fwdpanel", tooltip="Where the middle panel sits, as a share up from the bottom of the visible price range. 50 centres the stack, 0 pins it to the bottom edge, 100 to the top.")
-fwd_panel_fill = input.float(70, "Panel Fill (%)", minval=10, maxval=100, step=5, group=grp_fwd, inline="fwdpanel", tooltip="How much of the panel height the candles occupy. The rest is padding so the tallest wick stays clear of the frame. 100 lets them touch the edges.")
-fwd_lbl_gap = input.int(30, "Label Gap (ticks)", minval=0, maxval=2000, group=grp_fwd, tooltip="How far the panel title sits ABOVE the frame's top edge, in ticks of the chart symbol. The title is right-aligned to the frame's top-right corner.")
-fwd_lbl_col = input.color(#787b86, "Label Color", group=grp_fwd, tooltip="Colour of the panel title text. The title has no background of its own.")
-fwd_bull = input.color(#67AD5C, "Bull Body Color", group=grp_fwd, inline="fwdc")
-fwd_bear = input.color(color.black, "Bear Body Color", group=grp_fwd, inline="fwdc")
-fwd_wick = input.color(color.black, "Wick Color", group=grp_fwd, inline="fwdb")
-fwd_border = input.color(color.black, "Candle Border Color", group=grp_fwd, inline="fwdb")
-fwd_bwborder = input.int(1, "Body Border Width", minval=0, maxval=4, group=grp_fwd)
-fwd_frame = input.color(#787b86, "Panel Frame Color", group=grp_fwd, inline="fwdframe")
-
-// Visible price range. Pine exposes only the visible bar TIMES, not prices, so this is
-// the documented pattern for screen-anchored drawings: walk the window the two timestamps
-// describe and accumulate its extremes. TradingView re-runs the whole script whenever
-// those timestamps change, so the accumulators are rebuilt on every scroll and zoom, and
-// on the last bar they hold the price range the user is actually looking at. Sizing the
-// panels as fractions of that range is what keeps them the same size on screen and fully
-// on screen at any zoom — anchoring them to an absolute price instead let them ride out
-// of the visible window entirely.
-var float fwd_visHi = na
-var float fwd_visLo = na
-if time >= chart.left_visible_bar_time and time <= chart.right_visible_bar_time
-    fwd_visHi := na(fwd_visHi) ? high : math.max(fwd_visHi, high)
-    fwd_visLo := na(fwd_visLo) ? low : math.min(fwd_visLo, low)
-fwd_visRange = na(fwd_visHi) ? math.max(high - low, syminfo.mintick) * 4 : fwd_visHi - fwd_visLo
-fwd_scaled = fwd_map == "Scaled"
-fwd_band = fwd_visRange * fwd_panel_h_pct / 100.0
-fwd_pitch = fwd_visRange * (fwd_panel_h_pct + fwd_panel_gap_pct) / 100.0
-fwd_stackC = na(fwd_visHi) ? close : fwd_visLo + fwd_visRange * fwd_stack_pos / 100.0
-fwd_fill = fwd_panel_fill / 100.0
-fwd_lgap = fwd_lbl_gap * syminfo.mintick
-
-[autoEsSym, autoYmSym] = detectEsYmSymbols()
-fwd_es_pick = fwd_auto and not na(autoEsSym) ? autoEsSym : fwd_sym
-fwd_ym_pick = fwd_auto and not na(autoYmSym) ? autoYmSym : fwd_ym_sym
-fwd_es_req = ticker.standard(na(fwd_es_pick) ? syminfo.tickerid : fwd_es_pick)
-fwd_ym_req = ticker.standard(na(fwd_ym_pick) ? syminfo.tickerid : fwd_ym_pick)
-
-// The chart panel's label comes from chartContract(), not from getAbbr(syminfo.tickerid):
-// that call returned a stringified tuple and rendered the label as false,"symbol", while
-// getAbbr on the detected ES/YM tickers returned "ES"/"YM" correctly. The family
-// chartContract() reports is the same abbreviation, with the same mini/micro convention.
-[fwdFam, fwdMicro, fwdCode, fwdFeed] = chartContract()
-fwd_ch_abbr = na(fwdFam) ? "" : fwdFam
-fwd_es_abbr = getAbbr(fwd_es_pick)
-fwd_ym_abbr = getAbbr(fwd_ym_pick)
-
-// Twenty candles is 80 values per symbol, over Pine's 60-value tuple limit, so each
-// symbol is read in two calls of ten bars and the two halves are concatenated into one
-// flat array of four values per bar. Both are called from the global scope, which is
-// where request.security() is allowed to live.
-fwd_ohlc_lo(string sym, string tf) =>
-    [q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39] = request.security(sym, tf, [open, high, low, close, open[1], high[1], low[1], close[1], open[2], high[2], low[2], close[2], open[3], high[3], low[3], close[3], open[4], high[4], low[4], close[4], open[5], high[5], low[5], close[5], open[6], high[6], low[6], close[6], open[7], high[7], low[7], close[7], open[8], high[8], low[8], close[8], open[9], high[9], low[9], close[9]], barmerge.gaps_off, barmerge.lookahead_off)
-    array.from(q0, q1, q2, q3, q4, q5, q6, q7, q8, q9, q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39)
-
-fwd_ohlc_hi(string sym, string tf) =>
-    [q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39, q40, q41, q42, q43, q44, q45, q46, q47, q48, q49] = request.security(sym, tf, [open[10], high[10], low[10], close[10], open[11], high[11], low[11], close[11], open[12], high[12], low[12], close[12], open[13], high[13], low[13], close[13], open[14], high[14], low[14], close[14], open[15], high[15], low[15], close[15], open[16], high[16], low[16], close[16], open[17], high[17], low[17], close[17], open[18], high[18], low[18], close[18], open[19], high[19], low[19], close[19]], barmerge.gaps_off, barmerge.lookahead_off)
-    array.from(q10, q11, q12, q13, q14, q15, q16, q17, q18, q19, q20, q21, q22, q23, q24, q25, q26, q27, q28, q29, q30, q31, q32, q33, q34, q35, q36, q37, q38, q39, q40, q41, q42, q43, q44, q45, q46, q47, q48, q49)
-
-type FwdCfg
-    int n
-    int right
-    int width
-    int gap
-    int half
-    float centre
-    float band
-    float fill
-    float lgap
-    color bull
-    color bear
-    color wick
-    color border
-    int bwborder
-    color frame
-    string abbr
-    color lblcol
-    bool scaled
-
-var array<box> fwdBodies = array.new<box>()
-var array<line> fwdWicks = array.new<line>()
-var array<box> esBodies = array.new<box>()
-var array<line> esWicks = array.new<line>()
-var array<box> ymBodies = array.new<box>()
-var array<line> ymWicks = array.new<line>()
-var array<label> fwdChLbls = array.new<label>()
-var array<label> esLbls = array.new<label>()
-var array<label> ymLbls = array.new<label>()
-
-fwd_wipe(array<box> bodies, array<line> wicks, array<label> lbls) =>
-    if array.size(bodies) > 0
-        for prevBx in bodies
-            box.delete(prevBx)
-        array.clear(bodies)
-    if array.size(wicks) > 0
-        for prevWk in wicks
-            line.delete(prevWk)
-        array.clear(wicks)
-    if array.size(lbls) > 0
-        for prevLb in lbls
-            label.delete(prevLb)
-        array.clear(lbls)
-
-draw_fwd_strip(array<float> d, FwdCfg c, array<box> bodies, array<line> wicks, array<label> lbls) =>
-    // d holds 4 values per candle, oldest HTF bar at index 0, so slot 0 is the live
-    // forming bar and belongs on the right — hence cnt - 1 - i.
-    int cnt = math.min(c.n, array.size(d) / 4)
-    // One shared horizontal offset for the whole column, so the three panels stack
-    // straight down instead of stepping sideways. The frame is at least Panel Width and
-    // grows past it when the candles need more room.
-    int innerW = (cnt - 1) * c.gap + 2 * c.half
-    int leftX = math.min(bar_index + c.right - c.half, bar_index + 470)
-    int rightX = math.min(leftX + math.max(c.width, innerW), bar_index + 480)
-    // Fit the strip into its panel band: one raw range over at most 20 candles, then one
-    // multiply and one add per price. That keeps three contracts at different price
-    // levels and different volatilities the same size inside identically sized frames.
-    float rHi = na
-    float rLo = na
-    for i = 0 to cnt - 1
-        int rb = (cnt - 1 - i) * 4
-        float rh = array.get(d, rb + 1)
-        float rl = array.get(d, rb + 2)
-        if not na(rh) and not na(rl)
-            rHi := na(rHi) ? rh : math.max(rHi, rh)
-            rLo := na(rLo) ? rl : math.min(rLo, rl)
-    bool haveRange = not na(rHi) and not na(rLo)
-    float rawRange = haveRange ? math.max(rHi - rLo, syminfo.mintick) : na
-    float midRaw = haveRange ? (rHi + rLo) / 2.0 : na
-    bool fit = c.scaled and haveRange and not na(c.centre)
-    // Unfitted leaves centre/mid at 0 and scale at 1, so the contract's own prices pass
-    // through untouched and, because neither reads midRaw, a missing candle degrades to
-    // raw prices instead of poisoning the strip with na.
-    float sc = fit ? c.band * c.fill / rawRange : 1.0
-    float cs = fit ? c.centre : 0.0
-    float ms = fit ? midRaw : 0.0
-    // The frame always contains the strip: half is the requested band, widened to the
-    // data when Raw draws something taller.
-    float half = math.max(c.band, haveRange ? rawRange * sc : 0.0) / 2.0
-    float panelC = fit or not haveRange ? c.centre : midRaw
-    array.push(bodies, box.new(left=leftX, top=panelC + half, right=rightX, bottom=panelC - half, border_color=c.frame, border_width=1, bgcolor=c_trans))
-    // Plain text just above the top edge, right-aligned to the frame's top-right corner.
-    // c_trans is the same fully transparent background the rest of this script uses for
-    // text-only labels.
-    if c.abbr != ""
-        array.push(lbls, label.new(rightX, panelC + half + c.lgap, c.abbr + " CHART", xloc=xloc.bar_index, yloc=yloc.price, color=c_trans, textcolor=c.lblcol, style=label.style_label_upper_left, size=size.small))
-    for i = 0 to cnt - 1
-        int slot = cnt - 1 - i
-        int b = slot * 4
-        float fo = cs + (array.get(d, b) - ms) * sc
-        float fh = cs + (array.get(d, b + 1) - ms) * sc
-        float fl = cs + (array.get(d, b + 2) - ms) * sc
-        float fc = cs + (array.get(d, b + 3) - ms) * sc
-        if not na(fo) and not na(fh) and not na(fl) and not na(fc)
-            int cx = math.min(bar_index + c.right + i * c.gap, bar_index + 480 - c.half)
-            float bodyTop = math.max(fo, fc)
-            float bodyBot = math.min(fo, fc)
-            if bodyTop == bodyBot
-                bodyBot := bodyTop - syminfo.mintick
-            float wickTop = fh == fl ? fh - syminfo.mintick : fh
-            array.push(bodies, box.new(left=cx - c.half, top=bodyTop, right=cx + c.half, bottom=bodyBot, border_color=c.border, border_width=c.bwborder, bgcolor=fc >= fo ? c.bull : c.bear))
-            array.push(wicks, line.new(cx, wickTop, cx, fl, color=c.wick, width=1))
-
-if barstate.islast
-    // This wipe is load-bearing, not housekeeping. Pine's per-tick rollback only clears
-    // the previous tick's objects on the same unconfirmed bar — it does not reach back
-    // to the previous bar's committed set. Wiping on every execution is what holds each
-    // panel at exactly cnt + 1 boxes, cnt wicks and one label, and keeps all of them the
-    // newest set on the chart, so TradingView's oldest-first GC can never take them. It
-    // also runs while Show is off, so switching the toggle off takes the committed
-    // panels down instead of stranding them. Do NOT simplify this into
-    // create-once-and-mutate with box.set_ and line.set_ setters: that makes the panels
-    // the oldest object set and they get garbage-collected a few hundred bars in.
-    fwd_wipe(fwdBodies, fwdWicks, fwdChLbls)
-    fwd_wipe(esBodies, esWicks, esLbls)
-    fwd_wipe(ymBodies, ymWicks, ymLbls)
-    if fwd_on
-        int fwdHalf = math.max(1, int(fwd_bw / 2))
-        if fwd_chart_on
-            array<float> chD = array.concat(fwd_ohlc_lo(syminfo.tickerid, fwd_tf), fwd_ohlc_hi(syminfo.tickerid, fwd_tf))
-            FwdCfg cfgCh = FwdCfg.new(fwd_n, fwd_right, fwd_panel_w, fwd_gap, fwdHalf, fwd_stackC + fwd_pitch, fwd_band, fwd_fill, fwd_lgap, fwd_bull, fwd_bear, fwd_wick, fwd_border, fwd_bwborder, fwd_frame, fwd_ch_abbr, fwd_lbl_col, fwd_scaled)
-            draw_fwd_strip(chD, cfgCh, fwdBodies, fwdWicks, fwdChLbls)
-        array<float> esD = array.concat(fwd_ohlc_lo(fwd_es_req, fwd_tf), fwd_ohlc_hi(fwd_es_req, fwd_tf))
-        FwdCfg cfgEs = FwdCfg.new(fwd_n, fwd_right, fwd_panel_w, fwd_gap, fwdHalf, fwd_stackC, fwd_band, fwd_fill, fwd_lgap, fwd_bull, fwd_bear, fwd_wick, fwd_border, fwd_bwborder, fwd_frame, fwd_es_abbr, fwd_lbl_col, fwd_scaled)
-        draw_fwd_strip(esD, cfgEs, esBodies, esWicks, esLbls)
-        if fwd_ym_on
-            array<float> ymD = array.concat(fwd_ohlc_lo(fwd_ym_req, fwd_tf), fwd_ohlc_hi(fwd_ym_req, fwd_tf))
-            FwdCfg cfgYm = FwdCfg.new(fwd_n, fwd_right, fwd_panel_w, fwd_gap, fwdHalf, fwd_stackC - fwd_pitch, fwd_band, fwd_fill, fwd_lgap, fwd_bull, fwd_bear, fwd_wick, fwd_border, fwd_bwborder, fwd_frame, fwd_ym_abbr, fwd_lbl_col, fwd_scaled)
-            draw_fwd_strip(ymD, cfgYm, ymBodies, ymWicks, ymLbls)
