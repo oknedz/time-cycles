@@ -116,10 +116,11 @@ act_30 = auto_adj ? (tf_min <= 60 and show_30) : show_30
 act_10 = auto_adj ? (tf_min <= 30 and show_10) : show_10
 is_crypto = syminfo.type == "crypto"
 calc_tz = is_crypto ? "UTC" : "America/New_York"
-is_new_d = ta.change(dayofmonth(time, calc_tz)) != 0
 ny_h = hour(time, "America/New_York")
 ny_m = minute(time, "America/New_York")
 ny_m_total = ny_h * 60 + ny_m
+pd_day_id = year(time, "America/New_York") * 10000 + month(time, "America/New_York") * 100 + dayofmonth(time, "America/New_York")
+is_new_pd_d = ta.change(pd_day_id) != 0
 var int cyc_start = cyc_mins.get(array.indexof(cyc_opts, cyc_start_str))
 cx_anchor = cx_h * 60 + cx_m
 asb_s = asb_h * 60 + asb_m
@@ -450,7 +451,7 @@ var label pd_lbl_ce = na
 var bool pd_stale = true
 
 if valid_tf
-    if is_new_d
+    if is_new_pd_d
         if not na(pd_h) and not na(pd_l)
             pd_ph := pd_h
             pd_pl := pd_l
@@ -485,19 +486,19 @@ if valid_tf and show_pdhl
             pd_lbl_ce := na
         pd_line_h := line.new(bar_index, pd_ph, bar_index, pd_ph, color=c_pdh, width=w_pdh, style=get_style(s_pdh))
         pd_line_l := line.new(bar_index, pd_pl, bar_index, pd_pl, color=c_pdl, width=w_pdl, style=get_style(s_pdl))
-        pd_lbl_h := label.new(bar_index, pd_ph, show_pdhl_lbl ? "PD High" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
-        pd_lbl_l := label.new(bar_index, pd_pl, show_pdhl_lbl ? "PD Low" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_h := label.new(bar_index + 3, pd_ph, show_pdhl_lbl ? "PD High" : "", color=c_trans, textcolor=c_pdh, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_l := label.new(bar_index + 3, pd_pl, show_pdhl_lbl ? "PD Low" : "", color=c_trans, textcolor=c_pdl, style=label.style_label_left, size=pdhl_ts)
     if show_pdce and na(pd_line_ce) and not na(pd_line_h)
         pd_line_ce := line.new(bar_index, pd_ce, bar_index, pd_ce, color=c_pdce, width=w_pdce, style=get_style(s_pdce))
-        pd_lbl_ce := label.new(bar_index, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
+        pd_lbl_ce := label.new(bar_index + 3, pd_ce, show_pdhl_lbl ? "Daily C.E." : "", color=c_trans, textcolor=c_pdce, style=label.style_label_left, size=pdhl_ts)
     if not na(pd_line_h)
-        line.set_x2(pd_line_h, bar_index)
-        line.set_x2(pd_line_l, bar_index)
-        label.set_x(pd_lbl_h, bar_index)
-        label.set_x(pd_lbl_l, bar_index)
+        line.set_x2(pd_line_h, bar_index + 2)
+        line.set_x2(pd_line_l, bar_index + 2)
+        label.set_xy(pd_lbl_h, bar_index + 3, pd_ph)
+        label.set_xy(pd_lbl_l, bar_index + 3, pd_pl)
     if not na(pd_line_ce)
-        line.set_x2(pd_line_ce, bar_index)
-        label.set_x(pd_lbl_ce, bar_index)
+        line.set_x2(pd_line_ce, bar_index + 2)
+        label.set_xy(pd_lbl_ce, bar_index + 3, pd_ce)
 else
     if not na(pd_line_h)
         line.delete(pd_line_h)
