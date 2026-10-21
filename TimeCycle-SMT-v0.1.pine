@@ -89,6 +89,21 @@ s_pdce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pdh
 show_pdhl_lbl = input.bool(true, "Show Labels", group=grp_pdh, inline="pdlbl")
 pdhl_ts = input.string(size.small, "Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_pdh, inline="pdlbl")
 
+grp_pwh = "Prev Week H/L"
+show_pwhl = input.bool(true, "Show PWH/PWL", group=grp_pwh)
+c_pwh = input.color(color.orange, "PWH", group=grp_pwh, inline="pwh")
+w_pwh = input.int(1, "", 1, 5, group=grp_pwh, inline="pwh")
+s_pwh = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pwh, inline="pwh")
+c_pwl = input.color(color.orange, "PWL", group=grp_pwh, inline="pwl")
+w_pwl = input.int(1, "", 1, 5, group=grp_pwh, inline="pwl")
+s_pwl = input.string("Dashed", "", ["Solid", "Dashed", "Dotted"], group=grp_pwh, inline="pwl")
+show_pwce = input.bool(true, "50% C.E.", group=grp_pwh, inline="pwce")
+c_pwce = input.color(color.orange, "", group=grp_pwh, inline="pwce")
+w_pwce = input.int(1, "", 1, 5, group=grp_pwh, inline="pwce")
+s_pwce = input.string("Dotted", "", ["Solid", "Dashed", "Dotted"], group=grp_pwh, inline="pwce")
+show_pwhl_lbl = input.bool(true, "Show Labels", group=grp_pwh, inline="pwlbl")
+pwhl_ts = input.string(size.small, "Label Size", options=[size.auto, size.tiny, size.small, size.normal, size.large, size.huge], group=grp_pwh, inline="pwlbl")
+
 grp_vl = "Cycle Dividers"
 show_vl = input.bool(false, "Vertical Lines Instead of Boxes", group=grp_vl, tooltip="On: the cycles are marked by vertical lines and the filled cycle boxes are hidden. Off: the usual cycle boxes. The two are never shown together.")
 vl_mode = input.string("Full Chart", "Height", ["Full Chart", "Match Cycle Box"], group=grp_vl, inline="vlm", active=show_vl)
@@ -121,6 +136,10 @@ ny_m = minute(time, "America/New_York")
 ny_m_total = ny_h * 60 + ny_m
 pd_day_id = year(time, "America/New_York") * 10000 + month(time, "America/New_York") * 100 + dayofmonth(time, "America/New_York")
 is_new_pd_d = ta.change(pd_day_id) != 0
+pw_week_id = year(time, "America/New_York") * 100 + weekofyear(time, "America/New_York")
+is_new_pw_w = ta.change(pw_week_id) != 0
+pw_dow = dayofweek(time, "America/New_York")
+pw_weekday = pw_dow >= dayofweek.monday and pw_dow <= dayofweek.friday
 var int cyc_start = cyc_mins.get(array.indexof(cyc_opts, cyc_start_str))
 cx_anchor = cx_h * 60 + cx_m
 asb_s = asb_h * 60 + asb_m
@@ -519,6 +538,88 @@ else
 plot(pd_ph, "PD High", display=display.data_window)
 plot(pd_pl, "PD Low", display=display.data_window)
 plot(pd_ce, "Daily C.E.", display=display.data_window)
+
+var float pw_h = na
+var float pw_l = na
+var float pw_ph = na
+var float pw_pl = na
+var line pw_line_h = na
+var line pw_line_l = na
+var line pw_line_ce = na
+var label pw_lbl_h = na
+var label pw_lbl_l = na
+var label pw_lbl_ce = na
+var bool pw_stale = true
+
+if valid_tf
+    if is_new_pw_w
+        if not na(pw_h) and not na(pw_l)
+            pw_ph := pw_h
+            pw_pl := pw_l
+            pw_stale := true
+        pw_h := na
+        pw_l := na
+    if pw_weekday
+        pw_h := na(pw_h) ? high : math.max(pw_h, high)
+        pw_l := na(pw_l) ? low : math.min(pw_l, low)
+else
+    pw_stale := true
+
+var float pw_ce = na
+pw_ce := not na(pw_ph) and not na(pw_pl) ? (pw_ph + pw_pl) / 2 : na
+
+if valid_tf and show_pwhl
+    if pw_stale and not na(pw_ph) and not na(pw_pl)
+        pw_stale := false
+        if not na(pw_line_h)
+            line.delete(pw_line_h)
+            label.delete(pw_lbl_h)
+            line.delete(pw_line_l)
+            label.delete(pw_lbl_l)
+            pw_line_h := na
+            pw_line_l := na
+            pw_lbl_h := na
+            pw_lbl_l := na
+        if not na(pw_line_ce)
+            line.delete(pw_line_ce)
+            label.delete(pw_lbl_ce)
+            pw_line_ce := na
+            pw_lbl_ce := na
+        pw_line_h := line.new(bar_index, pw_ph, bar_index, pw_ph, color=c_pwh, width=w_pwh, style=get_style(s_pwh))
+        pw_line_l := line.new(bar_index, pw_pl, bar_index, pw_pl, color=c_pwl, width=w_pwl, style=get_style(s_pwl))
+        pw_lbl_h := label.new(bar_index + 3, pw_ph, show_pwhl_lbl ? "PWH" : "", color=c_trans, textcolor=c_pwh, style=label.style_label_left, size=pwhl_ts)
+        pw_lbl_l := label.new(bar_index + 3, pw_pl, show_pwhl_lbl ? "PWL" : "", color=c_trans, textcolor=c_pwl, style=label.style_label_left, size=pwhl_ts)
+    if show_pwce and na(pw_line_ce) and not na(pw_line_h)
+        pw_line_ce := line.new(bar_index, pw_ce, bar_index, pw_ce, color=c_pwce, width=w_pwce, style=get_style(s_pwce))
+        pw_lbl_ce := label.new(bar_index + 3, pw_ce, show_pwhl_lbl ? "PWCE" : "", color=c_trans, textcolor=c_pwce, style=label.style_label_left, size=pwhl_ts)
+    if not na(pw_line_h)
+        line.set_x2(pw_line_h, bar_index + 2)
+        line.set_x2(pw_line_l, bar_index + 2)
+        label.set_xy(pw_lbl_h, bar_index + 3, pw_ph)
+        label.set_xy(pw_lbl_l, bar_index + 3, pw_pl)
+    if not na(pw_line_ce)
+        line.set_x2(pw_line_ce, bar_index + 2)
+        label.set_xy(pw_lbl_ce, bar_index + 3, pw_ce)
+else
+    if not na(pw_line_h)
+        line.delete(pw_line_h)
+        line.delete(pw_line_l)
+        label.delete(pw_lbl_h)
+        label.delete(pw_lbl_l)
+        pw_line_h := na
+        pw_line_l := na
+        pw_lbl_h := na
+        pw_lbl_l := na
+    if not na(pw_line_ce)
+        line.delete(pw_line_ce)
+        label.delete(pw_lbl_ce)
+        pw_line_ce := na
+        pw_lbl_ce := na
+    pw_stale := true
+
+plot(pw_ph, "PWH", display=display.data_window)
+plot(pw_pl, "PWL", display=display.data_window)
+plot(pw_ce, "PWCE", display=display.data_window)
 
 wd_loc = loc_wd == "Top" ? location.top : location.bottom
 wd_off = off_wd == 0 ? 0 : math.round(off_wd / tf_min)
